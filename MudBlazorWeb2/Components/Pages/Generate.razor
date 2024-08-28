@@ -1,0 +1,87 @@
+﻿@page "/generate"
+
+@using System.Text.RegularExpressions
+
+@inject HttpClient Http
+@rendermode InteractiveServer
+
+<PageTitle>👦 web-chat 🤖</PageTitle>
+
+<MudContainer>
+    <MudText Typo="Typo.h5">Web-интерфейс для работы с моделью Ai</MudText>
+    <MudDivider />
+    <br />
+    <MudText Typo="Typo.body1">Данный чат можно использовать для:</MudText>
+    <MudText Typo="Typo.body2"> - перевода текста с одного языка на другой</MudText>
+    <MudText Typo="Typo.body2"> - "отточки" шаблона запроса</MudText>
+    <MudText Typo="Typo.body2"> - создания различных текстов, например, отчётов</MudText>
+    <MudText Typo="Typo.body2"> - просто пообщаться</MudText>
+    <MudDivider />
+    <br /><br />
+
+    <MudCard Style="box-shadow:none;">
+        @if (Answer.done)
+        {
+            <MudCardContent>
+                <MudText>👦 @prompt</MudText>
+                <MudText>🤖 @Answer.response.ToString()</MudText>
+            </MudCardContent>
+        }
+
+        <MudGrid Style="height:48px;">
+            <MudItem xs="12" sm="10">
+                <MudTextField @bind-Value="ask" Placeholder="Введите свой запрос..." FullWidth="true"></MudTextField>
+            </MudItem>
+            <MudItem xs="12" sm="2">
+                @if (!loading)
+                {
+                   <MudButton OnClick="@(() => SendAsync(ask))" Color="Color.Info" FullWidth="true">Отправить</MudButton>
+                }
+            </MudItem>
+        </MudGrid>
+
+        <MudGrid>
+            @if (loading)
+            {
+                <MudItem xs="12">
+                    <br />
+                    <MudProgressLinear Color="Color.Info" Indeterminate="true" />
+                </MudItem>
+            }
+        </MudGrid>
+    </MudCard>
+</MudContainer>
+
+@code {
+    private Data.Answer Answer = new();
+    private Data.Question Question = new();
+    private string ask = string.Empty;
+    private string prompt = string.Empty;
+    private bool loading = false;
+
+    protected override void OnInitialized()
+    {
+        Http.Timeout = TimeSpan.FromMinutes(10); //TIP
+    }
+
+    private async Task SendAsync(string message)
+    {
+        if (!string.IsNullOrWhiteSpace(message))
+        {
+            Answer.done = false;
+            loading = true;
+            prompt = message;
+            Question.prompt = message;
+
+            var replyServerOllama = await Http.PostAsJsonAsync<Data.Question>("http://192.168.2.253:11434/api/generate", Question);
+
+            if (replyServerOllama.IsSuccessStatusCode)
+            {
+                Answer = await replyServerOllama.Content.ReadFromJsonAsync<Data.Answer>();
+                loading = false;
+            }
+
+            ask = string.Empty;
+        }
+    }
+}

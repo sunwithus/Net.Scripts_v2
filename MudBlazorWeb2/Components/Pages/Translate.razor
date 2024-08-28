@@ -1,0 +1,82 @@
+﻿@page "/translate"
+
+@using System.Text.RegularExpressions
+
+@inject HttpClient Http
+@rendermode InteractiveServer
+
+<PageTitle>📄 translator 📑</PageTitle>
+
+<MudContainer>
+    <MudText Typo="Typo.h5">Переводчик</MudText>
+    <MudDivider />
+    <br />
+    <MudText Typo="Typo.body1">Мультиязычный переводчик на русский язык</MudText>
+   <MudDivider />
+    <br />
+
+    <MudCard Style="height:110px; box-shadow:none;">
+
+        <MudGrid>
+            <MudItem xs="12" sm="10">
+                <MudTextField @bind-Value="ask" Label="Введите текст..." Lines="3" Variant="Variant.Outlined"  />
+            </MudItem>
+            <MudItem xs="12" sm="2" Style="display:flex; flex-direction:column; align-self: center;">
+                @if (!loading)
+                {
+                    <MudIconButton Style="width:64px;" OnClick="@(() => SendAsync(ask))" Size="Size.Large" Icon="@Icons.Material.Filled.PlayArrow"></MudIconButton>
+                }
+            </MudItem>
+            @if (loading)
+            {
+                <MudItem xs="12">
+                    <MudProgressLinear Color="Color.Info" Indeterminate="true" />
+                </MudItem>
+            }
+        </MudGrid>
+
+
+        @if (Answer.done)
+        {
+            <MudCardContent>
+                @*<MudText>📄 @prompt</MudText>*@
+                <MudText>📑 @Answer.response.ToString()</MudText>
+            </MudCardContent>
+        }
+    </MudCard>
+</MudContainer>
+
+@code {
+    private Data.Answer Answer = new();
+    private Data.Question Question = new();
+    private string ask = string.Empty;
+    private string prompt = string.Empty;
+    private bool loading = false;
+
+    protected override void OnInitialized()
+    {
+        Http.Timeout = TimeSpan.FromMinutes(10); //TIP
+    }
+
+    private async Task SendAsync(string message)
+    {
+        if (!string.IsNullOrWhiteSpace(message))
+        {
+            string preText = "Сделай перевод текста на русский язык, ответом должен должен быть только перевод, без дополнительных фраз. Вот текст: ";
+            Answer.done = false;
+            loading = true;
+            prompt = message;
+            Question.prompt = preText + message;
+
+            var replyServerOllama = await Http.PostAsJsonAsync<Data.Question>("http://192.168.2.253:11434/api/generate", Question);
+
+            if (replyServerOllama.IsSuccessStatusCode)
+            {
+                Answer = await replyServerOllama.Content.ReadFromJsonAsync<Data.Answer>();
+                loading = false;
+            }
+
+            ask = string.Empty;
+        }
+    }
+}
