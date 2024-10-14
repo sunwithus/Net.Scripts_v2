@@ -24,26 +24,26 @@
     <MudText Typo="Typo.h5">Обработка аудиоданных Oracle => 💬 + 🚀</MudText>
     <MudDivider />
     <br />
-    <MudPaper Style="padding: 7px 25px;">
+    <MudPaper>
         <MudElement style="height: 210px; position: relative;">
-            <MudOverlay Visible="Singleton.Instance.IsPlayingNow" LightBackground="true" Absolute="true">
-                <MudText Typo="Typo.body1">.</MudText>
+            <MudOverlay Visible="Singleton.Instance.IsPlayingNow || !Singleton.Instance.IsStoped" LightBackground="true" Absolute="true">
+                <MudText Typo="Typo.body1"> </MudText>
             </MudOverlay>
             <MudText Typo="Typo.body1">
                 Изменить параметры шаблона обработки
-                    <EditParameters />
-                    <MudDivider />
+                <EditParameters />
+                <MudDivider />
                 Текущие настройки подключения Oracle:
-                    <b>@DatabaseService._oracleSettings.DataSource => @DatabaseService._oracleSettings.Scheme</b>
-                    <EditSettings OnStateChanged="HandleStateChanged" />
+                <b>@DatabaseService._oracleSettings.DataSource => @DatabaseService._oracleSettings.Scheme</b>
+                <EditSettings OnStateChanged="HandleStateChanged" />
             </MudText>
             @* // Период *@
             <MudGrid Spacing="8" Justify="Justify.FlexStart">
                 <MudItem>
-                        <MudTextField T="DateTime" Format="yyyy-MM-ddTHH:mm:ss" Label="От даты:" InputType="InputType.DateTimeLocal" @bind-Value="Singleton.Instance.StartDate" />
+                    <MudTextField T="DateTime" Format="yyyy-MM-ddTHH:mm:ss" Label="От даты:" InputType="InputType.DateTimeLocal" @bind-Value="Singleton.Instance.StartDate" />
                 </MudItem>
                 <MudItem>
-                        <MudTextField T="DateTime" Format="yyyy-MM-ddTHH:mm:ss" Label="По дату:" InputType="InputType.DateTimeLocal" @bind-Value="Singleton.Instance.EndDate" />
+                    <MudTextField T="DateTime" Format="yyyy-MM-ddTHH:mm:ss" Label="По дату:" InputType="InputType.DateTimeLocal" @bind-Value="Singleton.Instance.EndDate" />
                 </MudItem>
             </MudGrid>
             @* // Повторный запуск *@
@@ -86,7 +86,7 @@
                         Ожидание повторного запуска каждые @(CycleInterval * 60) сек. &nbsp;&nbsp;&nbsp;
                         <MudProgressCircular Color="Color.Info" Size="Size.Small" Indeterminate="true" />
                     </div>
-                    
+
                 }
             </div>
         }
@@ -135,7 +135,8 @@
 
         if (!Singleton.Instance.IsStoped || Singleton.Instance.IsPlayingNow)
         {
-            if (!Singleton.Instance.IsCycle) {
+            if (!Singleton.Instance.IsCycle)
+            {
 
                 return;
             }
@@ -154,9 +155,10 @@
 
             try
             {
+                /*
                 //===========================================================
                 //имитация процесса
-                //=========================================================== 
+                //===========================================================
                 Singleton.Instance.ProcessedKeys = 0;
                 Singleton.Instance.TotalKeys = 5;
                 Singleton.Instance.ProcessedKeys = 0;
@@ -167,9 +169,9 @@
                     Singleton.Instance.ProcessedKeys++;
                 }
                 //===========================================================
-
-                //await audioProcessor.ProcessAudioFilesAsync(Singleton.Instance.StartDate, Singleton.Instance.EndDate, DatabaseService._oracleSettings.Scheme, UpdateProgress, Constants.ModelName, parameters.PreText);
-                await Task.Delay(1200);
+                */
+                await audioProcessor.ProcessAudioFilesAsync(Singleton.Instance.StartDate, Singleton.Instance.EndDate, DatabaseService._oracleSettings.Scheme, UpdateProgress, Constants.ModelName, parameters.PreText);
+                await Task.Delay(200);
 
                 Singleton.Instance.IsStoped = true;
                 Singleton.Instance.ProcessingMessage = $"Обработка остановлена. Всего обработано: {Singleton.Instance.ProcessedKeys} / {Singleton.Instance.TotalKeys}";
@@ -181,10 +183,11 @@
 
             if (!Singleton.Instance.IsCycle) { Singleton.Instance.IsStopPressed = true; Singleton.Instance.IsPlayed = false; }
 
-            if (Singleton.Instance.IsCycle && !Singleton.Instance.IsStopPressed && Singleton.Instance.IsPlayed) {
+            if (Singleton.Instance.IsCycle && !Singleton.Instance.IsStopPressed && Singleton.Instance.IsPlayed)
+            {
                 while (!Singleton.Instance.IsStopPressed)
                 {
-                    await Task.Delay(CycleInterval * 60 * 1000); // вместо минут для теста
+                    await Task.Delay(CycleInterval * 60 * 1000); // вместо минут для циклического запуска
                     break;
                 }
             }
@@ -205,10 +208,11 @@
     private async Task StopProcessing()
     {
         Singleton.Instance.ProcessingMessage = !Singleton.Instance.IsStoped ? "Обработка завершается, подождите..." : "Обработка остановлена.";
+        if (Singleton.Instance.IsStopPressed) Singleton.Instance.IsPlayingNow = false;
         Singleton.Instance.IsStopPressed = true;
         await audioProcessor.StopProcessingAsync();
         Singleton.Instance.IsStoped = true;
-        Singleton.Instance.IsPlayingNow = false;
+        //Singleton.Instance.IsPlayingNow = false;
         Singleton.Instance.IsPlayed = false;
     }
 
@@ -221,8 +225,8 @@
 
     public void Dispose()
     {
-        // Останавливаем 
+        // Останавливаем
     }
-    
+
 
 }

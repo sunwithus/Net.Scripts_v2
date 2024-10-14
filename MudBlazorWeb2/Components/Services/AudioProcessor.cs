@@ -14,13 +14,18 @@ public class AudioProcessor
 
     private readonly List<string> _codecs = new List<string>()
         {
-            "WAVE_FILE", "RPE-LTP", "DAMPS", "GSM", "UMTS_AMR"/*
-            ,
-            "PCM-128", "QCELP-8", "EVRC", "QCELP-13", "ADPCM", "AMBE.HR_IRIDIUM", "A-LAW", "AMBE_INMARSAT_MM", "APC.HR_INMARSAT_B", "IMBE_INMARSAT_M",
+            "UMTS_AMR", "EVRC", "GSM"/*
+            ,"WAVE_FILE", "RPE-LTP", "DAMPS",
+            "PCM-128", "QCELP-8", "QCELP-13", "ADPCM", "AMBE.HR_IRIDIUM", "A-LAW", "AMBE_INMARSAT_MM", "APC.HR_INMARSAT_B", "IMBE_INMARSAT_M",
             "AME", "ACELP_TETRA", "GSM.EFR_ABIS", "GSM.HR_ABIS", "GSM.AMR_ABIS", "GSM_ABIS", "LD-CELP", "E-QCELP", "ATC", "PSI-CELP", "AMBE.GMR1", "AMBE.GMR2", "AMBE.INMARSAT_BGAN", "ADM.UAV",
             "PCMA", "PCMU", "IPCMA", "IPCMU", "L8", "IL8", "L16", "IL16", "G.723.1", "G.726-32", "G.728", "G.729", "GSM.0610", "ILBC-13", "ILBC-15", "PDC.FR", "PDC.EFR", "PDC.HR",
             "IDEN.FR", "APCO-25", "RP-CELP", "IDEN.HR"*/
         };
+
+    private readonly List<string> _doNotWorkWith = new List<string>()
+    {
+        "FAXDATA_GSM","DATA_GSM", "BINARY", "FAXDATA_CDMA", "Paging Response", "DMR"
+    };
 
     private bool isProcessing = false;
 
@@ -60,7 +65,8 @@ public class AudioProcessor
                 var (audioDataLeft, audioDataRight, recordType) = await _databaseService.GetAudioDataAsync(key, schemeName);
                 string audioFilePath = Path.Combine("C:\\temp\\4", $"{key}.wav");
 
-                if (recordType == "UMTS.AMR-WB") continue; // пока с этим кодеком не работаем
+                if (recordType == "UMTS.AMR-WB" || recordType == "EVS" || _doNotWorkWith.Contains(recordType)) continue; // пока с этими кодеком не работаем, а также BINARY, FAX...
+                
                 if (recordType != null && _codecs.Contains(recordType))
                 {
                     Console.WriteLine("using decoder!!!");
@@ -70,6 +76,7 @@ public class AudioProcessor
                 else
                 {
                     Console.WriteLine("using ffmpeg!!!");
+                    Console.WriteLine("recordType is " + recordType);
                     await ConvertToWavAsyncStream(audioDataLeft, audioDataRight, audioFilePath);
                     //await ConvertToWavAsyncFile(audioDataLeft, audioDataRight, audioFilePath);
                     await Task.Delay(200); //возможно файл не успевает сохраниться, поэтому пауза

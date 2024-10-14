@@ -22,7 +22,7 @@ public class WhisperService
         fileContent.Headers.ContentType = MediaTypeHeaderValue.Parse("audio/wav");
         form.Add(fileContent, "audio_file", Path.GetFileName(audioFilePath));
 
-        string requestUrl = "http://192.168.2.254:9000/detect-language?encode=true";
+        string requestUrl = "http://192.168.2.254:8999/detect-language?encode=true";
 
         var response = await _httpClient.PostAsync(requestUrl, form);
         response.EnsureSuccessStatusCode();
@@ -48,10 +48,12 @@ public class WhisperService
         //string requestUrl = $"http://192.168.2.254:9000/asr?encode=true&task=transcribe&language=ru&word_timestamps=true&output=json";
         string requestUrl = $"http://192.168.2.254:9000/asr?encode=true&task=transcribe&word_timestamps=true&output=json";
 
+        /*
         if (languageCode == "ru" || languageCode == "uk")
         {
-            requestUrl = $"http://192.168.2.254:9000/asr?encode=true&output=json&task=transcribe&word_timestamps=true";
+            requestUrl = $"http://192.168.2.254:9000/asr?encode=true&task=transcribe&word_timestamps=true&output=json";
         }
+        */
 
         var response = await _httpClient.PostAsync(requestUrl, form);
         response.EnsureSuccessStatusCode();
