@@ -52,6 +52,7 @@ app.UseAntiforgery();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-app.Run(); // app.Run("https://0.0.0.0:445");
+//app.Run("http://0.0.0.0:555");
+app.Run("http://localhost:1111");
 
 

@@ -31,8 +31,8 @@ public class DatabaseService
             $"SELECT S_INCKEY FROM {schemeName}.SPR_SPEECH_TABLE " +
             $"WHERE S_TYPE=0 " +
             $"AND S_DURATION > INTERVAL '10' SECOND " +
-            $"AND S_EVENTCODE NOT IN ('BINARY', 'FAXDATA_GSM', 'DATA_GSM', 'EVS', 'UMTS.AMR-WB') " +
-            $"AND S_POSTKEY IS NULL " + //IS NOT NULL
+            $"AND S_EVENTCODE NOT IN ('BINARY', 'FAXDATA_GSM', 'DATA_GSM', 'FAXDATA_CDMA') " +
+            $"AND S_NOTICE IS NULL " + //Примечание IS NOT NULL
             //$"AND S_NOTICE <> ''" +
             $"AND S_DATETIME BETWEEN :start_date AND :end_date " +
             $"ORDER BY S_DATETIME DESC"; //в порядке уменьшения, //в порядке увеличения $"ORDER BY S_DATETIME ASC" 
@@ -68,7 +68,7 @@ public class DatabaseService
                 byte[]? audioDataRight = reader["S_RSPEECH"] as byte[];
                 string? recordType = reader["S_RECORDTYPE"] as string;
 
-                Console.WriteLine($"Audio data for key {key} loaded successfully.");
+                Console.WriteLine($"Audio data for key {key} loaded successfully. recordType = " + recordType);
                 return (audioDataLeft, audioDataRight, recordType);
             }
 
@@ -79,12 +79,20 @@ public class DatabaseService
 
     public async Task InsertCommentAsync(int key, string text, string detectedLanguage, string responseOllamaText, OracleTransaction transaction, string schemeName, string modelName)
     {
+        
         // Register the code pages encoding provider
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         // Use the appropriate encoding for the comment
         text = responseOllamaText + "\n ############################## \n" + text;
 
-        byte[] commentBytes = Encoding.GetEncoding(1251).GetBytes(text);
+        byte[] commentBytes = Encoding.GetEncoding(1251).GetBytes(text); // т.к. доступны только кирилица и латиница, текст будем переводить
+        //byte[] commentBytes = Encoding.GetEncoding(1251).GetBytes(text); // китайский текст - знаками вопроса
+        //byte[] commentBytes = Encoding.UTF8.GetBytes(text); // всё - закарючки
+        //byte[] commentBytes = Encoding.GetEncoding("utf-8").GetBytes(text); // всё - закарючки
+        //byte[] commentBytes = Encoding.ASCII.GetBytes(text); // всё - закарючки
+        //byte[] commentBytes = Encoding.Unicode.GetBytes(text); // всё пусто кроме цифр
+        //byte[] commentBytes = Encoding.GetEncoding("ISO-8859-1").GetBytes(text); // всё - вопросы
+
 
         //Console.WriteLine("text: " + text);
         //responseOllamaText = responseOllamaText.Length > 99 ? responseOllamaText.Substring(0, 99) : responseOllamaText;
@@ -116,12 +124,12 @@ public class DatabaseService
             USING (SELECT S_INCKEY FROM {schemeName}.SPR_SPEECH_TABLE WHERE S_INCKEY = :S_INCKEY) T2
             ON (T1.S_INCKEY = T2.S_INCKEY)
             WHEN MATCHED THEN
-                UPDATE SET T1.S_BELONG = :S_BELONG, T1.S_POSTKEY = :S_POSTKEY, T1.S_POSTID = :S_POSTID
+                UPDATE SET T1.S_BELONG = :S_BELONG, T1.S_NOTICE = :S_NOTICE, T1.S_POSTID = :S_POSTID
             WHEN NOT MATCHED THEN
-                INSERT (S_INCKEY, S_BELONG, S_POSTKEY, S_POSTID) VALUES (:S_INCKEY, :S_BELONG, :S_POSTKEY, :S_POSTID)";
+                INSERT (S_INCKEY, S_BELONG, S_NOTICE, S_POSTID) VALUES (:S_INCKEY, :S_BELONG, :S_NOTICE, :S_POSTID)";
             insertSpeechCommand.Parameters.Add(":S_INCKEY", OracleDbType.Int32).Value = key;
             insertSpeechCommand.Parameters.Add(":S_BELONG", OracleDbType.Varchar2).Value = detectedLanguage;
-            insertSpeechCommand.Parameters.Add(":S_POSTKEY", OracleDbType.Varchar2).Value = dangerLevelText;
+            insertSpeechCommand.Parameters.Add(":S_NOTICE", OracleDbType.Varchar2).Value = dangerLevelText;
             insertSpeechCommand.Parameters.Add(":S_POSTID", OracleDbType.Varchar2).Value = modelName;
             //S_POSTKEY - ключ поста
             //S_POSTID	VARCHAR(20)			Имя поста регистрации
