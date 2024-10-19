@@ -35,7 +35,7 @@ namespace MudBlazorWeb2.Components.Common
         private bool isPlayingNow = false;
         private bool isStopPressed = true;
         private DateTime startDate = DateTime.Now.AddMonths(-1);
-        private DateTime endDate = DateTime.Now.AddMonths(-1);
+        private DateTime endDate = DateTime.Now.AddMonths(1);
 
         public int ProcessedKeys
         {

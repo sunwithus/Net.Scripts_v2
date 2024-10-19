@@ -19,7 +19,7 @@
     <MudDivider />
     <br /><br />
 
-    <MudCard Style="box-shadow:none;">
+    <MudCard Style="height:110px; box-shadow:none;">
         @if (Answer.done)
         {
             <MudCardContent>
@@ -28,23 +28,19 @@
             </MudCardContent>
         }
 
-        <MudGrid Style="height:48px;">
+        <MudGrid>
             <MudItem xs="12" sm="10">
-                <MudTextField @bind-Value="ask" Placeholder="Введите свой запрос..." FullWidth="true"></MudTextField>
+                <MudTextField @bind-Value="ask" Label="Введите свой запрос..." Lines="3" Variant="Variant.Outlined" />
             </MudItem>
-            <MudItem xs="12" sm="2">
+            <MudItem xs="12" sm="2" Style="display:flex; flex-direction:column; align-self: center;">
                 @if (!loading)
                 {
-                   <MudButton OnClick="@(() => SendAsync(ask))" Color="Color.Info" FullWidth="true">Отправить</MudButton>
+                    <MudIconButton Style="width:64px;" OnClick="@(() => SendAsync(ask))" Size="Size.Large" Icon="@Icons.Material.Filled.PlayArrow"></MudIconButton>
                 }
             </MudItem>
-        </MudGrid>
-
-        <MudGrid>
             @if (loading)
             {
                 <MudItem xs="12">
-                    <br />
                     <MudProgressLinear Color="Color.Info" Indeterminate="true" />
                 </MudItem>
             }

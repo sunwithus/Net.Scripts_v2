@@ -1,8 +1,26 @@
+//Program.cs
+
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using MudBlazorWeb2.Components.EntityFrameworkCore;
+
 using MudBlazor.Services;
 using MudBlazorWeb2.Components;
+using static MudBlazorWeb2.Components.Pages.ReplicatorOra;
 
 var builder = WebApplication.CreateBuilder(args);
+
+//Oracle
+var connectionString = builder.Configuration.GetConnectionString("OracleDbConnection");
+builder.Services.AddDbContextFactory<OracleDbContext>(options =>
+            options.UseOracle(connectionString, providerOptions => providerOptions
+                                .CommandTimeout(60)
+                                .UseRelationalNulls(true)
+                                .MinBatchSize(2))
+                 .EnableDetailedErrors(false)
+                 .EnableSensitiveDataLogging(false)
+                 .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking));
+//#####
 
 builder.Services.AddSignalR();
 //
@@ -52,6 +70,8 @@ app.UseAntiforgery();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-app.Run(); // app.Run("https://0.0.0.0:445");
+//app.Run("http://0.0.0.0:555");
+//app.Run("http://localhost:1111");
+app.Run();
 
 

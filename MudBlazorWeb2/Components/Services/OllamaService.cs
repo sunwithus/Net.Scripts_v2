@@ -21,7 +21,6 @@ public class OllamaService
     {
         var content = new StringContent(JsonSerializer.Serialize(new { model = modelName, prompt = preText + "=>" + recognizedText, stream = false }), Encoding.UTF8, "application/json");
         var response = await _httpClient.PostAsync("http://192.168.2.253:11434/api/generate", content);
-        //var response = await _httpClient.PostAsync("http://192.168.2.254:11434/api/generate", content);
         response.EnsureSuccessStatusCode();
 
         var responseBody = await response.Content.ReadAsStringAsync();

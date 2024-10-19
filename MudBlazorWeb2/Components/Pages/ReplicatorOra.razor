@@ -1,0 +1,128 @@
+﻿@*ReplicatorOra.razor*@
+
+@page "/oracle-replicator"
+@rendermode InteractiveServer
+
+@using Microsoft.EntityFrameworkCore
+@using System.Text.Json
+
+@using MudBlazorWeb2.Components.EntityFrameworkCore
+@using MudBlazorWeb2.Components.Modules.Replicator
+@inject IDbContextFactory<OracleDbContext> DbFactory
+@inject IConfiguration Configuration 
+
+<PageTitle>💬 Репликатор Oracle 11.2 🖍</PageTitle>
+
+
+<MudContainer>
+    <MudText Typo="Typo.h5">Аудио в Oracle 🎧 => 🖥️</MudText>
+    <MudDivider />
+    <br />
+    <MudPaper>
+        <OracleConnectionSettings nameConfigFile="@nameConfigFile" colorButton="@colorButton" oracleDbContext="_context" />
+    </MudPaper>
+
+    <MudItem xs="4">
+        <b>Оператор: </b>
+        <InputSelect @bind-Value="sourceName" style="border:solid 1px black;">
+            <option value=""> </option>
+            @*foreach (var oper in operators)
+            {
+                <option value="@oper">@oper</option>
+            }*@
+        </InputSelect>
+        <MudIconButton Icon="@Icons.Material.Filled.Settings" Color="Color.Default" OnClick="@(e => ToggleOverlay(true))" />
+    </MudItem>
+    @if (sourceName != "")
+    {
+        <div style="text-align: left">
+            LoadManyFilesFromFolder @*<LoadManyFilesFromFolder pathToSaveTempAudio="@pathToSaveTempAudio" onlyAudioType="@onlyAudioType" colorButton="@colorButton" />*@
+        </div>
+    }
+    else
+    {
+        <MudText Typo="Typo.h6" Color="Color.Secondary">Заполните значение "Оператор"</MudText>
+    }
+    <br />
+
+
+
+
+
+</MudContainer>
+
+@code {
+    string nameConfigFile = Path.Combine(AppContext.BaseDirectory, "replicatorSettings.json");
+    string operatorsFile = Path.Combine(AppContext.BaseDirectory, "replicatorOperators.txt");
+    MudBlazor.Color colorButton = Color.Secondary;
+
+    List<string> operators = new();
+    private string sourceName = "";
+    bool isVisible;
+
+
+
+
+
+    private OracleDbContext _context;
+
+    protected override async Task OnInitializedAsync()
+    {
+        string readFile = await File.ReadAllTextAsync(operatorsFile);
+        operators = readFile.Trim().Split(',').ToList();
+        foreach (var oper in operators)
+        {
+            Console.WriteLine(oper);
+        }
+
+        
+        //string originalText = "Hello work";
+        // запись строки
+        //await File.WriteAllTextAsync(operatorsFile, originalText);
+        // дозапись в конец файла
+        //await File.AppendAllTextAsync(operatorsFile, "\nHello work");
+
+
+        _context = DbFactory.CreateDbContext(); // Pass the schema as a single string
+        //Установка схемы динамически
+        _context.Database.ExecuteSqlRaw($"ALTER SESSION SET CURRENT_SCHEMA = test");
+
+
+        /*var entities1 = await _context.SprSpeechTable.ToListAsync();
+        string s = string.Empty;
+
+        foreach (var entity in entities1)
+        {
+            Console.WriteLine(entity.Id);
+            if (entity.Belong != null)
+            {
+                Console.WriteLine(entity.Belong);
+                s = entity.Belong.ToString();
+                entity.Notice = "11";
+                _context.Update(entity);
+            }
+        }
+
+        var entities2 = await _context.SprSpCommentTable.ToListAsync();
+        foreach (var entity in entities2)
+        {
+            Console.WriteLine(entity.Id);
+            Console.WriteLine(entity.Comment);
+        }*/
+
+        await _context.SaveChangesAsync();
+
+        _context.Dispose();
+    }
+
+    public void Dispose()
+    {
+        _context?.Dispose();
+    }
+    
+    public void ToggleOverlay(bool value)
+    {
+        isVisible = value;
+        StateHasChanged();
+    }
+}
