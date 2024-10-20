@@ -1,0 +1,101 @@
+﻿@*//OracleChooseOperator.razor*@
+
+@using System.Text.RegularExpressions
+
+@rendermode InteractiveServer
+
+<MudText Typo="Typo.body1" Style="display: flex;">
+    <MudSelect ValueChanged="@(value => OnOperatorSelectedChanged(value))" T="string" Value="@operatorName" Color=@colorButton Style="width: 250px;">
+        <MudSelectItem Value="string.Empty">Оператор:</MudSelectItem>
+        @foreach (var oper in operators)
+        {
+            <MudSelectItem Value="@oper">@oper</MudSelectItem>
+        }
+    </MudSelect>
+    <MudIconButton Style="position:relative; top:-7px;" Icon="@Icons.Material.Outlined.Settings" Color="Color.Default" OnClick="@(e => ToggleOverlay(true))" />
+</MudText>
+
+<MudOverlay Visible="isVisible" DarkBackground="true" Absolute="false">
+    <MudCard Style="width: 500px;">
+        <MudCardContent>
+            <MudText Typo="Typo.body1">Имя оператора</MudText>
+            <MudDivider />
+            <MudTextField T="string" @bind-Value="operatorsString" Text="@operatorsString" Label="в PostWork 'Имя источника'" Variant="Variant.Outlined" Lines="7" />
+        </MudCardContent>
+        <MudCardActions>
+            <MudButton Variant="Variant.Outlined" Color=@colorButton OnClick="@(e => ApplyButtonClick())">Сохранить</MudButton>
+            <MudButton Variant="Variant.Outlined" Color="@colorButton" OnClick="@(e => CancelButtonClick())" Class="ml-auto">Отмена</MudButton>
+        </MudCardActions>
+    </MudCard>
+</MudOverlay>
+
+@code {
+
+    [Parameter]
+    public string operatorsFile {get; set;}
+    [Parameter]
+    public MudBlazor.Color colorButton { get; set; }
+    [Parameter]
+    public EventCallback<string> OnOperatorSelected { get; set; }
+
+    string operatorsString = "";
+    string operatorName = "";
+
+    List<string> operators = new();
+
+    bool isVisible;
+
+    private async void OnOperatorSelectedChanged(string value)
+    {
+        operatorName = value;
+        await OnOperatorSelected.InvokeAsync(value);
+    }
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSettingsFromFile();
+        isVisible = false;
+    }
+
+    private async Task LoadSettingsFromFile()
+    {
+        string readFile = await File.ReadAllTextAsync(operatorsFile);
+        operators = Regex.Replace(readFile, @"\s+", " ").Trim().Split(',').ToList()
+            .Select(op => op.Trim().TrimEnd(',', '.'))
+            .Where(op => !string.IsNullOrWhiteSpace(op))
+            .OrderBy(op => op)
+            .ToList();
+        operatorsString = string.Join(", ", operators);
+    }
+
+    private async Task SaveSettingsToFile()
+    {
+        await File.WriteAllTextAsync(operatorsFile, Regex.Replace(operatorsString, @"\s+", " ").Trim());
+    }
+
+    private async void ApplyButtonClick()
+    {
+        await SaveSettingsToFile();
+        await ReloadSettings();
+    }
+
+    private async void CancelButtonClick()
+    {
+        await ReloadSettings();
+    }
+
+    public async void ToggleOverlay(bool value)
+    {
+        isVisible = value;
+        await ReloadSettings();
+    }
+
+    private async Task ReloadSettings()
+    {
+        await LoadSettingsFromFile();
+        ToggleOverlay(false);
+        StateHasChanged();
+    }
+
+
+}

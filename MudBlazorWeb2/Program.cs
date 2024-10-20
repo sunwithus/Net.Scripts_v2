@@ -22,7 +22,13 @@ builder.Services.AddDbContextFactory<OracleDbContext>(options =>
                  .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking));
 //#####
 
-builder.Services.AddSignalR();
+// Настройки SignalR
+builder.Services.AddSignalR(options =>
+{
+    options.MaximumReceiveMessageSize = 1024 * 1024 * 512;
+    options.ClientTimeoutInterval = TimeSpan.FromMinutes(60);
+    options.HandshakeTimeout = TimeSpan.FromMinutes(60);
+});
 //
 var oracleSettingsFilePath = Path.Combine(AppContext.BaseDirectory, "oracleSettings.json");
 var oracleSettings = new OracleSettings();

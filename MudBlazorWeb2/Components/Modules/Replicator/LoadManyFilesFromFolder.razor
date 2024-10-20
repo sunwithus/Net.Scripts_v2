@@ -1,11 +1,9 @@
-﻿@using MudBlazorWeb2.Components.Classes;
-@inject IJSRuntime JSRuntime;
+﻿@*LoadManyFilesFromFolder.razor*@
 
 Выберите необходимые аудиофайлы (до @maxAllowedFiles шт., до @(maxFileSize / 1024 / 1024) Мб):<br />
-<MudButton Variant="Variant.Filled" Color="@colorButton" StartIcon="@Icons.Material.Filled.CloudUpload">
-    <InputFile @onclick="BeforeLoadFiles" OnChange="LoadFiles" multiple />
+<MudButton Variant="Variant.Outlined" Color="@colorButton" StartIcon="@Icons.Material.Filled.CloudUpload">
+    <InputFile OnChange="LoadFiles" multiple />
 </MudButton>
-<br />
 <br />
 @if (isLoading)
 {
@@ -13,7 +11,6 @@
 }
 else if (isVisible)
 {
-
     <MudSimpleTable Hover="true" Dense="true" FixedHeader="true" Style="height:150px;">
         <thead>
             <tr>
@@ -35,7 +32,6 @@ else if (isVisible)
         } 
         </tbody>
     </MudSimpleTable>
-
 }
 
 @code {
@@ -44,7 +40,7 @@ else if (isVisible)
     [Parameter]
     public bool onlyAudioType { get; set; } = true;
     [Parameter]
-    public MudBlazor.Color colorButton { get; set; } = Color.Primary;
+    public MudBlazor.Color colorButton { get; set; }
 
     private List<IBrowserFile> loadedFiles = new();
     private long maxFileSize = 1024 * 1024 * 512;
@@ -55,14 +51,6 @@ else if (isVisible)
 
     private int filesPerBatch = 10; // Количество файлов на одну партию
 
-    private async void BeforeLoadFiles()
-    {
-        isVisible = false;
-        await JSRuntime.InvokeVoidAsync("hideElement", "startibs");
-        await JSRuntime.InvokeVoidAsync("hideElement", "console");
-        await JSRuntime.InvokeVoidAsync("hideElement", "progress");
-    }
-
     private async Task LoadFiles(InputFileChangeEventArgs e)
     {
         isLoading = true;
@@ -70,8 +58,7 @@ else if (isVisible)
         loadedFiles.Clear();
 
         // Предварительная очистка директории
-        Operations operationWithFiles = new Operations();
-        operationWithFiles.clearFolder(pathToSaveTempAudio);
+        await ClearDirectory(pathToSaveTempAudio);
 
         progressPercent = 0;
 
@@ -88,26 +75,19 @@ else if (isVisible)
                 {
                     var trustedFileName = file.Name.Replace(" ", "").Replace("—", "");
                     string filePath = Path.Combine(pathToSaveTempAudio, trustedFileName);
-                    Console.WriteLine(filePath);
 
-                    await using FileStream writeStream = new(filePath, FileMode.Create);
                     using var readStream = file.OpenReadStream(maxFileSize);
-                    var bytesRead = 0;
-                    var totalRead = 0;
-                    var buffer = new byte[1024 * 10];
+                    using var writeStream = new FileStream(filePath, FileMode.Create);
 
-                    while ((bytesRead = await readStream.ReadAsync(buffer)) != 0)
-                    {
-                        totalRead += bytesRead;
-                        await writeStream.WriteAsync(buffer, 0, bytesRead);
-                    }
+                    await readStream.CopyToAsync(writeStream);
 
                     lock (loadedFiles)
                     {
                         loadedFiles.Add(file);
                     }
 
-                    Console.WriteLine($"Unsafe Filename: {file.Name} File saved: {trustedFileName}");
+                    Console.WriteLine($"File saved: {filePath}");
+
                 }
                 catch (Exception ex)
                 {
@@ -123,12 +103,25 @@ else if (isVisible)
 
             await Task.WhenAll(tasks);
         }
-        
-        isLoading = false;
-        isVisible = true;
 
-        await JSRuntime.InvokeVoidAsync("showElement", "startibs"); // js видимость кнопки пуск
-        
+        isLoading = false; // проценты выполнения
+        isVisible = true; // таблица с файлами
+
+    }
+
+    public async Task ClearDirectory(string folder)
+    {
+        try
+        {
+            Directory.Delete(folder, true);
+            await Task.Delay(1);
+            Directory.CreateDirectory(folder);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Произошла ошибка при очистке директории: " + ex.Message);
+        }
+
     }
 }
 

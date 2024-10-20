@@ -10,8 +10,8 @@
 @rendermode InteractiveServer
 @inject IDbContextFactory<OracleDbContext> DbFactory
 
-<MudPaper>
-    <MudButton Variant="Variant.Filled" Color="@colorButton" OnClick="@(e => ToggleOverlay(true))">Настройки подключения</MudButton>
+<MudText>
+    <MudButton Variant="Variant.Outlined" Color="@colorButton" OnClick="@(e => ToggleOverlay(true))">Настройки БД</MudButton>
     <MudOverlay Visible="isVisible" DarkBackground="true" Absolute="false">
         <EditForm Model="@settings" Style="width:500px">
 
@@ -32,15 +32,15 @@
                 </MudCardContent>
 
                 <MudCardActions>
-                    <MudButton OnClick="@(e => TestButtonClick())" ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="@colorButton">Тест подключения</MudButton>
-                    <MudButton OnClick="@(e => ApplyButtonClick())" ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="@colorButton" Class="ml-auto">Применить</MudButton>&nbsp;
-                    <MudButton Variant="Variant.Filled" Color="@colorButton" OnClick="@(e => ToggleOverlay(false))">Отмена</MudButton>
+                    <MudButton OnClick="@(e => TestButtonClick())" ButtonType="ButtonType.Submit" Variant="Variant.Outlined" Color="@colorButton">Тест подключения</MudButton>
+                    <MudButton OnClick="@(e => ApplyButtonClick())" ButtonType="ButtonType.Submit" Variant="Variant.Outlined" Color="@colorButton" Class="ml-auto">Применить</MudButton>&nbsp;
+                    <MudButton Variant="Variant.Outlined" Color="@colorButton" OnClick="@(e => CancelButtonClick())">Отмена</MudButton>
                 </MudCardActions>
             </MudCard>
 
         </EditForm>
     </MudOverlay>
-</MudPaper>
+</MudText>
 
 
 
@@ -60,10 +60,23 @@
 
     protected override async Task OnInitializedAsync()
     {
+        isVisible = false;
+        await LoadSettingsFromFile();
+    }
+
+    private async Task LoadSettingsFromFile()
+    {
         string json = await File.ReadAllTextAsync(nameConfigFile);
         settings = JsonSerializer.Deserialize<OraSettings>(json);
         conStringDBA = $"User Id={settings.ReplOraItems.User};Password={settings.ReplOraItems.Password};Data Source={settings.ReplOraItems.DataSource};";
-        isVisible = false;
+    }
+    private async Task SaveSettingsToFile()
+    {
+        settings.ReplOraString.OracleDbConnectionString = conStringDBA;
+        settings.ReplOraString.Scheme = settings.ReplOraItems.Scheme;
+        var options = new JsonSerializerOptions { WriteIndented = true };
+        string json = JsonSerializer.Serialize(settings, options);
+        await File.WriteAllTextAsync(nameConfigFile, json);
     }
     
     private async Task CheckDatabaseConnection()
@@ -101,18 +114,19 @@
     private async void TestButtonClick()
     {
         message = "";
+        conStringDBA = $"User Id={settings.ReplOraItems.User};Password={settings.ReplOraItems.Password};Data Source={settings.ReplOraItems.DataSource};";
         await CheckDatabaseConnection();
-        
     }
 
     private async void ApplyButtonClick()
     {
-        settings.ReplOraString.OracleDbConnectionString = conStringDBA;
-        settings.ReplOraString.Scheme = settings.ReplOraItems.Scheme;
-        var options = new JsonSerializerOptions { WriteIndented = true };
-        string json = JsonSerializer.Serialize(settings, options);
-        await File.WriteAllTextAsync(nameConfigFile, json);
-        //SaveSettingsToFile();
+        await SaveSettingsToFile();
+        ToggleOverlay(false);
+    }
+
+    private async void CancelButtonClick()
+    {
+        await LoadSettingsFromFile();
         ToggleOverlay(false);
     }
 
