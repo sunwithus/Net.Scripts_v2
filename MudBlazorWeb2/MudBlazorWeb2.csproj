@@ -7,6 +7,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Components\Pages\SprSpeechTables\**" />
+    <Content Remove="Components\Pages\SprSpeechTables\**" />
+    <EmbeddedResource Remove="Components\Pages\SprSpeechTables\**" />
+    <None Remove="Components\Pages\SprSpeechTables\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Remove="replicatorOperators.txt" />
   </ItemGroup>
 
@@ -27,10 +34,5 @@
     <PackageReference Include="MudBlazor" Version="7.*" />
 	<PackageReference Include="FFMpegCore" Version="5.1.0" />
 	  <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="23.5.0" />
-  </ItemGroup>
-
-
-  <ItemGroup>
-    <Folder Include="Components\Pages\SprSpeechTables\" />
   </ItemGroup>
 </Project>

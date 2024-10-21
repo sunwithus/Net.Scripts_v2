@@ -20,31 +20,37 @@
     <MudItem Style="display: flex;">
         <OracleChooseOperator operatorsFile="@operatorsFile" colorButton="@colorButton" OnOperatorSelected="HandleOperatorSelected" />
             <MudText> &nbsp; &nbsp; </MudText>
-        <OracleConnectionSettings nameConfigFile="@nameConfigFile" colorButton="@colorButton" oracleDbContext="_context" />
-        
+        <OracleConnectionSettings nameConfigFile="@nameConfigFile" colorButton="@colorButton" />
     </MudItem>
-
-    <LoadManyFilesFromFolder pathToSaveTempAudio="@pathToSaveTempAudio" onlyAudioType="@onlyAudioType" colorButton="@colorButton" />
 
     @if (operatorName != "")
     {
-        <LoadManyFilesFromFolder pathToSaveTempAudio="@pathToSaveTempAudio" onlyAudioType="@onlyAudioType" colorButton="@colorButton" />
+        <LoadManyFilesFromFolder pathToSaveTempAudio="@pathToSaveTempAudio" onlyAudioType="@true" colorButton="@colorButton" OnFilesLoaded="HandleFilesLoaded" />
     }
     else
     {
         <MudText Typo="Typo.h6" Color="Color.Secondary">Выберите значение "Оператор"</MudText>
     }
+
+    <br />
+
+    @if (isFilesLoaded)
+    {
+        <OracleAudioReplication nameConfigFile="@nameConfigFile" pathToSaveTempAudio="@pathToSaveTempAudio" sourceName="@operatorName" colorButton="@colorButton" />
+    }
+
+    
 </MudContainer>
 
 @code {
-    string nameConfigFile = Path.Combine(AppContext.BaseDirectory, "replicatorSettings.json");
-    string operatorsFile = Path.Combine(AppContext.BaseDirectory, "replicatorOperators.txt");
+    string nameConfigFile = Path.Combine(AppContext.BaseDirectory, "replicatorSettings.json"); //Настройки подключения к БД
+    string operatorsFile = Path.Combine(AppContext.BaseDirectory, "replicatorOperators.txt"); //Операторы
     MudBlazor.Color colorButton = Color.Secondary;
     private string pathToSaveTempAudio = @"C:\temp\3\";
-    private bool onlyAudioType = true;
+    //private bool onlyAudioType = true;
 
     private string operatorName = ""; //имя источник
-    //private OracleChooseOperator operatorChooser;
+    private bool isFilesLoaded = false;
 
     private void HandleOperatorSelected(string value)
     {
@@ -53,7 +59,13 @@
         StateHasChanged();
     }
 
-    private OracleDbContext _context;
+    private void HandleFilesLoaded()
+    {
+        isFilesLoaded = true;
+        Console.WriteLine($"HandleFilesLoaded: Файлы загружены");
+    }
+
+    //private OracleDbContext _context;
 
     protected override async Task OnInitializedAsync()
     {

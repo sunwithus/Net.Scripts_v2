@@ -1,6 +1,7 @@
 ﻿@*LoadManyFilesFromFolder.razor*@
 
-Выберите необходимые аудиофайлы (до @maxAllowedFiles шт., до @(maxFileSize / 1024 / 1024) Мб):<br />
+Выберите необходимые аудиофайлы@* (до @maxAllowedFiles шт., до @(maxFileSize / 1024 / 1024) Мб)*@:
+<br />
 <MudButton Variant="Variant.Outlined" Color="@colorButton" StartIcon="@Icons.Material.Filled.CloudUpload">
     <InputFile OnChange="LoadFiles" multiple />
 </MudButton>
@@ -41,6 +42,8 @@ else if (isVisible)
     public bool onlyAudioType { get; set; } = true;
     [Parameter]
     public MudBlazor.Color colorButton { get; set; }
+    [Parameter]
+    public EventCallback OnFilesLoaded { get; set; }
 
     private List<IBrowserFile> loadedFiles = new();
     private long maxFileSize = 1024 * 1024 * 512;
@@ -106,6 +109,7 @@ else if (isVisible)
 
         isLoading = false; // проценты выполнения
         isVisible = true; // таблица с файлами
+        await OnFilesLoaded.InvokeAsync(); // оповещение в родительском компоненте о завершении загрузки
 
     }
 

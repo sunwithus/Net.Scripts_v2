@@ -7,22 +7,38 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace MudBlazorWeb2.Components.EntityFrameworkCore
 {
+    // Определение контекста базы данных для работы с Entity Framework Core
     public class OracleDbContext : DbContext
     {
+        // Конструктор, принимающий параметры конфигурации контекста
         public OracleDbContext(DbContextOptions<OracleDbContext> options) : base(options)
         {
         }
-
+        // Определение DbSet - коллекций таблиц базы данных
         public DbSet<SPR_SPEECH_TABLE> SprSpeechTable { get; set; }
+        public DbSet<SPR_SP_DATA_1_TABLE> SprSpData1Table{ get; set; }
         public DbSet<SPR_SP_COMMENT_TABLE> SprSpCommentTable { get; set; }
-        public DbSet<SPR_SP_COMMENT_TABLE> SprSpData1Table { get; set; }
 
+        // Переопределение метода для настройки моделей (сопоставления сущностей с таблицами)
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            // Указываем, что сущность SPR_SPEECH_TABLE сопоставляется с таблицей "SPR_SPEECH_TABLE"
             modelBuilder.Entity<SPR_SPEECH_TABLE>().ToTable("SPR_SPEECH_TABLE");
-            modelBuilder.Entity<SPR_SP_COMMENT_TABLE>().ToTable("SPR_SP_COMMENT_TABLE");
-            modelBuilder.Entity<SPR_SP_DATA_1_TABLE>().ToTable("SPR_SP_DATA_1_TABLE");
 
+            // Настраиваем свойства сущности SPR_SP_DATA_1_TABLE для полей Fspeech и Rspeech, указывая их тип как BLOB
+            modelBuilder.Entity<SPR_SP_DATA_1_TABLE>()
+                .ToTable("SPR_SP_DATA_1_TABLE")  // Указываем имя таблицы
+                .Property(b => b.Fspeech)       // Указываем свойство Fspeech
+                .HasColumnType("BLOB");         // Устанавливаем тип данных для колонки как BLOB
+
+            modelBuilder.Entity<SPR_SP_DATA_1_TABLE>()
+                .Property(b => b.Rspeech)       // Указываем свойство Rspeech
+                .HasColumnType("BLOB");         // Устанавливаем тип данных для колонки как BLOB
+
+            // Сопоставляем сущность SPR_SP_COMMENT_TABLE с таблицей "SPR_SP_COMMENT_TABLE"
+            modelBuilder.Entity<SPR_SP_COMMENT_TABLE>().ToTable("SPR_SP_COMMENT_TABLE");
+
+            // Вызов базовой реализации метода
             base.OnModelCreating(modelBuilder);
         }
     }
@@ -32,13 +48,13 @@ namespace MudBlazorWeb2.Components.EntityFrameworkCore
     {
         [Key]
         [Column("S_INCKEY")]
-        public long Id { get; set; }
+        public long Id { get; set; } = 0;
 
         [Column("S_TYPE")] //1 - текстовое сообщение, 0 - сеанс связи
-        public int Type { get; set; } = -1;
+        public int Type { get; set; } = 0;
 
         [Column("S_PRELOOKED")] //Признак просмотра (0/1)
-        public int? Prelooked { get; set; }
+        public int? Prelooked { get; set; } = 0;
 
         [Column("S_DEVICEID")] //Имя устройства регистрации (MEDIUM_R)
         public string? Deviceid { get; set; }
@@ -53,10 +69,10 @@ namespace MudBlazorWeb2.Components.EntityFrameworkCore
         public int? Event { get; set; } = -1;
 
         [Column("S_EVENTCODE")] //Событие (оригинал) - GSM
-        public string? Eventcode { get; set; }
+        public string? Eventcode { get; set; } = "GSM";
 
         [Column("S_STANDARD")] //стандарт системы связи - GSM_ABIS
-        public string? Standard { get; set; }
+        public string? Standard { get; set; } = "GSM_ABIS";
 
         [Column("S_NETWORK")] //
         public string? Network { get; set; }
@@ -65,10 +81,10 @@ namespace MudBlazorWeb2.Components.EntityFrameworkCore
         public string? Sysnumber3 { get; set; }
 
         [Column("S_SOURCEID")] //??? Номер источника сообщения по базе отбора - 0
-        public int? Sourseid { get; set; }
+        public int? Sourceid { get; set; } = 0;
 
         [Column("S_STATUS")] //??? статус завершения сеанса - 0
-        public int? Status { get; set; }
+        public int? Status { get; set; } = 0;
 
         [Column("S_BELONG")] //приндалежность - язык оригинала
         public string? Belong { get; set; }
@@ -92,19 +108,7 @@ namespace MudBlazorWeb2.Components.EntityFrameworkCore
         public string? Usernumber { get; set; }
 
         [Column("S_CALLTYPE")] //тип вызова 0-входящий, 1-исходящий, 2-неизвестный...
-        public string? Calltype { get; set; }
-    }
-
-    [Table("SPR_SP_COMMENT_TABLE")]
-    public class SPR_SP_COMMENT_TABLE
-    {
-        [Key]
-        [Column("S_INCKEY")]
-        public long Id { get; set; }
-
-        [Column("S_COMMENT")]
-        public byte[]? Comment { get; set; }
-
+        public int? Calltype { get; set; } = 2;
     }
 
     [Table("SPR_SP_DATA_1_TABLE")]
@@ -112,10 +116,10 @@ namespace MudBlazorWeb2.Components.EntityFrameworkCore
     {
         [Key]
         [Column("S_INCKEY")]
-        public long Id { get; set; }
+        public long Id { get; set; } = 0;
 
         [Column("S_ORDER")] //Номер записи в сеансе (0 - по умолчанию) - обязательный параметр
-        public int? Order { get; set; } = 1;
+        public int? Order { get; set; } = 0;
         
         [Column("S_RECORDTYPE")]//Типзаписи (GSM/SMS Text/UCS2/…) - обязательный параметр
         public string? Recordtype { get; set; } = "PCMA"; //поиграться с кодировками
@@ -126,4 +130,29 @@ namespace MudBlazorWeb2.Components.EntityFrameworkCore
         [Column("S_RSPEECH")]
         public byte[]? Rspeech { get; set; }
     }
+
+    [Table("SPR_SP_COMMENT_TABLE")]
+    public class SPR_SP_COMMENT_TABLE
+    {
+        [Key]
+        [Column("S_INCKEY")]
+        public long Id { get; set; } = 0;
+
+        [Column("S_COMMENT")]
+        public byte[]? Comment { get; set; }
+
+    }
+    /*
+    
+    //Более компактная запись, когда название таблицы совпадает с названием класса
+    //и название поля совпадает с названием свойства
+    public class SPR_SP_COMMENT_TABLE  // Без [Table("SPR_SP_COMMENT_TABLE")]
+    {
+        [Key] // Указывает, что это первичный ключ
+        [Column("S_INCKEY")] // Указывает, что свойство связано с колонкой S_INCKEY
+        public long Id { get; set; } = 0; // Поле S_INCKEY
+        public byte[]? S_COMMENT { get; set; } // Поле S_COMMENT, без [Column("S_COMMENT")]
+    }
+
+    */
 }
