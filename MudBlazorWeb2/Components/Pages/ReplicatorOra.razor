@@ -5,13 +5,14 @@
 
 @using Microsoft.EntityFrameworkCore
 @using System.Text.Json
+@using System.ComponentModel
 
 @using MudBlazorWeb2.Components.EntityFrameworkCore
 @using MudBlazorWeb2.Components.Modules.Replicator
 @inject IDbContextFactory<OracleDbContext> DbFactory
 @inject IConfiguration Configuration 
 
-<PageTitle>💬 Репликатор Oracle 11.2 🖍</PageTitle>
+<PageTitle>🎧 Replicator Oracle 🖥️</PageTitle>
 
 <MudContainer>
     <MudText Typo="Typo.h5">Аудио в Oracle 🎧 => 🖥️</MudText>
@@ -25,8 +26,9 @@
 
     @if (operatorName != "")
     {
-        <LoadManyFilesFromFolder pathToSaveTempAudio="@pathToSaveTempAudio" onlyAudioType="@true" colorButton="@colorButton" OnFilesLoaded="HandleFilesLoaded" />
+        <LoadManyFilesFromFolder pathToSaveTempAudio="@pathToSaveTempAudio" onlyAudioType="@true" colorButton="@colorButton" OnFinishLoading="HandleFilesLoaded" />
     }
+
     else
     {
         <MudText Typo="Typo.h6" Color="Color.Secondary">Выберите значение "Оператор"</MudText>
@@ -36,21 +38,39 @@
 
     @if (isFilesLoaded)
     {
-        <OracleAudioReplication nameConfigFile="@nameConfigFile" pathToSaveTempAudio="@pathToSaveTempAudio" sourceName="@operatorName" colorButton="@colorButton" />
+        <OracleAudioReplication nameConfigFile="@nameConfigFile" pathToSaveTempAudio="@pathToSaveTempAudio" sourceName="@operatorName" colorButton="@colorButton" OnReplicationProcessing="HandleReplicationIsProcessing" />
     }
 
     
 </MudContainer>
 
+
+<div style="@(OraSingleton.Instance.IsStoped ? "background-color: transparent; opacity: 1; z-index: auto; position: relative;" : "background-color: bisque; opacity: 0.5; z-index: 9999; position: absolute;")">
+    @if (!OraSingleton.Instance.IsStoped)
+    {
+        <div style="margin-left:100px; margin-top:10px;">Идёт выполнение, подождите... Выполнено: @OraSingleton.Instance.ProgressExec %.</div>
+    }
+</div>
+@OraSingleton.Instance.IsStoped
+@OraSingleton.Instance.ProgressExec
+
+
 @code {
+
     string nameConfigFile = Path.Combine(AppContext.BaseDirectory, "replicatorSettings.json"); //Настройки подключения к БД
     string operatorsFile = Path.Combine(AppContext.BaseDirectory, "replicatorOperators.txt"); //Операторы
     MudBlazor.Color colorButton = Color.Secondary;
-    private string pathToSaveTempAudio = @"C:\temp\3\";
+    private string pathToSaveTempAudio = "";
     //private bool onlyAudioType = true;
 
     private string operatorName = ""; //имя источник
     private bool isFilesLoaded = false;
+
+    protected override void OnInitialized()
+    {
+        string uniqueTempFolder = Guid.NewGuid().ToString() + @"\";
+        pathToSaveTempAudio = @"C:\temp\3\" + uniqueTempFolder;
+    }
 
     private void HandleOperatorSelected(string value)
     {
@@ -59,22 +79,93 @@
         StateHasChanged();
     }
 
-    private void HandleFilesLoaded()
+    private void HandleFilesLoaded(bool value)
     {
-        isFilesLoaded = true;
-        Console.WriteLine($"HandleFilesLoaded: Файлы загружены");
+        isFilesLoaded = value;
+        Console.WriteLine($"HandleFilesLoaded: Файлы загружены: {value}");
     }
 
-    //private OracleDbContext _context;
+    private void HandleReplicationIsProcessing(bool value)
+    {
+        OraSingleton.Instance.IsStoped = value;
+        //OraSingleton.Instance.ProgressExec = args.PercentsProgress;
+    }
+
+    public class MembershipEventArgsRepl
+    {
+        public bool IsFinished { get; set; }
+        public float PercentsProgress { get; set; }
+    }
+
+    private void Singleton_PropertyChanged(object sender, PropertyChangedEventArgs e)
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void ChangeSingletonValuesToDefault()
+    {
+        OraSingleton.Instance.IsStoped = true;
+        OraSingleton.Instance.ProgressExec = 0;
+    }
 
     protected override async Task OnInitializedAsync()
     {
-        //_context = DbFactory.CreateDbContext(); // Pass the schema as a single string
-        //Установка схемы динамически
-        //_context.Database.ExecuteSqlRaw($"ALTER SESSION SET CURRENT_SCHEMA = test");
-        /*var entities1 = await _context.SprSpeechTable.ToListAsync();*/
-        //await _context.SaveChangesAsync();
-        //_context.Dispose();
-    }   
+        //await LoadSettingsFromFile();
+        await Task.Delay(1);
+        OraSingleton.Instance.PropertyChanged += Singleton_PropertyChanged;
+    }
 
+    public class OraSingleton
+    {
+        private static OraSingleton instance;
+        private static readonly object padlock = new object();
+
+        private OraSingleton()
+        {
+        }
+
+        public static OraSingleton Instance
+        {
+            get
+            {
+                lock (padlock)
+                {
+                    if (instance == null)
+                    {
+                        instance = new OraSingleton();
+                    }
+                    return instance;
+                }
+            }
+        }
+
+        private bool isStoped = true;
+        public bool IsStoped
+        {
+            get { return isStoped; }
+            set
+            {
+                isStoped = value;
+                OnPropertyChanged(nameof(IsStoped));
+            }
+        }
+
+        private float progressExec = 0;
+        public float ProgressExec
+        {
+            get { return progressExec; }
+            set
+            {
+                progressExec = value;
+                OnPropertyChanged(nameof(ProgressExec));
+            }
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        protected virtual void OnPropertyChanged(string propertyName)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+    }
 }

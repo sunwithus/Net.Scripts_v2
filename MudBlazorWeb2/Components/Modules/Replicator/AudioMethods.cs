@@ -31,20 +31,16 @@ namespace MudBlazorWeb2.Components.Modules.Replicator
                     int calltype = (parts[3] == "In") ? 0 : (parts[3] == "Out") ? 1 : 2;
                     return (timestamp, "", parts[0], parts[1], calltype);
                 }
-
                 else
                 {
                     throw new InvalidOperationException("Invalid file name format.");
                 }
-
             }
             catch
             {
                 Console.WriteLine("Не удалось получить данные из названия файла: " + fileNameNoExt);
-                //message = "Не удалось получить данные из названия файла: " + fileNameNoExt + message;
                 return (DateTime.Now, "", "", "", 2);
             }
-
             throw new InvalidOperationException("Unsupported file extension: " + fileExt);
         }
 

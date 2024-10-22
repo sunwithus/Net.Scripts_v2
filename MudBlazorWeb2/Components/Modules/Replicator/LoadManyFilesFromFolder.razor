@@ -10,7 +10,7 @@
 {
     <p>Progress: @string.Format("{0:P0}", progressPercent)</p>
 }
-else if (isVisible)
+else if (isVisibleFilesList)
 {
     <MudSimpleTable Hover="true" Dense="true" FixedHeader="true" Style="height:150px;">
         <thead>
@@ -43,21 +43,29 @@ else if (isVisible)
     [Parameter]
     public MudBlazor.Color colorButton { get; set; }
     [Parameter]
-    public EventCallback OnFilesLoaded { get; set; }
+    public EventCallback<bool> OnFinishLoading { get; set; }
+
+    //Обработка выбора файлов для загрузки
+    private async Task OnChangeFilesToLoad(bool value)
+    {
+        await OnFinishLoading.InvokeAsync(value);
+    }
 
     private List<IBrowserFile> loadedFiles = new();
     private long maxFileSize = 1024 * 1024 * 512;
     private int maxAllowedFiles = 10000;
     private bool isLoading;
-    private bool isVisible = false;
+    private bool isVisibleFilesList = false;
     private decimal progressPercent;
 
     private int filesPerBatch = 10; // Количество файлов на одну партию
 
     private async Task LoadFiles(InputFileChangeEventArgs e)
     {
+        await OnChangeFilesToLoad(false);
+
         isLoading = true;
-        isVisible = false;
+        isVisibleFilesList = false;
         loadedFiles.Clear();
 
         // Предварительная очистка директории
@@ -108,8 +116,8 @@ else if (isVisible)
         }
 
         isLoading = false; // проценты выполнения
-        isVisible = true; // таблица с файлами
-        await OnFilesLoaded.InvokeAsync(); // оповещение в родительском компоненте о завершении загрузки
+        isVisibleFilesList = true; // таблица с файлами
+        await OnChangeFilesToLoad(true); // оповещение в родительском компоненте о завершении загрузки
 
     }
 
@@ -117,7 +125,10 @@ else if (isVisible)
     {
         try
         {
-            Directory.Delete(folder, true);
+            if (Directory.Exists(folder))
+            {
+                Directory.Delete(folder, true);
+            }
             await Task.Delay(1);
             Directory.CreateDirectory(folder);
         }

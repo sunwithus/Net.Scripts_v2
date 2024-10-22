@@ -1,8 +1,5 @@
 ﻿@*OracleAudioReplication.razor*@
 
-@using Oracle.ManagedDataAccess.Client
-@using Oracle.ManagedDataAccess.Types
-
 @using Microsoft.EntityFrameworkCore
 @using FFMpegCore
 @using System.Diagnostics
@@ -12,25 +9,37 @@
 @using MudBlazorWeb2.Components.Modules.Replicator
 @using MudBlazorWeb2.Components.EntityFrameworkCore
 
-
-
-<MudButton OnClick="@(e => StartReplication())" ButtonType="ButtonType.Submit" Variant="Variant.Outlined" Color="@colorButton">Пуск!</MudButton>
-
-<MudSimpleTable Hover="true" Dense="true" FixedHeader="true" Style="height:200px;">
-    <thead>
-        <tr>
-            <th>Прогресс:</th>
-            <th>Сообщение:</th>
-        </tr>
-    </thead>
-    <tbody>
+    <MudSimpleTable Hover="true" Dense="true" FixedHeader="true" Style="height:200px;">
+        <colgroup>
+            <col span="1" style="width: 60%;">
+            <col span="1" style="width: 40%;">
+        </colgroup>
+        <thead>
             <tr>
-                <td>@progress</td>
-                <td>@message</td>
+                <th>
+                <MudText Style="display: flex; flex-direction: row; flex-basis:250px; justify-content: space-between; align-items=center;">
+                        <MudButton  OnClick="@(e => StartReplication())" ButtonType="ButtonType.Submit" Variant="Variant.Outlined" Color="@colorButton">Пуск!</MudButton>
+                        <MudText>@if (Scheme != "") { <MudText>Схема БД => @Scheme.ToUpper()</MudText> }</MudText>
+                        @if (progressCircular)
+                        {
+                            <MudProgressCircular Color="@colorButton" Indeterminate="true" Size="Size.Small" />
+                        }
+                    else
+                    {
+                        <MudText>&nbsp;</MudText>
+                    }
+                    </MudText>
+                </th>
+                <th>@progress</th>
             </tr>
-    </tbody>
-</MudSimpleTable>
-
+        </thead>
+        @if (!string.IsNullOrEmpty(message))
+        {
+            <tbody>
+                @((MarkupString)message)
+            </tbody>
+        }
+    </MudSimpleTable>
 
 @code {
     [Parameter]
@@ -41,8 +50,20 @@
     public string sourceName { get; set; }
     [Parameter]
     public MudBlazor.Color colorButton { get; set; }
-    //[Parameter]
-    //public OracleDbContext DbContext { get; set; }
+    [Parameter]
+    public EventCallback<bool> OnReplicationProcessing { get; set; }
+
+    public class MembershipEventArgsRepl
+    {
+        public bool IsFinished { get; set; }
+        public float PercentsProgress { get; set; }
+    }
+    //Обработка начала/окончания процесса реплакации
+    private async Task IsReplicationFinished(bool value, float percents)
+    {
+        var args = new MembershipEventArgsRepl { IsFinished = value, PercentsProgress = percents };
+        await OnReplicationProcessing.InvokeAsync(value);
+    }
 
     OraSettings settings = new OraSettings();
 
@@ -51,16 +72,11 @@
 
     private string ffmpegExePath = @"C:\dotnet\ffmpeg\ffmpeg.exe";
     private int currentProgress = 0;
-    private int durationOfWav = 0;
     private string message = "";
     private string progress = "";
+    private bool progressCircular = false;
 
     Operations operations = new Operations();
-
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadSettingsFromFile();
-    }
 
     private async Task LoadSettingsFromFile()
     {
@@ -75,12 +91,26 @@
 
     private async Task StartReplication()
     {
+        await IsReplicationFinished (false, 0); // передача родительскому эл-ту о начале
+        progressCircular = true;
         await LoadSettingsFromFile();
 
         message = "";
         progress = "";
 
-        string[] files = Directory.GetFiles(pathToSaveTempAudio);
+        string[] files;
+        if (Directory.Exists(pathToSaveTempAudio))
+        {
+            files = Directory.GetFiles(pathToSaveTempAudio);
+        }
+        else
+        {
+            progressCircular = false;
+            message = $"<tr><td>Файлы в директории отсутствуют </td><td></td ></tr >";
+            Console.WriteLine(message);
+            await IsReplicationFinished(true, 0); // передача родительскому эл-ту об окончании
+            return;
+        }
 
         try
         {
@@ -88,12 +118,7 @@
             using (var context = new OracleDbContext(new DbContextOptionsBuilder<OracleDbContext>().UseOracle(conStringDBA).Options))
             {
                 await context.Database.OpenConnectionAsync();
-                if (await context.Database.CanConnectAsync())
-                    message += "EFCore: Соединение с Oracle установлено!\n";
-                Console.WriteLine("EFCore: Соединение с Oracle установлено!");
-
                 await context.Database.ExecuteSqlRawAsync($"ALTER SESSION SET CURRENT_SCHEMA = {Scheme}");
-                message += $"Выбранная схема: {Scheme} ";
                 Console.WriteLine($"Выбранная схема: {Scheme}");
 
                 int filesCount = files.Count();
@@ -102,102 +127,141 @@
                 foreach (var filePath in files)
                 {
                     currentFileNum++;
-                    progress = currentFileNum + " / " + filesCount;
-                    try
-                    {
-                        long maxKey = await context.SprSpeechTable.MaxAsync(x => x.Id);
-                        Console.WriteLine("maxKey: " + maxKey);
+                    progress = $"{currentFileNum} / {filesCount}";
+                    await IsReplicationFinished(false, (float)currentFileNum / (float)filesCount * 100);
 
-                        var fileData = new { Timestamp = DateTime.Now, IMEI = "", Caller = "", Talker = "", Calltype = 2 };
-                        //var fileData = AudioMethods.ParseFileName(filePath);
-
-                        await RunFFmpeg(filePath);
-
-                        byte[]? fileDataLeft = File.Exists(filePath + "_left.wav") ? File.ReadAllBytes(filePath + "_left.wav") : null;
-                        //OracleDbType oracleDbType = OracleDbType.Blob;
-                        
-                        if (fileDataLeft == null) fileDataLeft = File.Exists(filePath + "_mono.wav") ? File.ReadAllBytes(filePath + "_mono.wav") : null;
-                        byte[]? fileDataRight = File.Exists(filePath + "_right.wav") ? File.ReadAllBytes(filePath + "_right.wav") : null;
-
-                        if (fileDataLeft != null)
-                        {
-                            var speechTableEntry = new SPR_SPEECH_TABLE
-                                {
-                                    Id = maxKey + 1,
-                                    Type = 0,
-                                    Prelooked = 0,
-                                    Deviceid = "MEDIUM_R",
-                                    Datetime = fileData.Timestamp,
-                                    Duration = string.Format("+00 {0:D2}:{1:D2}:{2:D2}.000000", durationOfWav / 3600, (durationOfWav % 3600) / 60, durationOfWav % 60),
-                                    Sysnumber3 = fileData.IMEI,
-                                    //Event = 0,
-                                    //Eventcode = "GSM",
-                                    //Standard = "GSM_ABIS",
-                                    //Network = null,
-                                    //Sourceid = 0,
-                                    //Status = 0,
-                                    //Belong = null,
-                                    //Dchannel = 2,
-                                    //Rchannel = 2,
-                                    Sourcename = sourceName,
-                                    Talker = fileData.Talker,
-                                    Usernumber = fileData.Caller,
-                                    Calltype = fileData.Calltype
-                                };
-
-                            var data1TableEntry = new SPR_SP_DATA_1_TABLE
-                                {
-                                    Id = maxKey + 1,
-                                    //Order = 1,
-                                    //Recordtype = "PCMA",
-                                    Fspeech = fileDataLeft, //тип данных OracleDbType.Blob, в OracleDbContext.cs (также для Rspeech)
-                                    Rspeech = fileDataRight //modelBuilder.Entity<SPR_SP_DATA_1_TABLE>().ToTable("SPR_SP_DATA_1_TABLE").Property(b => b.Fspeech).HasColumnType("BLOB")
-
-                                };
-
-                            context.SprSpeechTable.Add(speechTableEntry);
-                            context.SprSpData1Table.Add(data1TableEntry);
-
-                            await context.SaveChangesAsync();                        
-                             
-                            message = "\n" + filePath + " - записан в БД." + message;
-                        }
-                    }
-                    catch (DbUpdateException e)
-                    {
-                        message = "\n" + filePath + " - ошибка записи. " + e.Message + "\nInner Exception: " + e.InnerException?.Message + message;
-                        foreach (var entry in e.Entries)
-                        {
-                            entry.State = EntityState.Detached;
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        message = "\n" + filePath + " - ошибка записи. " + ex.Message + message;
-                    }
-
-                    Console.WriteLine(DateTime.Now);
+                    await ProcessFile(context, filePath);
                 }
 
+                Console.WriteLine(DateTime.Now);
                 await context.Database.CloseConnectionAsync();
-                message += "EFCore: Соединение с Oracle закрыто!\n";
-                message += "Время выполнения: " + (DateTime.Now - DateTime.Now).ToString() + "\n";
             }
         }
         catch (Exception ex)
         {
             Console.WriteLine("Error connecting or operating to Oracle: " + ex.Message);
-            message = "Ошибка при выполнении операции с базой данных Oracle: " + ex.Message + "\n" + message;
+            message = $"<tr><td>Ошибка при выполнении операции с базой данных Oracle: </td><td> ⛔ + " + ex.Message + "</td ></tr >";
         }
-        // очистка директории после всех операций
-        operations.clearFolder(pathToSaveTempAudio);
+        finally
+        {
+            operations.DeleteFolder(pathToSaveTempAudio);
+            progressCircular = false;
+            await IsReplicationFinished(true, 0); // передача родительскому эл-ту об окончании
+        }
+
+
+    }
+
+    private async Task ProcessFile(OracleDbContext context, string filePath)
+    {
+        try
+        {
+            long maxKey = await context.SprSpeechTable.MaxAsync(x => x.Id);
+            Console.WriteLine("maxKey: " + maxKey);
+
+            var fileData = AudioMethods.ParseFileName(filePath); //если не удалось, возвращает {DateTime.Now, "", "", "", 2}
+
+            ///////////////////////////////////////////////////////////////////
+            await RunFFmpeg(filePath);
+
+            var mediaInfo = await FFProbe.AnalyseAsync(filePath);
+            int durationOfWav = (int)(mediaInfo.PrimaryAudioStream?.Duration.TotalSeconds ?? 0);
+            /*
+            string ffmpegParams;
+
+            if (mediaInfo.PrimaryAudioStream?.Channels >= 2)
+            {
+                ffmpegParams = $"-filter_complex \"[0:0]pan=1|c0=c0[left];[0:0]pan=1|c0=c1[right]\" ";
+                ffmpegParams += $"-map \"[left]\" -c:a pcm_alaw -b:a 128k -ar 8000 {filePath}_left.wav ";
+                ffmpegParams += $"-map \"[right]\" -c:a pcm_alaw -b:a 128k -ar 8000 {filePath}_right.wav ";
+            }
+            else
+            {
+                ffmpegParams = $"-codec:a pcm_alaw -b:a 128k -ac 1 -ar 8000 {filePath}_mono.wav";
+            }
+
+            var ffmpeg = FFMpegArguments.FromFileInput(filePath);
+            await ffmpeg
+                .OutputToFile(Path.GetDirectoryName(filePath), true, options => options
+                .ForceFormat("wav")
+                .WithCustomArgument(ffmpegParams)
+                )
+                .ProcessAsynchronously();
+            */
+            ///////////////////////////////////////////////////////////////////
+
+
+            byte[]? fileDataLeft = File.Exists(filePath + "_left.wav") ? File.ReadAllBytes(filePath + "_left.wav") : null;
+            //OracleDbType oracleDbType = OracleDbType.Blob;
+            if (fileDataLeft == null) fileDataLeft = File.Exists(filePath + "_mono.wav") ? File.ReadAllBytes(filePath + "_mono.wav") : null;
+            
+            byte[]? fileDataRight = File.Exists(filePath + "_right.wav") ? File.ReadAllBytes(filePath + "_right.wav") : null;
+
+            if (fileDataLeft != null)
+            {
+                var speechTableEntry = new SPR_SPEECH_TABLE
+                    {
+                        Id = maxKey + 1,
+                        Type = 0,
+                        Prelooked = 0,
+                        Deviceid = "MEDIUM_R",
+                        Datetime = fileData.Timestamp,
+                        Duration = string.Format("+00 {0:D2}:{1:D2}:{2:D2}.000000", durationOfWav / 3600, (durationOfWav % 3600) / 60, durationOfWav % 60),
+                        Sysnumber3 = fileData.IMEI,
+                        //Event = 0,
+                        //Eventcode = "GSM",
+                        //Standard = "GSM_ABIS",
+                        //Network = null,
+                        //Sourceid = 0,
+                        //Status = 0,
+                        //Belong = null,
+                        //Dchannel = 2,
+                        //Rchannel = 2,
+                        //Notice = "Примечание",
+                        Sourcename = sourceName,
+                        Talker = fileData.Talker,
+                        Usernumber = fileData.Caller,
+                        Calltype = fileData.Calltype
+                    };
+
+                var data1TableEntry = new SPR_SP_DATA_1_TABLE
+                    {
+                        Id = maxKey + 1,
+                        //Order = 1,
+                        //Recordtype = "PCMA",
+                        Fspeech = fileDataLeft, //тип данных OracleDbType.Blob, в OracleDbContext.cs (также для Rspeech)
+                        Rspeech = fileDataRight //modelBuilder.Entity<SPR_SP_DATA_1_TABLE>().ToTable("SPR_SP_DATA_1_TABLE").Property(b => b.Fspeech).HasColumnType("BLOB")
+
+                    };
+
+                context.SprSpeechTable.Add(speechTableEntry);
+                context.SprSpData1Table.Add(data1TableEntry);
+
+                await context.SaveChangesAsync();
+
+                if (fileData.IMEI == "" && fileData.Caller == "" && fileData.Talker == "")
+                {
+                    message = $"<tr><td>{filePath}</td><td> ✔️ Записан! Идентификаторы не найдены! </td ></tr >" + message;
+                }
+                else
+                {
+                    message = $"<tr><td>{filePath}</td><td> ✅ Успешно записан! </td ></tr >" + message;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            message = $"<tr><td>{filePath}</td><td> ❌ + " + ex.Message + "</td ></tr >" + message;
+        }
     }
 
     // т.е. в папке оригинал + 2 (или 1) + 1
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////////
     private async Task RunFFmpeg(string inputFileName)
     {
         var mediaInfo = await FFProbe.AnalyseAsync(inputFileName);
-        durationOfWav = Convert.ToInt32(mediaInfo.PrimaryAudioStream?.Duration.TotalSeconds);
+        int durationOfWav = Convert.ToInt32(mediaInfo.PrimaryAudioStream?.Duration.TotalSeconds);
         Console.WriteLine("durationOfWav:" + durationOfWav);
 
         string ffmpegCommandParams;
@@ -212,11 +276,11 @@
         {
             ffmpegCommandParams = $"-i {inputFileName} -codec:a pcm_alaw -b:a 128k -ac 1 -ar 8000 {inputFileName}_mono.wav";
         }
-        await RunCmdCommand(ffmpegExePath, ffmpegCommandParams);
+        await RunCmdCommand(ffmpegExePath, ffmpegCommandParams, durationOfWav);
 
     }
 
-    private async Task RunCmdCommand(string executablePath, string command)
+    private async Task RunCmdCommand(string executablePath, string command, int durationOfWav)
     {
         ProcessStartInfo startInfo = new ProcessStartInfo
             {
@@ -242,7 +306,7 @@
                         {
                             string time = e.Data.Substring(indexOfTimePosition + beforeTime.Length, 8);
                             TimeSpan timeSpan = TimeSpan.Parse(time);
-                            currentProgress = (int)(100 * timeSpan.TotalSeconds / durationOfWav);
+                            currentProgress = (int)(100 * timeSpan.TotalSeconds /*/ durationOfWav*/);
                             currentProgress = currentProgress > 100 ? 99 : currentProgress;
                             Console.WriteLine($"Прогресс: {currentProgress}");
                         }
@@ -267,5 +331,7 @@
             await Task.Run(() => process.WaitForExit());
         }
     }
+
+ 
 
 }

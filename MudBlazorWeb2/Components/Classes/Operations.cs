@@ -4,7 +4,7 @@ namespace MudBlazorWeb2.Components.Classes
 {
     public class Operations
     {
-        public void clearFolder(string FolderName)
+        public void ClearFolder(string FolderName)
         {
             DirectoryInfo dir = new DirectoryInfo(FolderName);
 
@@ -15,21 +15,18 @@ namespace MudBlazorWeb2.Components.Classes
 
             foreach (DirectoryInfo di in dir.GetDirectories())
             {
-                clearFolder(di.FullName);
+                ClearFolder(di.FullName);
                 di.Delete();
             }
         }
 
-        public string GetValueFromLine(string[] lines, string key)
+        public void DeleteFolder(string FolderName)
         {
-            foreach (var line in lines)
+            DirectoryInfo dir = new DirectoryInfo(FolderName);
+            if (dir.Exists)
             {
-                if (line.StartsWith($"{key}="))
-                {
-                    return line.Replace($"{key}=", "");
-                }
+                dir.Delete(true);
             }
-            return "";
         }
 
         public int GetLineIndex (string[] lines, string findLineIndex)
