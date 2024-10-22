@@ -18,41 +18,36 @@
     <MudText Typo="Typo.h5">Аудио в Oracle 🎧 => 🖥️</MudText>
     <MudDivider />
     <br />
+
+    <MudOverlay Visible="!OraSingleton.Instance.IsStoped" LightBackground="true" Absolute="true">
+        <MudText>Процесс занят.</MudText>
+        <MudText>Идёт выполнение, подождите... @OraSingleton.Instance.ProgressExec %</MudText>
+    </MudOverlay>
+
     <MudItem Style="display: flex;">
         <OracleChooseOperator operatorsFile="@operatorsFile" colorButton="@colorButton" OnOperatorSelected="HandleOperatorSelected" />
-            <MudText> &nbsp; &nbsp; </MudText>
+        <MudText> &nbsp; &nbsp; </MudText>
         <OracleConnectionSettings nameConfigFile="@nameConfigFile" colorButton="@colorButton" />
     </MudItem>
 
-    @if (operatorName != "")
+    @if (!string.IsNullOrEmpty(operatorName))
     {
         <LoadManyFilesFromFolder pathToSaveTempAudio="@pathToSaveTempAudio" onlyAudioType="@true" colorButton="@colorButton" OnFinishLoading="HandleFilesLoaded" />
     }
 
     else
     {
-        <MudText Typo="Typo.h6" Color="Color.Secondary">Выберите значение "Оператор"</MudText>
+        <MudText Typo="Typo.h6" Color="@colorButton">Выберите значение "Оператор"</MudText>
     }
 
     <br />
 
     @if (isFilesLoaded)
     {
-        <OracleAudioReplication nameConfigFile="@nameConfigFile" pathToSaveTempAudio="@pathToSaveTempAudio" sourceName="@operatorName" colorButton="@colorButton" OnReplicationProcessing="HandleReplicationIsProcessing" />
+        <OracleAudioReplication nameConfigFile="@nameConfigFile" pathToSaveTempAudio="@pathToSaveTempAudio" sourceName="@operatorName" colorButton="@colorButton" IsReplicationFinished="HandleReplicationIsFinished" OnPercentsProgress="HandlePercentsProgress" />
     }
 
-    
-</MudContainer>
-
-
-<div style="@(OraSingleton.Instance.IsStoped ? "background-color: transparent; opacity: 1; z-index: auto; position: relative;" : "background-color: bisque; opacity: 0.5; z-index: 9999; position: absolute;")">
-    @if (!OraSingleton.Instance.IsStoped)
-    {
-        <div style="margin-left:100px; margin-top:10px;">Идёт выполнение, подождите... Выполнено: @OraSingleton.Instance.ProgressExec %.</div>
-    }
-</div>
-@OraSingleton.Instance.IsStoped
-@OraSingleton.Instance.ProgressExec
+ </MudContainer>
 
 
 @code {
@@ -61,15 +56,14 @@
     string operatorsFile = Path.Combine(AppContext.BaseDirectory, "replicatorOperators.txt"); //Операторы
     MudBlazor.Color colorButton = Color.Secondary;
     private string pathToSaveTempAudio = "";
-    //private bool onlyAudioType = true;
-
     private string operatorName = ""; //имя источник
     private bool isFilesLoaded = false;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        string uniqueTempFolder = Guid.NewGuid().ToString() + @"\";
-        pathToSaveTempAudio = @"C:\temp\3\" + uniqueTempFolder;
+        pathToSaveTempAudio = $"C:\\temp\\3\\{Guid.NewGuid()}\\";
+        await Task.Delay(1);
+        OraSingleton.Instance.PropertyChanged += Singleton_PropertyChanged;
     }
 
     private void HandleOperatorSelected(string value)
@@ -85,16 +79,14 @@
         Console.WriteLine($"HandleFilesLoaded: Файлы загружены: {value}");
     }
 
-    private void HandleReplicationIsProcessing(bool value)
+    private void HandleReplicationIsFinished (bool value)
     {
         OraSingleton.Instance.IsStoped = value;
-        //OraSingleton.Instance.ProgressExec = args.PercentsProgress;
     }
 
-    public class MembershipEventArgsRepl
+    private void HandlePercentsProgress(float PercentsProgress)
     {
-        public bool IsFinished { get; set; }
-        public float PercentsProgress { get; set; }
+        OraSingleton.Instance.ProgressExec = (int)PercentsProgress;
     }
 
     private void Singleton_PropertyChanged(object sender, PropertyChangedEventArgs e)
@@ -102,70 +94,4 @@
         InvokeAsync(StateHasChanged);
     }
 
-    public void ChangeSingletonValuesToDefault()
-    {
-        OraSingleton.Instance.IsStoped = true;
-        OraSingleton.Instance.ProgressExec = 0;
-    }
-
-    protected override async Task OnInitializedAsync()
-    {
-        //await LoadSettingsFromFile();
-        await Task.Delay(1);
-        OraSingleton.Instance.PropertyChanged += Singleton_PropertyChanged;
-    }
-
-    public class OraSingleton
-    {
-        private static OraSingleton instance;
-        private static readonly object padlock = new object();
-
-        private OraSingleton()
-        {
-        }
-
-        public static OraSingleton Instance
-        {
-            get
-            {
-                lock (padlock)
-                {
-                    if (instance == null)
-                    {
-                        instance = new OraSingleton();
-                    }
-                    return instance;
-                }
-            }
-        }
-
-        private bool isStoped = true;
-        public bool IsStoped
-        {
-            get { return isStoped; }
-            set
-            {
-                isStoped = value;
-                OnPropertyChanged(nameof(IsStoped));
-            }
-        }
-
-        private float progressExec = 0;
-        public float ProgressExec
-        {
-            get { return progressExec; }
-            set
-            {
-                progressExec = value;
-                OnPropertyChanged(nameof(ProgressExec));
-            }
-        }
-
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        protected virtual void OnPropertyChanged(string propertyName)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
-    }
 }

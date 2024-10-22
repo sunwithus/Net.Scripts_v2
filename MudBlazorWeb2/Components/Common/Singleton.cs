@@ -1,4 +1,6 @@
-﻿using System.ComponentModel;
+﻿//Singleton.cs
+
+using System.ComponentModel;
 
 namespace MudBlazorWeb2.Components.Common
 {

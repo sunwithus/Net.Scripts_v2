@@ -1,0 +1,59 @@
+﻿@page "/word-document"
+@rendermode InteractiveServer
+
+
+@using MudBlazorWeb2.Components.EntityFrameworkCore
+@inject IDbContextFactory<OracleDbContext> DbFactory
+
+@*
+@using Spire.Doc
+@using Spire.Doc.Documents
+@using Spire.Doc.Fields
+*@
+@using System
+@using System.Collections.Generic
+@using System.Drawing
+@using Microsoft.EntityFrameworkCore
+@using System.Text.Json
+@using Aspire.Oracle.EntityFrameworkCore
+@using Oracle.ManagedDataAccess.Client
+
+<PageTitle>💬 Оформление перехвата Word.doc 🖍</PageTitle>
+
+<div>будет реализованно позже...</div>
+https://spark.ru/user/158166/blog/130511/kak-ispolzovat-c-dlya-sozdaniya-dokumentov-word-na-osnove-shablona
+
+@code {
+
+    private async Task CheckDatabaseConnection()
+    {
+        try
+        {
+            using (var context = new OracleDbContext(new DbContextOptionsBuilder<OracleDbContext>().UseOracle(conStringDBA).Options))
+            {
+                await context.Database.OpenConnectionAsync();
+                if (await context.Database.CanConnectAsync())
+                    Console.WriteLine("Соединение с Oracle установлено!");
+
+                await context.Database.ExecuteSqlRawAsync($"ALTER SESSION SET CURRENT_SCHEMA = {settings.ReplOraItems.Scheme}");
+                long? maxKey = await context.SprSpeechTable.MaxAsync(x => x.Id);
+                if (maxKey > 0) Console.WriteLine("Схема: ");
+
+                await context.Database.CloseConnectionAsync();
+            }
+        }
+        catch (OracleException ex)
+        {
+            Console.WriteLine("Oracle Error: " + ex.Message);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("General Error: " + ex.Message);
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+
+}

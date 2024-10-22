@@ -48,10 +48,10 @@ namespace MudBlazorWeb2.Components.EntityFrameworkCore
     {
         [Key]
         [Column("S_INCKEY")]
-        public long Id { get; set; } = 0;
+        public long? Id { get; set; } = 0;
 
         [Column("S_TYPE")] //1 - текстовое сообщение, 0 - сеанс связи
-        public int Type { get; set; } = 0;
+        public int? Type { get; set; } = 0;
 
         [Column("S_PRELOOKED")] //Признак просмотра (0/1)
         public int? Prelooked { get; set; } = 0;
@@ -116,7 +116,7 @@ namespace MudBlazorWeb2.Components.EntityFrameworkCore
     {
         [Key]
         [Column("S_INCKEY")]
-        public long Id { get; set; } = 0;
+        public long? Id { get; set; } = 0;
 
         [Column("S_ORDER")] //Номер записи в сеансе (0 - по умолчанию) - обязательный параметр
         public int? Order { get; set; } = 0;
@@ -136,7 +136,7 @@ namespace MudBlazorWeb2.Components.EntityFrameworkCore
     {
         [Key]
         [Column("S_INCKEY")]
-        public long Id { get; set; } = 0;
+        public long? Id { get; set; } = 0;
 
         [Column("S_COMMENT")]
         public byte[]? Comment { get; set; }
