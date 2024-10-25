@@ -1,0 +1,65 @@
+﻿@*ProcessingDB.razor*@
+
+@page "/oracle2"
+@rendermode InteractiveServer
+
+@using Microsoft.EntityFrameworkCore
+@using System.Text.Json
+@using System.Threading.Tasks
+@*@using System.ComponentModel*@
+
+@using MudBlazorWeb2.Components.EntityFrameworkCore
+@using MudBlazorWeb2.Components.Modules.Replicator
+@using MudBlazorWeb2.Components.Modules.ProcessingDB
+@inject IDbContextFactory<OracleDbContext> DbFactory
+@inject IConfiguration Configuration 
+
+
+
+<PageTitle>💬 Process Oracle 🚀</PageTitle>
+
+<MudContainer>
+    <MudText Typo="Typo.h5">Обработка аудиоданных Oracle => 💬 + 🚀</MudText>
+    <MudDivider />
+    <br />
+
+    <MudText Color="@colorTag" Style="display: flex; justify-content:space-between; align-items: center; padding-bottom: 7px;" Typo="Typo.body1">
+        @if (settingsProcessing != null)
+        {
+            <MudText>
+                Текущие настройки БД: <b>@(settingsProcessing?.ReplOraItems?.DataSource) => @(settingsProcessing?.ReplOraItems?.Scheme)</b>
+            </MudText>
+        }
+        <OracleConnectionSettings nameConfigFile="@nameConfigFile" colorButton="@colorTag" OnSettingsChanged="LoadSettingsFromFile" />
+    </MudText>
+
+    <MudDivider />
+
+    Изменить шаблон запроса обработки
+    <EditTemplateTaskToAi colorButton="@colorTag" />
+
+
+ </MudContainer>
+
+
+@code {
+
+    string nameConfigFile = Path.Combine(AppContext.BaseDirectory, "settingsProcessing.json"); //Настройки подключения к БД
+
+    MudBlazor.Color colorTag = Color.Info;
+    OraSettings? settingsProcessing = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSettingsFromFile();
+    }
+
+    private async Task LoadSettingsFromFile()
+    {
+        string json = await File.ReadAllTextAsync(nameConfigFile);
+        settingsProcessing = JsonSerializer.Deserialize<OraSettings>(json);
+    }
+
+
+
+}

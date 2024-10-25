@@ -1,7 +1,9 @@
-﻿@page "/db-processing"
+﻿@*ProcessingBD_old.razor*@
+
+@page "/db-processing"
 @rendermode InteractiveServer
 
-@using MudBlazorWeb2.Components.Modules;
+@using MudBlazorWeb2.Components.Modules.ProcessingDB;
 @using MudBlazorWeb2.Components.Common;
 
 @using System.IO
@@ -60,7 +62,6 @@
         <div style="width:240px;">
             <MudIconButton style="width: 48px; height: 48px" Icon="@Icons.Material.Filled.PlayCircleFilled" Color="Color.Info" OnClick="ProcessAudioFiles" />
             <MudIconButton style="width: 48px; height: 48px" Icon="@Icons.Material.Filled.StopCircle" Color="Color.Info" OnClick="StopProcessing" />
-            @*<MudIconButton style="width: 48px; height: 48px" Icon="@Icons.Material.Filled.StopCircle" Color="Color.Error" OnClick="StopProcessingHard" />*@
         </div>
     </MudPaper>
     @* // Кнопки управления *@

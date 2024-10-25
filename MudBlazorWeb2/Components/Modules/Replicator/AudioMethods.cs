@@ -7,6 +7,7 @@ namespace MudBlazorWeb2.Components.Modules.Replicator
 {
     public class AudioMethods
     {
+        // Caller ; Talker
         public static (DateTime Timestamp, string IMEI, string Caller, string Talker, int Calltype) ParseFileName(string filePath)
         {
             var fileExt = Path.GetExtension(filePath);
@@ -28,8 +29,8 @@ namespace MudBlazorWeb2.Components.Modules.Replicator
                 {
                     string timestampString = parts[4] + " " + parts[5].Substring(0, 2) + ":" + parts[6].Substring(0, 2) + ":" + parts[7].Substring(0, 2);
                     DateTime timestamp = DateTime.ParseExact(timestampString, "yyyy-MM-dd HH:mm:ss", null);
-                    int calltype = (parts[3] == "In") ? 0 : (parts[3] == "Out") ? 1 : 2;
-                    return (timestamp, "", parts[0], parts[1], calltype);
+                    int calltype = (parts[3] == "In") ? 0 : (parts[3] == "Out") ? 1 : 2; //тип вызова 0-входящий, 1-исходящий, 2-неизвестный...
+                    return (timestamp, "", parts[0], parts[1], calltype); //parts[0] - Caller; 
                 }
                 else
                 {

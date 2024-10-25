@@ -28,7 +28,7 @@
                 </MudCardContent>
 
                 <MudCardContent Style="height:85px">
-                    <MudText Style="white-space: pre-wrap; max-width: 450px; position: relative; top: -25px" Color="Color.Info">@message</MudText>
+                    <MudText Style="white-space: pre-wrap; max-width: 450px; position: relative; top: -25px" Color="@colorButton">@message</MudText>
                 </MudCardContent>
 
                 <MudCardActions>
@@ -47,8 +47,8 @@
     public string? nameConfigFile { get; set; }
     [Parameter]
     public MudBlazor.Color colorButton { get; set; }
-/*    [Parameter]
-    public OracleDbContext? DbContext { get; set; }*/
+    [Parameter]
+    public EventCallback<string> OnSettingsChanged { get; set; }
 
 
     private bool isVisible;
@@ -90,7 +90,7 @@
                 await context.Database.ExecuteSqlRawAsync($"ALTER SESSION SET CURRENT_SCHEMA = {settings.ReplOraItems.Scheme}");
                 long? maxKey = await context.SprSpeechTable.MaxAsync(x => x.Id);
                 if (maxKey > 0)
-                    message += "Схема: " + settings.ReplOraItems.Scheme + " выбрана! \nМаксимальный идентификатор: " + maxKey + ".";
+                    message += "Схема: " + settings.ReplOraItems.Scheme + " выбрана! \nМаксимальный ключ: " + maxKey + ".";
 
                 await context.Database.CloseConnectionAsync();
             }
@@ -119,6 +119,7 @@
     private async void ApplyButtonClick()
     {
         await SaveSettingsToFile();
+        await OnSettingsChanged.InvokeAsync(); //оповещение родительского элемента о сохранении настроек
         ToggleOverlay(false);
     }
 

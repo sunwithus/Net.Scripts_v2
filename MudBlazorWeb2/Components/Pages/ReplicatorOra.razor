@@ -24,11 +24,21 @@
         <MudText>Идёт выполнение, подождите... @OraSingleton.Instance.ProgressExec %</MudText>
     </MudOverlay>
 
-    <MudItem Style="display: flex;">
+    <MudText Color="@colorButton" Style="display: flex; justify-content:space-between; align-items: center; padding-bottom: 7px;" Typo="Typo.body1">
+        @if (settingsReplicator != null)
+        {
+            <MudText>
+                Текущие настройки БД: <b>@(settingsReplicator?.ReplOraItems?.DataSource) => @(settingsReplicator?.ReplOraItems?.Scheme)</b>
+            </MudText>
+        }
+        <OracleConnectionSettings nameConfigFile="@nameConfigFile" colorButton="@colorButton" OnSettingsChanged="LoadSettingsFromFile" />
+    </MudText>
+
+    <MudDivider />
+
+    <MudText Style="width: 300px;">
         <OracleChooseOperator operatorsFile="@operatorsFile" colorButton="@colorButton" OnOperatorSelected="HandleOperatorSelected" />
-        <MudText> &nbsp; &nbsp; </MudText>
-        <OracleConnectionSettings nameConfigFile="@nameConfigFile" colorButton="@colorButton" />
-    </MudItem>
+    </MudText>
 
     @if (!string.IsNullOrEmpty(operatorName))
     {
@@ -52,18 +62,26 @@
 
 @code {
 
-    string nameConfigFile = Path.Combine(AppContext.BaseDirectory, "replicatorSettings.json"); //Настройки подключения к БД
+    string nameConfigFile = Path.Combine(AppContext.BaseDirectory, "settingsReplicator.json"); //Настройки подключения к БД
     string operatorsFile = Path.Combine(AppContext.BaseDirectory, "replicatorOperators.txt"); //Операторы
     MudBlazor.Color colorButton = Color.Secondary;
     private string pathToSaveTempAudio = "";
     private string operatorName = ""; //имя источник
     private bool isFilesLoaded = false;
+    OraSettings? settingsReplicator = new();
 
     protected override async Task OnInitializedAsync()
     {
         pathToSaveTempAudio = $"C:\\temp\\3\\{Guid.NewGuid()}\\";
-        await Task.Delay(1);
+        //await Task.Delay(1);
         OraSingleton.Instance.PropertyChanged += Singleton_PropertyChanged;
+        await LoadSettingsFromFile();
+    }
+
+    private async Task LoadSettingsFromFile()
+    {
+        string json = await File.ReadAllTextAsync(nameConfigFile);
+        settingsReplicator = JsonSerializer.Deserialize<OraSettings>(json);
     }
 
     private void HandleOperatorSelected(string value)

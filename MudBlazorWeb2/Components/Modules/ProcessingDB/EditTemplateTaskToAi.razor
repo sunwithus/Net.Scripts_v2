@@ -1,0 +1,61 @@
+﻿@page "/edit-parameterss2"
+@rendermode InteractiveServer
+
+@using System.Text.Json
+
+
+<MudText>
+    <MudIconButton style="width: 48px; height: 48px" Icon="@Icons.Material.Filled.SettingsEthernet" Color="@colorButton" OnClick="@(e => ToggleOverlay(true))" />
+        <MudOverlay Visible="isVisible" DarkBackground="true" Absolute="false">
+        <EditForm Model="@parameters" Style="width:500px">
+
+            <MudCard>
+
+                <MudCardContent Style="height:85px">
+                    <MudText Style="white-space: pre-wrap; max-width: 450px; position: relative; top: -25px" Color="@colorButton">message</MudText>
+                </MudCardContent>
+
+                <MudTextField @bind-Value="parameters.PreText" Lines="7" Label="PreText:" Style="width: 480px;" Variant="Variant.Outlined"></MudTextField>
+
+                <MudCardActions>
+                    <MudButton OnClick="@(e => ApplyButtonClick())" ButtonType="ButtonType.Submit" Variant="Variant.Outlined" Color="@colorButton" Class="ml-auto">Применить</MudButton>&nbsp;
+                    <MudButton Variant="Variant.Outlined" Color="@colorButton" OnClick="@(e => CancelButtonClick())">Отмена</MudButton>
+                </MudCardActions>
+            </MudCard>
+
+        </EditForm>
+    </MudOverlay>
+</MudText>
+
+@code {
+
+    [Parameter]
+    public MudBlazor.Color colorButton { get; set; }
+
+    private Parameters parameters; // Declare the parameters variable here
+    private bool isVisible = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+
+    }
+
+    public void ToggleOverlay(bool value)
+    {
+        isVisible = value;
+    }
+
+
+    private async void ApplyButtonClick()
+    {
+        //await SaveSettingsToFile();
+        //await OnSettingsChanged.InvokeAsync(); //оповещение родительского элемента о сохранении настроек
+        ToggleOverlay(false);
+    }
+
+    private async void CancelButtonClick()
+    {
+        //await LoadSettingsFromFile();
+        ToggleOverlay(false);
+    }
+}
