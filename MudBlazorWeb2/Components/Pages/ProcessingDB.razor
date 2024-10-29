@@ -1,22 +1,17 @@
-﻿@page "/db-processing"
+﻿@* ProcessingDB.razor *@
+
+@page "/db-processing"
 @rendermode InteractiveServer
 
-@using MudBlazorWeb2.Components.Modules;
-@using MudBlazorWeb2.Components.Common;
-
-@using System.IO
-@using System.Text
+@using Microsoft.EntityFrameworkCore
 @using System.Text.Json
-@using System.Threading.Tasks
+@using System.ComponentModel
 
-@using System.ComponentModel;
+@using MudBlazorWeb2.Components.Modules.Replicator
+@using MudBlazorWeb2.Components.Modules.ProcessingDB
 
-@inject AudioProcessor audioProcessor
-@inject DatabaseService DatabaseService
+@inject SettingsService SettingsService
 
-@inject NavigationManager Navigation
-
-@implements IDisposable
 
 <PageTitle>💬 Process Oracle 🚀</PageTitle>
 
@@ -24,214 +19,83 @@
     <MudText Typo="Typo.h5">Обработка аудиоданных Oracle => 💬 + 🚀</MudText>
     <MudDivider />
     <br />
-    <MudPaper>
-        <MudElement style="height: 210px; position: relative;">
-            <MudOverlay Visible="Singleton.Instance.IsPlayingNow || !Singleton.Instance.IsStoped" LightBackground="true" Absolute="true">
-                <MudText Typo="Typo.body1"> </MudText>
-            </MudOverlay>
-            <MudText Typo="Typo.body1">
-                Изменить параметры шаблона обработки
-                <EditParameters />
-                <MudDivider />
-                Текущие настройки подключения Oracle:
-                <b>@DatabaseService._oracleSettings.DataSource => @DatabaseService._oracleSettings.Scheme</b>
-                <EditSettings OnStateChanged="HandleStateChanged" />
+
+    <MudText Color="@colorTag" Style="display: flex; justify-content:space-between; align-items: center; padding-bottom: 7px;" Typo="Typo.body1">
+        @if (settingsProcessing != null && settingsProcessing.ReplOraItems != null)
+        {
+            <MudText>
+                Текущие настройки БД: <b>@(settingsProcessing?.ReplOraItems?.DataSource) => @(settingsProcessing?.ReplOraItems?.Scheme)</b>
             </MudText>
+        }
+        <OracleConnectionSettings nameConfigFile="@nameConfigFile" colorButton="@colorTag" OnSettingsChanged="LoadSettingsFromFile" />
+    </MudText>
+
+    <MudDivider />
+
+    <MudText Style="display: flex; justify-content:space-between; align-items:start; padding-bottom: 7px;">
+
+        <MudText>
             @* // Период *@
             <MudGrid Spacing="8" Justify="Justify.FlexStart">
                 <MudItem>
-                    <MudTextField T="DateTime" Format="yyyy-MM-ddTHH:mm:ss" Label="От даты:" InputType="InputType.DateTimeLocal" @bind-Value="Singleton.Instance.StartDate" />
+                    <MudTextField T="DateTime" Format="yyyy-MM-ddTHH:mm:ss" Label="От даты:" InputType="InputType.DateTimeLocal" @bind-Value="ProcessSingleton.Instance.StartDate" />
                 </MudItem>
                 <MudItem>
-                    <MudTextField T="DateTime" Format="yyyy-MM-ddTHH:mm:ss" Label="По дату:" InputType="InputType.DateTimeLocal" @bind-Value="Singleton.Instance.EndDate" />
+                    <MudTextField T="DateTime" Format="yyyy-MM-ddTHH:mm:ss" Label="По дату:" InputType="InputType.DateTimeLocal" @bind-Value="ProcessSingleton.Instance.EndDate" />
                 </MudItem>
             </MudGrid>
             @* // Повторный запуск *@
             <MudGrid Spacing="3" Justify="Justify.FlexStart">
                 <MudItem>
-                    <MudCheckBox @bind-Value="Singleton.Instance.IsCycle" Size="Size.Small" Label="С интервалом повторного запуска (мин.):" Color="Color.Info" />
+                    <MudCheckBox @bind-Value="ProcessSingleton.Instance.IsCycle" Size="Size.Small" Label="С интервалом повторного запуска (мин.):" Color="@colorTag" />
                 </MudItem>
                 <MudItem>
-                    <MudNumericField Style="width:50px; top:7px;" @bind-Value="CycleInterval" Min="0" Step="1" Variant="Variant.Text" />
+                    <MudNumericField Style="width:50px; top:7px;" @bind-Value="ProcessSingleton.Instance.CycleInterval" Min="0" Step="1" Variant="Variant.Text" />
                 </MudItem>
             </MudGrid>
-        </MudElement>
-        <MudDivider />
-        <div style="width:240px;">
-            <MudIconButton style="width: 48px; height: 48px" Icon="@Icons.Material.Filled.PlayCircleFilled" Color="Color.Info" OnClick="ProcessAudioFiles" />
-            <MudIconButton style="width: 48px; height: 48px" Icon="@Icons.Material.Filled.StopCircle" Color="Color.Info" OnClick="StopProcessing" />
-            @*<MudIconButton style="width: 48px; height: 48px" Icon="@Icons.Material.Filled.StopCircle" Color="Color.Error" OnClick="StopProcessingHard" />*@
-        </div>
-    </MudPaper>
-    @* // Кнопки управления *@
+        </MudText>
+
+        <EditTemplateTaskToAi colorButton="@colorTag" OnApplyButtonClick="GetPreTextValue" />
+
+    </MudText>
+
+    <MudDivider />
 
     @* // Состояние выполнения *@
-    <br />
-    <MudText>
-        @if (Singleton.Instance.IsPlayingNow)
-        {
-            <div style="display: flex; flex-direction: column; justify-content: flex-start;">
-                <MudText style="width: 100%;">@Singleton.Instance.ProcessingMessage</MudText>
-                @if (Singleton.Instance.IsStoped != true)
-                {
-                    <MudProgressLinear Color="Color.Info" Indeterminate="true" Size="Size.Large" Style="width: 350px; margin-left: 10px; margin-top: 5px;">
-                        <MudText Typo="Typo.subtitle1" Color="Color.Dark">
-                            <b>Процесс: @Singleton.Instance.ProcessedKeys / @Singleton.Instance.TotalKeys</b>
-                        </MudText>
-                    </MudProgressLinear>
-                }
-                else if (Singleton.Instance.IsCycle && !Singleton.Instance.IsStopPressed)
-                {
-                    <div>
-                        Ожидание повторного запуска каждые @(CycleInterval * 60) сек. &nbsp;&nbsp;&nbsp;
-                        <MudProgressCircular Color="Color.Info" Size="Size.Small" Indeterminate="true" />
-                    </div>
+    <ProcessingStatus colorTag="@colorTag" preText="@preTextValue" modelName="@modelName" pathFileForAudio="@pathFileForAudio" schemeName="@settingsProcessing?.ReplOraString?.Scheme" conStringDBA="@settingsProcessing?.ReplOraString?.OracleDbConnectionString" />
 
-                }
-            </div>
-        }
-        else
-        {
-            <MudText style="idth: 100%;">@Singleton.Instance.ProcessingMessage &nbsp; &nbsp; &nbsp;</MudText>
-        }
-    </MudText>
 </MudContainer>
+
+
 
 @code {
 
-    private int CycleInterval { get; set; } = 1;
-    ReadUpdateJson readUpdateJson = new(); // класс чтения json с параметрами (PreText)
+    string modelName = "gemma2";
+    string nameConfigFile = Path.Combine(AppContext.BaseDirectory, "settingsProcessing.json"); //Настройки подключения к БД
+    string pathFileForAudio = @"C:\temp\temp_audio_from_db\";
+    MudBlazor.Color colorTag = Color.Info;
+    OraSettings? settingsProcessing = null;
+    private string preTextValue = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
-        await Task.Delay(1);
-        Singleton.Instance.PropertyChanged += Singleton_PropertyChanged;
+
+        settingsProcessing = new OraSettings ();
+        await LoadSettingsFromFile();
+        preTextValue = SettingsService.GetSetting("PreText");
+        ProcessSingleton.Instance.PropertyChanged += Singleton_PropertyChanged;
     }
 
-    private void Singleton_PropertyChanged(object sender, PropertyChangedEventArgs e)
+    private async Task LoadSettingsFromFile()
     {
-        InvokeAsync(StateHasChanged);
+        string json = await File.ReadAllTextAsync(nameConfigFile);
+        settingsProcessing = JsonSerializer.Deserialize<OraSettings>(json);
     }
 
-    public void ChangeSingletonValuesToDefault()
-    {
-        Singleton.Instance.ProcessedKeys = 0;
-        Singleton.Instance.TotalKeys = 0;
-        Singleton.Instance.IsStoped = true;
-        Singleton.Instance.IsPlayed = false;
-        Singleton.Instance.IsPlayingNow = false;
-        Singleton.Instance.IsStopPressed = true;
-        Singleton.Instance.StartDate = DateTime.Now.AddMonths(-1);
-        Singleton.Instance.EndDate = DateTime.Now.AddMonths(1);
-    }
+    private void GetPreTextValue() => preTextValue = SettingsService.GetSetting("PreText");
 
-    public void HandleStateChanged() // используется для обновления состояния при Сохранить в EditSettings
-    {
-        Console.WriteLine("Настройки подключения к БД обновлены. <EditSettings OnStateChanged='HandleStateChanged' />");
-    }
+    private void Singleton_PropertyChanged(object sender, PropertyChangedEventArgs e) => InvokeAsync(StateHasChanged);
 
-    private async Task ProcessAudioFiles()
-    {
-        Parameters parameters = await readUpdateJson.ReadFromJsonAsync(); // json с параметрами (PreText)
-
-        if (!Singleton.Instance.IsStoped || Singleton.Instance.IsPlayingNow)
-        {
-            if (!Singleton.Instance.IsCycle)
-            {
-
-                return;
-            }
-            Singleton.Instance.ProcessingMessage = "Обработка запущена, сначала выполните остановку.";
-            return; // Прекращаем выполнение, если обработка еще не завершена
-        }
-
-        do
-        {
-            Singleton.Instance.IsPlayingNow = true;
-            Singleton.Instance.ProcessingMessage = "Обработка запущена...";
-            Singleton.Instance.IsStoped = false;
-            Singleton.Instance.IsStopPressed = false;
-            Singleton.Instance.IsPlayed = true;
-            await InvokeAsync(() => StateHasChanged());
-
-            try
-            {
-                /*
-                //===========================================================
-                //имитация процесса
-                //===========================================================
-                Singleton.Instance.ProcessedKeys = 0;
-                Singleton.Instance.TotalKeys = 5;
-                Singleton.Instance.ProcessedKeys = 0;
-
-                while (Singleton.Instance.ProcessedKeys < Singleton.Instance.TotalKeys)
-                    {
-                    await Task.Delay(200);
-                    Singleton.Instance.ProcessedKeys++;
-                }
-                //===========================================================
-                */
-                await audioProcessor.ProcessAudioFilesAsync(Singleton.Instance.StartDate, Singleton.Instance.EndDate, DatabaseService._oracleSettings.Scheme, UpdateProgress, Constants.ModelName, parameters.PreText);
-                await Task.Delay(200);
-
-                Singleton.Instance.IsStoped = true;
-                Singleton.Instance.ProcessingMessage = $"Обработка остановлена. Всего обработано: {Singleton.Instance.ProcessedKeys} / {Singleton.Instance.TotalKeys}";
-            }
-            catch (Exception ex)
-            {
-                Singleton.Instance.ProcessingMessage = $"Произошла ошибка: {ex.Message}";
-            }
-
-            if (!Singleton.Instance.IsCycle) { Singleton.Instance.IsStopPressed = true; Singleton.Instance.IsPlayed = false; }
-
-            if (Singleton.Instance.IsCycle && !Singleton.Instance.IsStopPressed && Singleton.Instance.IsPlayed)
-            {
-                while (!Singleton.Instance.IsStopPressed)
-                {
-                    await Task.Delay(CycleInterval * 60 * 1000); // вместо минут для циклического запуска
-                    break;
-                }
-            }
-            Singleton.Instance.IsPlayingNow = false;
-        }
-        while (Singleton.Instance.IsCycle && !Singleton.Instance.IsStopPressed && Singleton.Instance.IsPlayed);
-
-    }
-
-    public async void UpdateProgress(int processed, int total)
-    {
-        if (Singleton.Instance.ProcessedKeys < processed) Singleton.Instance.ProcessingMessage = "Обработка запущена..."; // если процесс продолжается запираем ошибку
-        Singleton.Instance.ProcessedKeys = processed;
-        Singleton.Instance.TotalKeys = total;
-        await InvokeAsync(() => StateHasChanged());
-    }
-
-    private async Task StopProcessing()
-    {
-        await audioProcessor.StopProcessingAsync();
-
-        Singleton.Instance.ProcessingMessage = !Singleton.Instance.IsStoped ? "Обработка завершается, подождите..." : "Обработка остановлена.";
-        if (Singleton.Instance.IsStopPressed)
-        {
-            Singleton.Instance.IsPlayingNow = false;
-            await StopProcessingHard();
-        }
-        Singleton.Instance.IsStopPressed = true;
-        Singleton.Instance.IsStoped = true;
-        Singleton.Instance.IsPlayed = false;
-    }
-
-    private async Task StopProcessingHard()
-    {
-        ChangeSingletonValuesToDefault();
-        Singleton.Instance.IsStopPressed = true;
-        await audioProcessor.StopProcessingAsync();
-    }
-
-    public void Dispose()
-    {
-        // Останавливаем
-    }
 
 
 }

@@ -1,0 +1,14 @@
+{
+  "ReplOraItems": {
+    "User": "SYSDBA",
+    "Password": "masterkey",
+    "DataSource": "192.168.2.125/sprutora",
+    "Scheme": "test",
+    "TryToParse": "true"
+  },
+
+  "ReplOraString": {
+    "OracleDbConnectionString": "User Id=SYSDBA;Password=masterkey;Data Source=192.168.2.125/sprutora;",
+    "Scheme": "reika"
+  }
+}

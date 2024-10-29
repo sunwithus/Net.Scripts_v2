@@ -49,8 +49,10 @@
 </MudContainer>
 
 @code {
-    private Data.Answer Answer = new();
+    private Data.Answer Answer = new ();
+
     private Data.Question Question = new();
+
     private string ask = string.Empty;
     private string prompt = string.Empty;
     private bool loading = false;
@@ -80,4 +82,6 @@
             ask = string.Empty;
         }
     }
+
+
 }

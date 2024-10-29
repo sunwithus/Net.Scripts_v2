@@ -10,7 +10,11 @@ using static MudBlazorWeb2.Components.Pages.ReplicatorOra;
 
 var builder = WebApplication.CreateBuilder(args);
 
-//Oracle
+// Регистрация сервиса для чтения/записи настроек из appsettings.json (или другово файла)
+builder.Services.AddSingleton<SettingsService>();
+
+// Oracle
+// тут настройки "по-умолчанию"
 var connectionString = builder.Configuration.GetConnectionString("OracleDbConnection");
 builder.Services.AddDbContextFactory<OracleDbContext>(options =>
             options.UseOracle(connectionString, providerOptions => providerOptions
@@ -20,6 +24,7 @@ builder.Services.AddDbContextFactory<OracleDbContext>(options =>
                  .EnableDetailedErrors(false)
                  .EnableSensitiveDataLogging(false)
                  .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking));
+
 //#####
 
 // Настройки SignalR
@@ -29,13 +34,7 @@ builder.Services.AddSignalR(options =>
     options.ClientTimeoutInterval = TimeSpan.FromMinutes(60);
     options.HandshakeTimeout = TimeSpan.FromMinutes(60);
 });
-//
-var oracleSettingsFilePath = Path.Combine(AppContext.BaseDirectory, "oracleSettings.json");
-var oracleSettings = new OracleSettings();
-oracleSettings.LoadSettingsFromJson(oracleSettingsFilePath);
-builder.Services.AddSingleton(oracleSettings);
-
-builder.Services.AddSingleton<DatabaseService>();
+//#####
 
 // Add MudBlazor services
 builder.Services.AddMudServices();
@@ -53,10 +52,8 @@ builder.Services.AddHttpClient<WhisperService>(client =>
 
 builder.Services.AddHttpClient<OllamaService>(client =>
 {
-    client.Timeout = TimeSpan.FromMinutes(10); // Установка таймаута
+    client.Timeout = TimeSpan.FromMinutes(10);
 });
-
-builder.Services.AddScoped<AudioProcessor>();
 
 var app = builder.Build();
 
@@ -77,7 +74,6 @@ app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
 //app.Run("http://0.0.0.0:555");
-//app.Run("http://localhost:1111");
 app.Run();
 
 

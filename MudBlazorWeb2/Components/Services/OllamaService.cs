@@ -10,7 +10,6 @@ public class OllamaService
     public OllamaService(HttpClient httpClient)
     {
         _httpClient = httpClient;
-        _httpClient.Timeout = TimeSpan.FromMinutes(7);
     }
 
     public class ResponseData

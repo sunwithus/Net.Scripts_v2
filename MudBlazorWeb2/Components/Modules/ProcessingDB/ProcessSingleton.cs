@@ -1,19 +1,19 @@
-﻿//Singleton.cs
+﻿// ProcessSingleton.cs
 
 using System.ComponentModel;
 
-namespace MudBlazorWeb2.Components.Common
+namespace MudBlazorWeb2.Components.Modules.ProcessingDB
 {
-    public class Singleton
+    public class ProcessSingleton
     {
-        private static Singleton instance;
+        private static ProcessSingleton instance;
         private static readonly object padlock = new object();
 
-        private Singleton()
+        private ProcessSingleton()
         {
         }
 
-        public static Singleton Instance
+        public static ProcessSingleton Instance
         {
             get
             {
@@ -21,24 +21,34 @@ namespace MudBlazorWeb2.Components.Common
                 {
                     if (instance == null)
                     {
-                        instance = new Singleton();
+                        instance = new ProcessSingleton();
                     }
                     return instance;
                 }
             }
         }
 
-        private int processedKeys;
-        private int totalKeys;
+        private int cycleInterval = 1;
+        private int processedKeys = 0;
+        private int totalKeys = 0;
         private bool isStoped = true;
-        private string processingMessage;
-        private bool isCycle;
+        private string processingMessage = "";
+        private bool isCycle = true;
         private bool isPlayed = false;
         private bool isPlayingNow = false;
         private bool isStopPressed = true;
         private DateTime startDate = DateTime.Now.AddMonths(-1);
-        private DateTime endDate = DateTime.Now.AddMonths(1);
+        private DateTime endDate = DateTime.Now.AddMonths(1).AddYears(1);
 
+        public int CycleInterval
+        {
+            get { return cycleInterval; }
+            set
+            {
+                cycleInterval = value;
+                OnPropertyChanged(nameof(CycleInterval));
+            }
+        }
         public int ProcessedKeys
         {
             get { return processedKeys; }

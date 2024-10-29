@@ -19,6 +19,23 @@ namespace MudBlazorWeb2.Components.EntityFrameworkCore
         public DbSet<SPR_SP_DATA_1_TABLE> SprSpData1Table{ get; set; }
         public DbSet<SPR_SP_COMMENT_TABLE> SprSpCommentTable { get; set; }
 
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        {
+            base.OnConfiguring(optionsBuilder);
+            optionsBuilder
+                 //тут изменять настройки, для другой схемы, другой базы
+                 /*.UseOracle("User Id=SYSDBA;Password=masterkey;Data Source=192.168.2.125 / sprutora;", providerOptions => providerOptions
+                                .CommandTimeout(60)
+                                .UseRelationalNulls(true)
+                                .MinBatchSize(2))
+                 */
+                 .EnableDetailedErrors(false)
+                 .EnableSensitiveDataLogging(false)
+                 .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking)
+                 .LogTo(System.Console.WriteLine);
+
+        }
+
         // Переопределение метода для настройки моделей (сопоставления сущностей с таблицами)
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -37,6 +54,7 @@ namespace MudBlazorWeb2.Components.EntityFrameworkCore
 
             // Сопоставляем сущность SPR_SP_COMMENT_TABLE с таблицей "SPR_SP_COMMENT_TABLE"
             modelBuilder.Entity<SPR_SP_COMMENT_TABLE>().ToTable("SPR_SP_COMMENT_TABLE");
+                //.Property(b=>b.Comment).HasColumnType("BLOB");
 
             // Вызов базовой реализации метода
             base.OnModelCreating(modelBuilder);
@@ -106,6 +124,19 @@ namespace MudBlazorWeb2.Components.EntityFrameworkCore
 
         [Column("S_USERNUMBER")] //пользовательский номер источника (тот, кто звонит)
         public string? Usernumber { get; set; }
+
+        [Column("S_CID")] //идентификатор соты базовой станции
+        public string? Cid { get; set; }
+
+        [Column("S_LAC")] //код зоны базовой станции
+        public string? Lac { get; set; }
+
+        [Column("S_BASESTATION")] //код зоны базовой станции
+        public string? Basestation { get; set; }
+
+        [Column("S_POSTID")] //bмя поста регистрации
+        public string? Postid { get; set; }
+
 
         [Column("S_CALLTYPE")] //тип вызова 0-входящий, 1-исходящий, 2-неизвестный...
         public int? Calltype { get; set; } = 2;

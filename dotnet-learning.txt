@@ -1,0 +1,6 @@
+https://github.com/navferty/dotnet-learning
+
+https://learn.microsoft.com/en-us/dotnet/csharp/tour-of-csharp/
+
+//git
+https://learngitbranching.js.org/?locale=ru_RU

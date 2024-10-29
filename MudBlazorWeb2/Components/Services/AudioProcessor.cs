@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+﻿/*using System.Diagnostics;
 using Microsoft.AspNetCore.SignalR;
 
 using FFMpegCore;
@@ -14,12 +14,12 @@ public class AudioProcessor
 
     private readonly List<string> _codecs = new List<string>()
         {
-            "UMTS_AMR", "EVRC", "GSM"/*
+            "UMTS_AMR", "EVRC", "GSM"
             ,"WAVE_FILE", "RPE-LTP", "DAMPS",
             "PCM-128", "QCELP-8", "QCELP-13", "ADPCM", "AMBE.HR_IRIDIUM", "A-LAW", "AMBE_INMARSAT_MM", "APC.HR_INMARSAT_B", "IMBE_INMARSAT_M",
             "AME", "ACELP_TETRA", "GSM.EFR_ABIS", "GSM.HR_ABIS", "GSM.AMR_ABIS", "GSM_ABIS", "LD-CELP", "E-QCELP", "ATC", "PSI-CELP", "AMBE.GMR1", "AMBE.GMR2", "AMBE.INMARSAT_BGAN", "ADM.UAV",
             "PCMA", "PCMU", "IPCMA", "IPCMU", "L8", "IL8", "L16", "IL16", "G.723.1", "G.726-32", "G.728", "G.729", "GSM.0610", "ILBC-13", "ILBC-15", "PDC.FR", "PDC.EFR", "PDC.HR",
-            "IDEN.FR", "APCO-25", "RP-CELP", "IDEN.HR"*/
+            "IDEN.FR", "APCO-25", "RP-CELP", "IDEN.HR"
         };
 
     private readonly List<string> _doNotWorkWith = new List<string>()
@@ -333,3 +333,4 @@ public class AudioProcessor
         }
     }
 }
+*/

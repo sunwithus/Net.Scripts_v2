@@ -5,14 +5,14 @@
 @rendermode InteractiveServer
 
 <MudText Typo="Typo.body1" Style="display: flex;">
-    <MudSelect ValueChanged="@(value => OnOperatorSelectedChanged(value))" T="string" Value="@operatorName" Color=@colorButton Style="width: 250px;">
-        <MudSelectItem Value="string.Empty">Оператор:</MudSelectItem>
+    <MudSelect ValueChanged="@(value => OnOperatorSelectedChanged(value))" T="string" Label="Оператор:" Value="@operatorName" Color=@colorButton Style="width: 250px;">
+ 
         @foreach (var oper in operators)
         {
             <MudSelectItem Value="@oper">@oper</MudSelectItem>
         }
     </MudSelect>
-    <MudIconButton Style="position:relative; top:-7px;" Icon="@Icons.Material.Outlined.Settings" Color="Color.Default" OnClick="@(e => ToggleOverlay(true))" />
+    <MudIconButton  Icon="@Icons.Material.Outlined.Settings" Color="Color.Default" OnClick="@(e => ToggleOverlay(true))" />
 </MudText>
 
 <MudOverlay Visible="isVisible" DarkBackground="true" Absolute="false">

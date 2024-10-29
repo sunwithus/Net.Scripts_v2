@@ -3,57 +3,367 @@
 
 
 @using MudBlazorWeb2.Components.EntityFrameworkCore
+@using MudBlazorWeb2.Components.Modules.Replicator
 @inject IDbContextFactory<OracleDbContext> DbFactory
 
-@*
 @using Spire.Doc
 @using Spire.Doc.Documents
 @using Spire.Doc.Fields
-*@
+
 @using System
+@using System.Text
+@using System.Linq
 @using System.Collections.Generic
-@using System.Drawing
 @using Microsoft.EntityFrameworkCore
 @using System.Text.Json
-@using Aspire.Oracle.EntityFrameworkCore
+@using Oracle.EntityFrameworkCore
 @using Oracle.ManagedDataAccess.Client
 
-<PageTitle>💬 Оформление перехвата Word.doc 🖍</PageTitle>
+@inject IJSRuntime JsRuntime
 
-<div>будет реализованно позже...</div>
-https://spark.ru/user/158166/blog/130511/kak-ispolzovat-c-dlya-sozdaniya-dokumentov-word-na-osnove-shablona
+<PageTitle>🖍 Оформление Word.doc 📃</PageTitle>
 
-@code {
+@*  добавить плеер
+    https://www.codeproject.com/Tips/5338983/Build-Custom-Audio-Player-with-Waveform-in-JavaScr
+*@
 
-    private async Task CheckDatabaseConnection()
+<MudContainer>
+    <MudText Typo="Typo.h5">Оформление АЖ => 🖍 + 📃</MudText>
+    <MudDivider />
+    <br />
+    <MudText Color="@colorTag" Typo="Typo.body2">@message</MudText>
+
+    <MudText Color="@colorTag" Style="display: flex; justify-content:space-between; align-items: center; padding-bottom: 7px;" Typo="Typo.body1">
+        @if (settings != null)
+        {
+            <MudText>
+                Текущие настройки БД: <b>@(settings?.ReplOraItems?.DataSource) => @(settings?.ReplOraItems?.Scheme)</b>
+            </MudText>
+        }
+        <OracleConnectionSettings nameConfigFile="@nameConfigFile" colorButton="@colorTag" OnSettingsChanged="LoadSettingsFromFile" />
+    </MudText>
+
+    <MudDivider />
+
+    <MudText Style="display: flex; align-items: center; ">
+        <MudText>Введите номер поля <b>Ключ</b></MudText>
+        <MudNumericField @bind-Value="Id" Label="Ключ записи" Variant="Variant.Outlined" Min="0" Step="1" Style="height: 35px; width: 120px;" Class="ml-3" />
+    </MudText>
+
+    <MudText Style="display: flex; align-items: center; float: left;">
+        <MudButton OnClick="@(e => QueryById())" Variant="Variant.Outlined" Color="@colorTag">▷</MudButton>
+        @if (speechData != null && speechData.Count > 0 && speechData.FirstOrDefault().Id == Id)
+        {
+            <MudButton OnClick="@(e => GenerateWord())" Variant="Variant.Filled" Color="@colorTag" Class="ml-3">💾</MudButton>    
+        }
+    </MudText>
+
+    @if (speechData != null && speechData.Count > 0 && speechData.FirstOrDefault().Id == Id)
     {
+        <br /><br /><br />
+        <div style="align-items:center; display: flex; flex-direction: row;">
+            <MudButtonGroup Color="@colorTag" Variant="Variant.Text" Vertical="true">
+                <MudIconButton Icon="@Icons.Material.Filled.PlayCircleOutline" OnClick="@(e => PlayStereoAudio())" Color="@colorTag" aria-label="play" />
+                <MudIconButton Icon="@Icons.Material.Filled.PauseCircleOutline" OnClick="@(e => PauseStereoAudio())" Color="@colorTag" aria-label="pause" />
+                <MudIconButton Icon="@Icons.Material.Filled.Stop" OnClick="@(e => StopStereoAudio())" Color="@colorTag" aria-label="stop" />
+            </MudButtonGroup>
+            <div style="width: 100%; margin-left: 10px;">
+                <div style="display: flex; align-items:center; ">1:&nbsp;&nbsp;<audio style="width: 100%;" id="leftAudio" controls></audio></div>
+                <div style="display: flex; align-items:center; ">2:&nbsp;&nbsp;<audio style="width: 100%;" id="rightAudio" controls></audio></div>
+            </div>
+        </div>
+        <br />
+
+        <MudTable Items="@speechData" Dense="true" Hover="true" Bordered="true" Striped="true">
+            <HeaderContent>
+                @foreach (var header in ColumnHeaders)
+                {
+                    <MudTh>@header</MudTh>
+                }
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>@context.Id</MudTd>
+                <MudTd>@context.Datetime</MudTd>
+                <MudTd>@context.Duration.TrimStart('+').Trim('0').TrimEnd('.')</MudTd>
+                <MudTd>@context.Talker</MudTd>
+                <MudTd>@context.Usernumber</MudTd>
+                <MudTd>
+                    @switch (context.Calltype)
+                    {
+                        case 1: @:Исходящий
+                            break;
+                        case 0: @:Входящий
+                            break;
+                        default: @:Неизвестно
+                            break;
+                    }
+                </MudTd>
+                <MudTd>@context.Cid</MudTd>
+                <MudTd>@context.Lac</MudTd>
+                <MudTd>@context.Basestation</MudTd>
+                <MudTd>@context.Belong</MudTd>
+                <MudTd>@context.Sourcename</MudTd>
+                <MudTd>@context.Deviceid</MudTd>
+            </RowTemplate>
+        </MudTable>
+
         try
         {
-            using (var context = new OracleDbContext(new DbContextOptionsBuilder<OracleDbContext>().UseOracle(conStringDBA).Options))
-            {
-                await context.Database.OpenConnectionAsync();
-                if (await context.Database.CanConnectAsync())
-                    Console.WriteLine("Соединение с Oracle установлено!");
-
-                await context.Database.ExecuteSqlRawAsync($"ALTER SESSION SET CURRENT_SCHEMA = {settings.ReplOraItems.Scheme}");
-                long? maxKey = await context.SprSpeechTable.MaxAsync(x => x.Id);
-                if (maxKey > 0) Console.WriteLine("Схема: ");
-
-                await context.Database.CloseConnectionAsync();
-            }
-        }
-        catch (OracleException ex)
-        {
-            Console.WriteLine("Oracle Error: " + ex.Message);
+            string decodedComment = Encoding.GetEncoding("windows-1251").GetString(speechData.FirstOrDefault().Comment);
+            <br />
+            <pre style="white-space: pre-wrap">@decodedComment.TrimStart('0', '1', '2', '3', '4', '5', '.').Trim().Replace("\n\n", "\n")</pre>
         }
         catch (Exception ex)
         {
-            Console.WriteLine("General Error: " + ex.Message);
+            <p>Ошибка декодирования комментария: @ex.Message</p>
         }
-        finally
+    }
+
+</MudContainer>
+
+@code {
+
+    string nameConfigFile = Path.Combine(AppContext.BaseDirectory, "settingsMakingWord.json"); //Настройки подключения к БД"
+
+    MudBlazor.Color colorTag = Color.Success;
+
+    string conStringDBA = "";
+    string Scheme = "";
+    string message = ""; // Сообщение об ошибке
+    OraSettings? settings = new();
+    private List<SpeechData> speechData = null;
+
+    List<string> ColumnHeaders = new() { "Ключ", "Дата/время", "Длительность", "Собеседник", "Пользовательский номер", "Тип вызова", "CID", "LAC", "Базовая станция", "Принадлежность (язык оригинала)", "Имя источника (оператор)", "Устройство" };
+    long? Id = 0;
+    byte[]? AudioF = null;
+    byte[]? AudioR = null;
+    string Comment = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        // dotnet add package System.Text.Encoding.CodePages // Регистрация провайдера кодировок
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        speechData = new List<SpeechData>();
+        await LoadSettingsFromFile();
+    }
+
+    private async Task LoadSettingsFromFile()
+    {
+        string json = await File.ReadAllTextAsync(nameConfigFile);
+        settings = JsonSerializer.Deserialize<OraSettings>(json);
+        conStringDBA = $"User Id={settings.ReplOraItems.User};Password={settings.ReplOraItems.Password};Data Source={settings.ReplOraItems.DataSource};";
+        Scheme = settings.ReplOraString.Scheme;
+    }
+
+    private async Task QueryById()
+    {
+        //using (var context = await DbFactory.CreateDbContextAsync())
+        using (var context = new OracleDbContext(new DbContextOptionsBuilder<OracleDbContext>().UseOracle(conStringDBA).Options))
         {
+            try 
+            { 
+                await context.Database.OpenConnectionAsync(); 
+                if (await context.Database.CanConnectAsync())
+                {
+                    await context.Database.ExecuteSqlRawAsync($"ALTER SESSION SET CURRENT_SCHEMA = {Scheme}");
+                    var SPR_SPEECH_TABLE = context.SprSpeechTable.Where(x => x.Id == Id).ToList();
+                    var SPR_SP_DATA1_TABLE = context.SprSpData1Table.Where(x => x.Id == Id).ToList();
+                    var SPR_SP_COMMENT_TABLE = context.SprSpCommentTable.Where(x => x.Id == Id).ToList();
+
+                    speechData = SPR_SPEECH_TABLE.Select(speech => new SpeechData
+                        {
+                            Id = speech.Id,
+                            Deviceid = speech.Deviceid,
+                            Duration = speech.Duration,
+                            Datetime = speech.Datetime,
+                            Belong = speech.Belong,
+                            Sourcename = speech.Sourcename,
+                            Talker = speech.Talker,
+                            Usernumber = speech.Usernumber,
+                            Calltype = speech.Calltype,
+                            Cid = speech.Cid,
+                            Lac = speech.Lac,
+                            Basestation = speech.Basestation,
+                            Comment = SPR_SP_COMMENT_TABLE.FirstOrDefault(c => c.Id == speech.Id)?.Comment,
+                            AudioF = SPR_SP_DATA1_TABLE.FirstOrDefault(c => c.Id == speech.Id)?.Fspeech,
+                            AudioR = SPR_SP_DATA1_TABLE.FirstOrDefault(c => c.Id == speech.Id)?.Rspeech
+                        }).ToList();
+
+                    if (speechData != null)
+                    {
+                        foreach (var data in speechData)
+                        {
+                            if (data.AudioF != null)
+                            {
+                                AudioF = data.AudioF;
+                            }
+                            if (data.AudioR != null)
+                            {
+                                AudioR = data.AudioR;
+                            }
+                        }
+                    }   
+                }
+
+                await context.Database.CloseConnectionAsync();
+            }
+            catch (OracleException ex)
+            {
+                message = $"Ошибка Oracle: {ex.Message}";
+            }
+            catch (Exception ex)
+            {
+                message = $"Ошибка: {ex.Message}";
+            }
+            finally
+            {
+                StateHasChanged();
+            }
+        }
+    }
+
+    public class SpeechData
+    {
+        public long? Id { get; set; }
+        public string? Deviceid { get; set; }
+        public string? Duration { get; set; }
+        public DateTime? Datetime { get; set; }
+        public string? Belong { get; set; }
+        public string? Sourcename { get; set; }
+        public string? Talker { get; set; }
+        public string? Usernumber { get; set; }
+        public string? Cid { get; set; } = "";
+        public string? Lac { get; set; } = "";
+        public string? Basestation { get; set; } = "";
+        public int? Calltype { get; set; } = 2;
+        public byte[]? Comment { get; set; }
+        public byte[]? AudioF { get; set; }
+        public byte[]? AudioR { get; set; }
+    }
+
+    public async Task GenerateWord()
+    {
+        try
+        {
+            Document document = new Document();
+            document.LoadFromFile(Path.Combine(AppContext.BaseDirectory, "pattern.docx"));
+            Dictionary<string, string> replaceDict = new Dictionary<string, string>();
+
+            if (speechData != null && speechData.Count > 0)
+            {
+                var data = speechData.FirstOrDefault();
+
+                replaceDict.Add("#JournalNumber#", data.Id.ToString() ?? "");
+                replaceDict.Add("#Complex#", data.Deviceid ?? string.Empty); // Adjust this as necessary
+                replaceDict.Add("#OperatorName#", data.Sourcename ?? string.Empty);
+                replaceDict.Add("#DateTime#", data.Datetime?.ToString("dd-MM-yyyy HH:mm:ss") ?? string.Empty);
+                replaceDict.Add("#Duration#", data.Duration.Trim('+').Trim('0').Trim('.'));
+                replaceDict.Add("#RegistrationTime#", DateTime.Now.ToString("dd.MM HH:mm"));
+                replaceDict.Add("#Direction#", data.Calltype == 1 ? "исходящий звонок с" : data.Calltype == 0 ? "входящий звонок на" : "неизвестно направление вызова"); //тип вызова 0-входящий, 1-исходящий, 2-неизвестный
+                replaceDict.Add("#Direction2#", data.Calltype == 1 ? "на" : data.Calltype == 0 ? "с" : "");
+                replaceDict.Add("#Caller#", data.Usernumber ?? string.Empty); //номер кто звонит
+                replaceDict.Add("#Talker#", data.Talker ?? string.Empty); //собеседник
+                replaceDict.Add("#BaseStation#", string.IsNullOrEmpty(data.Basestation) ? "" : $"({data.Basestation})");
+                string Cid = string.IsNullOrEmpty(data.Cid) ? "" : $"CID: {data.Cid}; ";
+                string Lac = string.IsNullOrEmpty(data.Lac) ? "" : $"LAC: {data.Lac}; ";
+                replaceDict.Add("#LacCid#", Cid != "" || Lac != "" ? $"({Lac + Cid})" : "");
+                string Comment = Encoding.GetEncoding("windows-1251").GetString(data.Comment).TrimStart('0', '1', '2', '3', '4', '5', '.').Trim().Replace("\n\n", "\n");
+                replaceDict.Add("#DialogFromComment#", Comment ?? string.Empty);
+            }
+            else return;
+
+            foreach (KeyValuePair<string, string> kvp in replaceDict)
+            {
+                document.Replace(kvp.Key, kvp.Value, true, true);
+            }
+            //string outputFilePath = Path.Combine("C:\\Output\\Documents", "ReplacePlaceholders.docx"); //без использования JS
+            //document.SaveToFile(outputFilePath, "ReplacePlaceholders.docx"), FileFormat.Docx);
+            using (var stream = new MemoryStream())
+            {
+                document.SaveToFile(stream, FileFormat.Docx);
+                stream.Position = 0;
+                await JsRuntime.InvokeVoidAsync("downloadFile", "ReplacePlaceholders.docx", Convert.ToBase64String(stream.ToArray()));
+            }
+            document.Close();
+        }
+        catch (Exception ex)
+        {
+            message = $"Ошибка при генерации Word-файла: {ex.Message}";
             StateHasChanged();
         }
     }
 
+    private async Task PlayStereoAudio()
+    {
+        await PlayLeftAudio();
+        await PlayRightAudio();
+    }
+
+    private async Task StopStereoAudio()
+    {
+        await StopLeftAudio();
+        await StopRightAudio();
+    }
+
+    private async Task PauseStereoAudio()
+    {
+        await PauseLeftAudio();
+        await PauseRightAudio();
+    }
+
+
+    private async Task PlayLeftAudio()
+    {
+        try
+        {
+            if (AudioF != null)
+            {
+                using var streamRef = new DotNetStreamReference(new MemoryStream(AudioF));
+                await JsRuntime.InvokeVoidAsync("PlayAudioFileStream", streamRef, "leftAudio");
+                await JsRuntime.InvokeVoidAsync("PlayAudio", "leftAudio");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("PlayLeftAudio exception: " + ex);
+        }
+
+    }
+
+    private async Task PauseLeftAudio()
+    {
+        await JsRuntime.InvokeVoidAsync("PauseAudio", "leftAudio");
+    }
+
+    private async Task StopLeftAudio()
+    {
+        await JsRuntime.InvokeVoidAsync("StopAudio", "leftAudio");
+    }
+
+    private async Task PlayRightAudio()
+    {
+        try
+        {
+            if (AudioR != null)
+            {
+                using var streamRef = new DotNetStreamReference(new MemoryStream(AudioR));
+                await JsRuntime.InvokeVoidAsync("PlayAudioFileStream", streamRef, "rightAudio");
+                await JsRuntime.InvokeVoidAsync("PlayAudio", "rightAudio");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("PlayRightAudio exception: " + ex);
+        }
+    }
+
+    private async Task PauseRightAudio()
+    {
+        await JsRuntime.InvokeVoidAsync("PauseAudio", "rightAudio");
+    }
+
+    private async Task StopRightAudio()
+    {
+        await JsRuntime.InvokeVoidAsync("StopAudio", "rightAudio");
+    }
 }
