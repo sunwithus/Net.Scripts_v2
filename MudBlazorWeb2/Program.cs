@@ -47,12 +47,12 @@ builder.Services.AddHttpClient();
 // Добавление HttpClient сервисов с настройкой таймаута
 builder.Services.AddHttpClient<WhisperService>(client =>
 {
-    client.Timeout = TimeSpan.FromMinutes(30); // Установка таймаута
+    client.Timeout = TimeSpan.FromMinutes(25); // Установка таймаута
 });
 
 builder.Services.AddHttpClient<OllamaService>(client =>
 {
-    client.Timeout = TimeSpan.FromMinutes(10);
+    client.Timeout = TimeSpan.FromMinutes(25);
 });
 
 var app = builder.Build();
@@ -73,7 +73,7 @@ app.UseAntiforgery();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-//app.Run("http://0.0.0.0:555");
-app.Run();
+app.Run("http://0.0.0.0:555");
+//app.Run();
 
 

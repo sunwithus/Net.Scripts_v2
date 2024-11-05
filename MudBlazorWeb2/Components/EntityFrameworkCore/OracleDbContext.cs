@@ -31,8 +31,8 @@ namespace MudBlazorWeb2.Components.EntityFrameworkCore
                  */
                  .EnableDetailedErrors(false)
                  .EnableSensitiveDataLogging(false)
-                 .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking)
-                 .LogTo(System.Console.WriteLine);
+                 //.LogTo(System.Console.WriteLine)
+                 .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
 
         }
 
@@ -75,10 +75,11 @@ namespace MudBlazorWeb2.Components.EntityFrameworkCore
         public int? Prelooked { get; set; } = 0;
 
         [Column("S_DEVICEID")] //Имя устройства регистрации (MEDIUM_R)
-        public string? Deviceid { get; set; }
+        public string? Deviceid { get; set; } = "MEDIUM_R";
 
         [Column("S_DURATION")] //durationString = string.Format("+00 {0:D2}:{1:D2}:{2:D2}.000000", duration / 3600, (duration % 3600) / 60, duration % 60);
-        public string? Duration { get; set; }
+        public string? Duration { get; set; } // Duration - это INTERVAL (в C# - TimeSpan), не string (??? уже не помню, почему string а не TimeSpan)
+        //public TimeSpan? Duration { get; set; }
 
         [Column("S_DATETIME")] //DateTime timestamp = DateTime.ParseExact(timestampString, "dd-MM-yyyy HH:mm:ss", null); || DateTime timestamp = DateTime.Now
         public DateTime? Datetime { get; set; }

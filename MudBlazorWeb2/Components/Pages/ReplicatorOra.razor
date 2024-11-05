@@ -19,9 +19,9 @@
     <MudDivider />
     <br />
 
-    <MudOverlay Visible="!OraSingleton.Instance.IsStoped" LightBackground="true" Absolute="true">
+    <MudOverlay Visible="!OraSingleton.InstanceOra.IsStoped" LightBackground="true" Absolute="true">
         <MudText>Процесс занят.</MudText>
-        <MudText>Идёт выполнение, подождите... @OraSingleton.Instance.ProgressExec %</MudText>
+        <MudText>Идёт выполнение, подождите... @OraSingleton.InstanceOra.ProgressExec %</MudText>
     </MudOverlay>
 
     <MudText Color="@colorButton" Style="display: flex; justify-content:space-between; align-items: center; padding-bottom: 7px;" Typo="Typo.body1">
@@ -35,8 +35,9 @@
     </MudText>
 
     <MudDivider />
+    <br />
 
-    <MudText Style="width: 300px;">
+    <MudText Style="width: 330px;">
         <OracleChooseOperator operatorsFile="@operatorsFile" colorButton="@colorButton" OnOperatorSelected="HandleOperatorSelected" />
     </MudText>
 
@@ -73,8 +74,7 @@
     protected override async Task OnInitializedAsync()
     {
         pathToSaveTempAudio = $"C:\\temp\\3\\{Guid.NewGuid()}\\";
-        //await Task.Delay(1);
-        OraSingleton.Instance.PropertyChanged += Singleton_PropertyChanged;
+        OraSingleton.InstanceOra.PropertyChanged += Singleton_PropertyChanged;
         await LoadSettingsFromFile();
     }
 
@@ -99,12 +99,12 @@
 
     private void HandleReplicationIsFinished (bool value)
     {
-        OraSingleton.Instance.IsStoped = value;
+        OraSingleton.InstanceOra.IsStoped = value;
     }
 
     private void HandlePercentsProgress(float PercentsProgress)
     {
-        OraSingleton.Instance.ProgressExec = (int)PercentsProgress;
+        OraSingleton.InstanceOra.ProgressExec = (int)PercentsProgress;
     }
 
     private void Singleton_PropertyChanged(object sender, PropertyChangedEventArgs e)

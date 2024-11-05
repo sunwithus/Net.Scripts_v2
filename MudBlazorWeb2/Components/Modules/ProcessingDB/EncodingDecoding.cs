@@ -85,13 +85,15 @@ namespace MudBlazorWeb2.Components.Modules.ProcessingDB
         public static async Task ConvertToWavUsingDecoder(byte[] audioDataLeft, byte[] audioDataRight, string outputFilePath, string recordType)
         {
             var ramdomFileName = Path.GetRandomFileName();
-            var ramdomFileNameWithPath = Path.Combine(@"C:\temp\4\", ramdomFileName);
-            string fileNameLeft = ramdomFileNameWithPath + "_left";
+            string? directoryName = Path.GetDirectoryName(outputFilePath);
+            directoryName += "_for_decoder";
+            if(!Directory.Exists(directoryName)) Directory.CreateDirectory(directoryName);
+            var ramdomFileNameWithPath = Path.Combine(directoryName, ramdomFileName);
+            string fileNameLeft = ramdomFileNameWithPath + "_left"; // имя входного файла
             string fileNameRight = ramdomFileNameWithPath + "_right";
-            string fileNameLeftWav = fileNameLeft + ".wav";
+            string fileNameLeftWav = fileNameLeft + ".wav"; // имя выходного файла
             string fileNameRightWav = fileNameRight + ".wav";
-            string rightArgument = "";
-            rightArgument = "-filter_complex amix=inputs=2:duration=first:dropout_transition=2";
+            string rightArgument = "-filter_complex amix=inputs=2:duration=first:dropout_transition=2"; // для ffmpeg
 
             string pathToDecoder = "C:\\dotnet\\decoder\\decoder.exe";
             string pathToEncoder = "C:\\dotnet\\decoder\\suppdll";
@@ -122,14 +124,20 @@ namespace MudBlazorWeb2.Components.Modules.ProcessingDB
                     .WithCustomArgument("-codec:a pcm_s16le -b:a 128k -ar 16000 -ac 1")
                     .WithCustomArgument(rightArgument))
                     .ProcessAsynchronously();
+
+                Console.WriteLine();
+                Console.WriteLine($"Файл успешно сохранён: {outputFilePath}");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error: {ex.Message}");
+                Console.WriteLine();
+                Console.WriteLine($"Error ConvertToWavUsingDecoder: {ex.Message}");
+                Console.WriteLine();
             }
             finally
             {
                 // Ensure files are deleted
+                Console.WriteLine();
                 Console.WriteLine("RunCmdCommand(pathToDecoder, pathToEncoder)");
                 DeleteFiles(fileNameLeft, fileNameRight, fileNameLeftWav, fileNameRightWav);
             }

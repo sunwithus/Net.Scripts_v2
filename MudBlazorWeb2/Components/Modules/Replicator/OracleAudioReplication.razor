@@ -155,11 +155,10 @@
     {
         try
         {
-            long? maxKey = await context.SprSpeechTable.MaxAsync(x => (long?)x.Id) ?? 0;
+            Task<long?> _maxKey = context.SprSpeechTable.MaxAsync(x => (long?)x.Id);
+            var runFFmpeg = RunFFmpeg(filePath);
 
             var fileData = AudioMethods.ParseFileName(filePath); //если не удалось, возвращает {DateTime.Now, "", "", "", 2}
-
-            await RunFFmpeg(filePath);
 
             var mediaInfo = await FFProbe.AnalyseAsync(filePath);
             int durationOfWav = (int)(mediaInfo.PrimaryAudioStream?.Duration.TotalSeconds ?? 0);
@@ -168,11 +167,13 @@
             string rightChannelFileName = Path.Combine(Path.GetDirectoryName(filePath), $"{Path.GetFileNameWithoutExtension(filePath)}_right.wav");
             string monoChannelFileName = Path.Combine(Path.GetDirectoryName(filePath), $"{Path.GetFileNameWithoutExtension(filePath)}_mono.wav");
 
+            await runFFmpeg;
             byte[]? fileDataLeft = File.Exists(leftChannelFileName) ? File.ReadAllBytes(leftChannelFileName) : null;
             if (fileDataLeft == null) fileDataLeft = File.Exists(monoChannelFileName) ? File.ReadAllBytes(monoChannelFileName) : null;
 
             byte[]? fileDataRight = File.Exists(rightChannelFileName) ? File.ReadAllBytes(rightChannelFileName) : null;
 
+            long? maxKey = await _maxKey ?? 0;
             if (fileDataLeft != null)
             {
                 var speechTableEntry = new SPR_SPEECH_TABLE
@@ -182,6 +183,7 @@
                         Prelooked = 0,
                         Deviceid = "MEDIUM_R",
                         Datetime = fileData.Timestamp,
+                        //Duration = TimeSpan.Parse(string.Format("+00 {0:D2}:{1:D2}:{2:D2}.000000", durationOfWav / 3600, (durationOfWav % 3600) / 60, durationOfWav % 60)),
                         Duration = string.Format("+00 {0:D2}:{1:D2}:{2:D2}.000000", durationOfWav / 3600, (durationOfWav % 3600) / 60, durationOfWav % 60),
                         Sysnumber3 = fileData.IMEI,
                         Sourcename = sourceName,
@@ -222,7 +224,7 @@
         }
         catch (Exception ex)
         {
-            message = $"<tr><td>{filePath}</td><td> ❌ + " + ex.Message + "</td ></tr >" + message;
+            message = $"<tr><td>{filePath}</td><td> ❌ " + ex.Message + "</td ></tr >" + message;
         }
     }
 

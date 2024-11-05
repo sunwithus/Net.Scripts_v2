@@ -68,7 +68,7 @@ else if (isVisibleFilesList)
         isVisibleFilesList = false;
         loadedFiles.Clear();
 
-        // Предварительная очистка директории
+        // Предварительная очистка директории и создание снова
         await ClearDirectory(pathToSaveTempAudio);
 
         progressPercent = 0;
