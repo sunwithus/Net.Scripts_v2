@@ -31,7 +31,6 @@
     <MudText Typo="Typo.h5">Оформление АЖ => 🖍 + 📃</MudText>
     <MudDivider />
     <br />
-    <MudText Color="@colorTag" Typo="Typo.body2">@message</MudText>
 
     <MudText Color="@colorTag" Style="display: flex; justify-content:space-between; align-items: center; padding-bottom: 7px;" Typo="Typo.body1">
         @if (settings != null)
@@ -42,16 +41,20 @@
         }
         <OracleConnectionSettings nameConfigFile="@nameConfigFile" colorButton="@colorTag" OnSettingsChanged="LoadSettingsFromFile" />
     </MudText>
+    <MudText Color="@colorTag" Typo="Typo.body2">@message</MudText>
 
     <MudDivider />
+    <br />
 
     <MudText Style="display: flex; align-items: center; ">
         <MudText>Введите номер поля <b>Ключ</b></MudText>
         <MudNumericField @bind-Value="Id" Label="Ключ записи" Variant="Variant.Outlined" Min="0" Step="1" Style="height: 35px; width: 120px;" Class="ml-3" />
     </MudText>
 
+    <MudDivider />
+
     <MudText Style="display: flex; align-items: center; float: left;">
-        <MudButton OnClick="@(e => QueryById())" Variant="Variant.Outlined" Color="@colorTag">▷</MudButton>
+        <MudIconButton Icon="@Icons.Material.Filled.PlayCircleFilled" Color="@colorTag" OnClick="QueryById" Size="Size.Large" />
         @if (speechData != null && speechData.Count > 0 && speechData.FirstOrDefault().Id == Id)
         {
             <MudButton OnClick="@(e => GenerateWord())" Variant="Variant.Filled" Color="@colorTag" Class="ml-3">💾</MudButton>    
@@ -137,7 +140,7 @@
     long? Id = 0;
     byte[]? AudioF = null;
     byte[]? AudioR = null;
-    string Comment = "";
+    //string Comment = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -158,6 +161,7 @@
     private async Task QueryById()
     {
         //using (var context = await DbFactory.CreateDbContextAsync())
+        message = "";
         using (var context = new OracleDbContext(new DbContextOptionsBuilder<OracleDbContext>().UseOracle(conStringDBA).Options))
         {
             try 
@@ -257,7 +261,7 @@
                 replaceDict.Add("#Complex#", data.Deviceid ?? string.Empty); // Adjust this as necessary
                 replaceDict.Add("#OperatorName#", data.Sourcename ?? string.Empty);
                 replaceDict.Add("#DateTime#", data.Datetime?.ToString("dd-MM-yyyy HH:mm:ss") ?? string.Empty);
-                replaceDict.Add("#Duration#", data.Duration.Trim('+').Trim('0').Trim('.'));
+                replaceDict.Add("#Duration#", data.Duration?.Trim('+').Trim('0').Trim('.') ?? string.Empty);
                 replaceDict.Add("#RegistrationTime#", DateTime.Now.ToString("dd.MM HH:mm"));
                 replaceDict.Add("#Direction#", data.Calltype == 1 ? "исходящий звонок с" : data.Calltype == 0 ? "входящий звонок на" : "неизвестно направление вызова"); //тип вызова 0-входящий, 1-исходящий, 2-неизвестный
                 replaceDict.Add("#Direction2#", data.Calltype == 1 ? "на" : data.Calltype == 0 ? "с" : "");
@@ -267,7 +271,8 @@
                 string Cid = string.IsNullOrEmpty(data.Cid) ? "" : $"CID: {data.Cid}; ";
                 string Lac = string.IsNullOrEmpty(data.Lac) ? "" : $"LAC: {data.Lac}; ";
                 replaceDict.Add("#LacCid#", Cid != "" || Lac != "" ? $"({Lac + Cid})" : "");
-                string Comment = Encoding.GetEncoding("windows-1251").GetString(data.Comment).TrimStart('0', '1', '2', '3', '4', '5', '.').Trim().Replace("\n\n", "\n");
+                string Comment = "";
+                if(data.Comment != null) Comment = Encoding.GetEncoding("windows-1251").GetString(data.Comment).TrimStart('0', '1', '2', '3', '4', '5', '.').Trim().Replace("\n\n", "\n");
                 replaceDict.Add("#DialogFromComment#", Comment ?? string.Empty);
             }
             else return;

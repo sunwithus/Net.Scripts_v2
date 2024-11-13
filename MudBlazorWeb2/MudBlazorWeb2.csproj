@@ -14,14 +14,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Remove="processingPreText.txt" />
+    <None Remove="Components\Modules\ProcessingDB\ProcessingStatus.txt" />
     <None Remove="replicatorOperators.txt" />
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="processingPreText.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    <Content Include="Components\Modules\ProcessingDB\ProcessingStatus.txt" />
     <Content Include="replicatorOperators.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -46,6 +44,9 @@
 
 
   <ItemGroup>
+    <None Update="Components\Modules\Replicator\ffmpeg.exe">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="ffmpeg.exe">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

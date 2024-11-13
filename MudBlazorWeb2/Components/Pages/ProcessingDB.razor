@@ -5,12 +5,21 @@
 
 @using Microsoft.EntityFrameworkCore
 @using System.Text.Json
+@using System.Net.Http
+@using System.Text
 @using System.ComponentModel
 
+@using MudBlazorWeb2.Components.EntityFrameworkCore
 @using MudBlazorWeb2.Components.Modules.Replicator
 @using MudBlazorWeb2.Components.Modules.ProcessingDB
 
 @inject SettingsService SettingsService
+@inject IConfiguration Configuration
+
+
+@inject IDbContextFactory<OracleDbContext> DbFactory
+@inject WhisperService whisper
+@inject OllamaService ai
 
 
 <PageTitle>💬 Process Oracle 🚀</PageTitle>
@@ -20,82 +29,403 @@
     <MudDivider />
     <br />
 
-    <MudText Color="@colorTag" Style="display: flex; justify-content:space-between; align-items: center; padding-bottom: 7px;" Typo="Typo.body1">
-        @if (settingsProcessing != null && settingsProcessing.ReplOraItems != null)
-        {
-            <MudText>
-                Текущие настройки БД: <b>@(settingsProcessing?.ReplOraItems?.DataSource) => @(settingsProcessing?.ReplOraItems?.Scheme)</b>
-            </MudText>
-        }
-        <OracleConnectionSettings nameConfigFile="@nameConfigFile" colorButton="@colorTag" OnSettingsChanged="LoadSettingsFromFile" />
-    </MudText>
-
-    <MudDivider />
-
-    <MudText Style="display: flex; justify-content:space-between; align-items:start; padding-bottom: 7px;">
-
-        <MudText>
-            @* // Период *@
-            <MudGrid Spacing="8" Justify="Justify.FlexStart">
-                <MudItem>
-                    <MudTextField T="DateTime" Format="yyyy-MM-ddTHH:mm:ss" Label="От даты:" InputType="InputType.DateTimeLocal" @bind-Value="ProcessSingleton.Instance.StartDate" />
-                </MudItem>
-                <MudItem>
-                    <MudTextField T="DateTime" Format="yyyy-MM-ddTHH:mm:ss" Label="По дату:" InputType="InputType.DateTimeLocal" @bind-Value="ProcessSingleton.Instance.EndDate" />
-                </MudItem>
-            </MudGrid>
-            @* // Повторный запуск *@
-            <MudGrid Spacing="3" Justify="Justify.FlexStart">
-                <MudItem>
-                    <MudCheckBox @bind-Value="ProcessSingleton.Instance.IsCycle" Size="Size.Small" Label="С интервалом повторного запуска (мин.):" Color="@colorTag" />
-                </MudItem>
-                <MudItem>
-                    <MudNumericField Style="width:50px; top:7px;" @bind-Value="ProcessSingleton.Instance.CycleInterval" Min="0" Step="1" Variant="Variant.Text" />
-                </MudItem>
-            </MudGrid>
+    <MudText Style="position: relative;">
+        <MudOverlay Visible="ProcessSingleton.Instance.IsPlayingNow" LightBackground="true" Absolute="true" />
+        <MudText Color="@colorTag" Style="display: flex; justify-content:space-between; align-items: center; padding-bottom: 7px;" Typo="Typo.body1">
+            @if (settingsProcessing != null && settingsProcessing.ReplOraItems != null)
+            {
+                <MudText>
+                    Текущие настройки БД: <b>@(settingsProcessing?.ReplOraItems?.DataSource) => @(settingsProcessing?.ReplOraItems?.Scheme)</b>
+                </MudText>
+            }
+            <OracleConnectionSettings nameConfigFile="@nameConfigFile" colorButton="@colorTag" OnSettingsChanged="LoadSettingsFromFile" />
         </MudText>
-
-        <EditTemplateTaskToAi colorButton="@colorTag" OnApplyButtonClick="GetPreTextValue" />
-
+        <MudDivider />
+        <br />
+        <MudText Style="display: flex; justify-content:space-between; align-items:start; padding-bottom: 7px;">
+            <MudText>
+                @* // Период *@
+                <MudGrid Spacing="8" Justify="Justify.FlexStart">
+                    <MudItem>
+                        <MudTextField T="DateTime" Format="s" Label="От даты:" InputType="InputType.DateTimeLocal" @bind-Value="ProcessSingleton.Instance.StartDate" />
+                    </MudItem>
+                    <MudItem>
+                        <MudTextField T="DateTime" Format="yyyy-MM-ddTHH:mm:ss" Label="По дату:" InputType="InputType.DateTimeLocal" @bind-Value="ProcessSingleton.Instance.EndDate" />
+                    </MudItem>
+                </MudGrid>
+                @* // Повторный запуск *@
+                <MudGrid Spacing="3" Justify="Justify.FlexStart">
+                    <MudItem>
+                        <MudCheckBox @bind-Value="ProcessSingleton.Instance.IsCycle" Size="Size.Small" Label="С интервалом повторного запуска (мин.):" Color="@colorTag" />
+                    </MudItem>
+                    <MudItem>
+                        <MudNumericField Style="width:50px; top:7px;" @bind-Value="ProcessSingleton.Instance.CycleInterval" Min="0" Step="1" Variant="Variant.Text" />
+                    </MudItem>
+                </MudGrid>
+            </MudText>
+            <EditTemplateTaskToAi colorButton="@colorTag" OnApplyButtonClick="GetPreTextValue" />
+        </MudText>
     </MudText>
 
     <MudDivider />
 
-    @* // Состояние выполнения *@
-    <ProcessingStatus colorTag="@colorTag" preText="@preTextValue" modelName="@modelName" pathFileForAudio="@pathFileForAudio" schemeName="@settingsProcessing?.ReplOraString?.Scheme" conStringDBA="@settingsProcessing?.ReplOraString?.OracleDbConnectionString" />
+    <MudText>
+        @* // Кнопки управления *@
+        <MudIconButton Icon="@Icons.Material.Filled.PlayCircleFilled" Color="@colorTag" OnClick="StartProcessingDB" Size="Size.Large" />
+        <MudIconButton Icon="@Icons.Material.Filled.StopCircle" Color="@colorTag" OnClick="StopProcessing" Size="Size.Large" />
+
+        @* // Состояние выполнения *@
+        <MudText>@ProcessSingleton.Instance.ProcessingMessage</MudText>
+        @if (ProcessSingleton.Instance.IsPlayingNow) // прогресс ProcessedKeys / TotalKeys
+        {
+            @if (!ProcessSingleton.Instance.IsStoped2)
+            {
+                <MudText>
+                    <MudProgressLinear Color="@colorTag" Indeterminate="true" Size="Size.Large" Style="width: 350px; margin-top: 12px;">
+                        <MudText Typo="Typo.subtitle1" Color="Color.Default">
+                            <b>Процесс: @ProcessSingleton.Instance.ProcessedKeys / @ProcessSingleton.Instance.TotalKeys</b>
+                        </MudText>
+                    </MudProgressLinear>
+                </MudText>
+            }
+            else if (ProcessSingleton.Instance.IsCycle) // повторный запуск
+            {
+                <MudText>
+                    Ожидание повторного запуска каждые @(ProcessSingleton.Instance.CycleInterval * 60) сек. &nbsp;&nbsp;&nbsp;
+                    <MudProgressCircular Color="@colorTag" Size="Size.Small" Indeterminate="true" />
+                </MudText>
+            }
+        }
+    </MudText>
+
 
 </MudContainer>
 
 
-
 @code {
 
-    string modelName = "gemma2";
-    string nameConfigFile = Path.Combine(AppContext.BaseDirectory, "settingsProcessing.json"); //Настройки подключения к БД
-    string pathFileForAudio = @"C:\temp\temp_audio_from_db\";
     MudBlazor.Color colorTag = Color.Info;
+
+    string nameConfigFile = Path.Combine(AppContext.BaseDirectory, "settingsProcessing.json"); //Настройки подключения к БД
     OraSettings? settingsProcessing = null;
+    //EncodingDecoding? encodingDecoding = null;
+    List<string>? _codecs = null;
+    List<string>? _ignoreRecordType = null;
+    string? pathToDecoderExe;
+    string? pathToDecoderDll;
+    string? pathToFFmpegExe;
     private string preTextValue = string.Empty;
+    private string? conStringDBA, preText, schemeName;
+    int lagTime = 0; // время запаздывания Ollama от Whisper
 
     protected override async Task OnInitializedAsync()
     {
+        _codecs = Configuration.GetSection("EncodingDecoding:Codecs").Get<List<string>>();
+        _ignoreRecordType = Configuration.GetSection("EncodingDecoding:IgnoreRecordTypes").Get<List<string>>();
+        pathToDecoderExe = Configuration["PathToDecoderExe"];
+        pathToDecoderDll = Configuration["PathToDecoderDll"];
+        pathToFFmpegExe = Configuration["PathToFFmpegExe"];
 
         settingsProcessing = new OraSettings ();
         await LoadSettingsFromFile();
         preTextValue = SettingsService.GetSetting("PreText");
-        ProcessSingleton.Instance.PropertyChanged += Singleton_PropertyChanged;
+        preText = SettingsService.GetSetting("PreText");
+        ProcessSingleton.Instance.PropertyChanged2 += Singleton_PropertyChanged2;
+        if (!Directory.Exists(Configuration["AudioPathForProcessing"])) Directory.CreateDirectory(Configuration["AudioPathForProcessing"]); //
     }
 
     private async Task LoadSettingsFromFile()
     {
         string json = await File.ReadAllTextAsync(nameConfigFile);
         settingsProcessing = JsonSerializer.Deserialize<OraSettings>(json);
+        schemeName = settingsProcessing?.ReplOraString?.Scheme;
+        conStringDBA = settingsProcessing?.ReplOraString?.OracleDbConnectionString;
     }
 
     private void GetPreTextValue() => preTextValue = SettingsService.GetSetting("PreText");
 
-    private void Singleton_PropertyChanged(object sender, PropertyChangedEventArgs e) => InvokeAsync(StateHasChanged);
+    public void Singleton_PropertyChanged2(object sender, PropertyChangedEventArgs e) => InvokeAsync(StateHasChanged);
+
+    public async Task StartProcessingDB()
+    {
+        ProcessSingleton.Instance.IsStopPressed = false;
+
+        if (ProcessSingleton.Instance.IsPlayingNow)
+        {
+            ProcessSingleton.Instance.ProcessingMessage = "Обработка запущена, сначала выполните остановку.";
+            return;
+        }
+
+        try
+        {
+            do
+            {
+                ChangeSingleton(true, false, "Обработка запускается...", 0, 0); // IsPlayingNow, IsStoped...
+                await ProcessAudioAsync(ProcessSingleton.Instance.StartDate, ProcessSingleton.Instance.EndDate, schemeName, Configuration["OllamaModelName"], preText, UpdateProgress2);
+                await Task.Delay(2000);
+                ChangeSingleton(true, true, $"Обработка завершена. Обработано: {ProcessSingleton.Instance.ProcessedKeys} / {ProcessSingleton.Instance.TotalKeys}"); // IsPlayingNow, IsStoped...
+
+                if (ProcessSingleton.Instance.IsCycle && !ProcessSingleton.Instance.IsStopPressed)
+                {
+                    ProcessSingleton.Instance.ProcessingMessage = "Обработка завершена. Ожидание новых записей...";
+                    await Task.Delay(ProcessSingleton.Instance.CycleInterval * 60 * 1000);
+                }
+
+            }
+            while (!ProcessSingleton.Instance.IsStopPressed && ProcessSingleton.Instance.IsCycle);
+            ProcessSingleton.Instance.IsPlayingNow = false;
+
+        }
+        catch (Exception ex)
+        {
+            ProcessSingleton.Instance.ProcessingMessage = $"Произошла ошибка: {ex.Message}";
+            ProcessSingleton.Instance.IsPlayingNow = false;
+            ProcessSingleton.Instance.IsStopPressed = true;
+            ProcessSingleton.Instance.IsStoped2 = true;
+        }
+    }
+
+    public async Task StopProcessing()
+    {
+        ProcessSingleton.Instance.IsStopPressed = true;
+        ProcessSingleton.Instance.ProcessingMessage = ProcessSingleton.Instance.IsStoped2 ? "Обработка остановлена." : "Выполняется остановка, подождите...";
+        while (ProcessSingleton.Instance.IsStoped2 == false)
+        {
+            await Task.Delay(1000);
+        }
+        ProcessSingleton.Instance.IsPlayingNow = false;
+    }
+
+    public async void UpdateProgress2(int processed, int total)
+    {
+        if (ProcessSingleton.Instance.ProcessedKeys < processed) ProcessSingleton.Instance.ProcessingMessage = "Обработка выполняется..."; // если процесс продолжается запираем ошибку
+        ProcessSingleton.Instance.ProcessedKeys = processed;
+        ProcessSingleton.Instance.TotalKeys = total;
+        //await InvokeAsync(() => StateHasChanged());
+        await Task.Delay(0);
+        StateHasChanged();
+    }
+
+    public async Task ChangeSingleton(bool IsPlayingNow, bool IsStoped, string ProcessingMessage, int ProcessedKeys = -1, int TotalKeys = -1)
+    {
+        if (ProcessedKeys >= 0 && TotalKeys >= 0)
+        {
+            ProcessSingleton.Instance.ProcessedKeys = ProcessedKeys;
+            ProcessSingleton.Instance.TotalKeys = TotalKeys;
+        }
+        ProcessSingleton.Instance.ProcessingMessage = ProcessingMessage;
+        ProcessSingleton.Instance.IsStoped2 = IsStoped;
+        ProcessSingleton.Instance.IsPlayingNow = IsPlayingNow;
+        await InvokeAsync(() => StateHasChanged());
+    }
+
+    public async Task ProcessAudioAsync(DateTime StartDate, DateTime EndDate, string schemeName, string modelName, string preText, Action<int, int> updateProgress)
+    {
+        //Task<string> loadModel = OllamaResponse("Переведи на руссий слово: ", "success", modelName); //если моделью не пользовались, для загрузки в память видеокатры, чтоб "разбудить"
+
+        using (var db = new OracleDbContext(new DbContextOptionsBuilder<OracleDbContext>().UseOracle(conStringDBA).Options))
+        {
+            await db.Database.OpenConnectionAsync();
+            await db.Database.ExecuteSqlRawAsync($"ALTER SESSION SET CURRENT_SCHEMA = {schemeName}");
+            Console.WriteLine($"Выбранная схема: {schemeName}");
+
+            var audioList = EFCoreLinq.GetSpeechRecords(StartDate, EndDate, db, _ignoreRecordType); // список аудио
+
+            int processedKeys = 0;
+            int totalKeys = audioList.Count;
+
+            foreach (var entity in audioList)
+            {
+                /////////////////////////////////////////
+                /// Остановить процесс                ///
+                if (ProcessSingleton.Instance.IsStopPressed)
+                {
+                    ChangeSingleton(false, true, $"Обработка завершена. Обработано: {ProcessSingleton.Instance.ProcessedKeys} / {ProcessSingleton.Instance.TotalKeys}", ProcessSingleton.Instance.ProcessedKeys, ProcessSingleton.Instance.TotalKeys); // IsPlayingNow, IsStoped...
+                    break;
+                }
+                /////////////////////////////////////////
+                updateProgress(processedKeys, totalKeys);
+                ProcessSingleton.Instance.IsStoped2 = false;
+                ProcessSingleton.Instance.ProcessingMessage = "Обработка выполняется...";
+
+                // ORACLE => get audio
+                var (audioDataLeft, audioDataRight, recordType) = await EFCoreLinq.GetAudioDataAsync(entity.Id, schemeName, db);
+                Console.WriteLine($"Audio data for key {entity.Id} loaded successfully. recordType = " + recordType);
+
+                // FFMpeg or Decoder => audio to folder
+                string audioFilePath = Path.Combine(Configuration["AudioPathForProcessing"], $"{entity.Id}.wav");
+
+                await FFMpeg(audioDataLeft, audioDataRight, recordType, audioFilePath, pathToDecoderExe, pathToDecoderDll);
+                await Task.Delay(50);
+                if (!File.Exists(audioFilePath))
+                {
+                    Console.WriteLine();
+                    Console.WriteLine("FFMpeg_Decoder не выполнил задачу, отсутструет файл => " + audioFilePath);
+                    Console.WriteLine();
+                    continue;
+                }
+                // WHISPER
+                Task<string> _recognizedText = whisper.RecognizeSpeechAsync(audioFilePath, Configuration); //асинхронно, не ждём
+                (string languageCode, string detectedLanguage) = await WhisperDetectLanguage(audioFilePath); //жмём..
+                string recognizedText = await _recognizedText; //дожидаемся _recognizedText...*/
+                                                               //var (languageCode, detectedLanguage, recognizedText) = ("ru", "Russian", "Почему небо голубое");
+                                                               // DELETE
+                File.Delete(audioFilePath);
+                updateProgress(++processedKeys, totalKeys);
+                StateHasChanged();
+
+                // OLLAMA + ORACLE => Run task without await
+                ProcessOllamaAndUpdateEntityAsync(entity.Id, recognizedText, languageCode, detectedLanguage, preText, Configuration["OllamaModelName"], schemeName).ContinueWith(task =>
+                        {
+                            if (task.IsFaulted)
+                            {
+                                Console.WriteLine("Ошибка при обработке Ollama и обновлении сущности EFCore: " + task.Exception.Message);
+                            }
+                        });
+
+                lagTime = await HandleLagTime(lagTime); // если Ollama отстаёт от Whisper => ожидаем...
+                ConsoleCol.WriteLine("lagTime = " + lagTime, ConsoleColor.Magenta);
+
+        //_ = ProcessOllamaAndUpdateEntityAsync(entity.Id, recognizedText, languageCode, detectedLanguage, preText, Configuration["OllamaModelName"], schemeName);
+                /*
+                // метод ProcessOllamaAndUpdateEntityAsync для замены кода ниже, т.к. нужно сделать выполнение асинхронным
+                // OLLAMA
+                Task<string> responseOllamaText = OllamaResponse(preText, recognizedText, Configuration["OllamaModelName"]);
+                if (languageCode != "ru" && languageCode != "uk") recognizedText = await OllamaTranslate(recognizedText, modelName, languageCode, detectedLanguage);
+
+                // ORACLE => update entity
+                await EFCoreLinq.InsertCommentAsync(entity.Id, recognizedText, detectedLanguage, await responseOllamaText, db, schemeName, Configuration["OllamaModelName"]);
+
+                updateProgress(++processedKeys, totalKeys);
+            */
+            }
+        }
+    }
+
+    public async Task ProcessOllamaAndUpdateEntityAsync(long? entityId, string recognizedText, string languageCode, string detectedLanguage, string preText, string modelName, string schemeName)
+    {
+        // OLLAMA
+        Task<string> responseOllamaText = OllamaResponse(preText, recognizedText, modelName);
+        if (languageCode != "ru" && languageCode != "uk" && !string.IsNullOrEmpty(languageCode))
+        {
+            recognizedText = await OllamaTranslate(recognizedText, modelName, languageCode, detectedLanguage);
+        }
+        using (var db = new OracleDbContext(new DbContextOptionsBuilder<OracleDbContext>().UseOracle(conStringDBA).Options))
+        {
+            await db.Database.OpenConnectionAsync();
+            await db.Database.ExecuteSqlRawAsync($"ALTER SESSION SET CURRENT_SCHEMA = {schemeName}");
+            // ORACLE => update entity
+            await EFCoreLinq.InsertCommentAsync(entityId, recognizedText, detectedLanguage, await responseOllamaText, db, schemeName, modelName);
+            await db.Database.CloseConnectionAsync();
+        }
+    }
+
+    private async Task<int> HandleLagTime(int lagTime)
+    {
+        if (lagTime <= 40) return lagTime;
+
+        /*var (delay, message) = lagTime switch
+            {
+            > 500 => (3000000, "lagTime > 220 выжидаем паузу... 300 секунд..."),
+            > 240 => (1200000, "lagTime > 220 выжидаем паузу... 120 секунд..."),
+            > 120 => (60000, "lagTime > 220 выжидаем паузу... 60 секунд..."),
+            _ => (30000, $"lagTime = {lagTime}\nвыжидаем паузу... 30 секунд..."),
+        };*/
+
+        int delay = lagTime / 2;
+        string message = $"lagTime = {lagTime} выжидаем паузу... {delay} секунд...";
+
+        ConsoleCol.WriteLine(message, ConsoleColor.Red);
+        await Task.Delay(delay * 1000);
+        return delay;
+    }
 
 
+    private async Task FFMpeg(byte[] audioDataLeft, byte[] audioDataRight, string? recordType, string audioFilePath, string pathToDecoderExe, string pathToDecoderDll)
+    {
+        try
+        {
+            if (audioDataLeft != null)
+            {
+                if (recordType != null && _codecs.Contains(recordType))
+                {
+                    Console.WriteLine("using decoder!!! recordType is " + recordType);
+                    await EncodingDecoding.ConvertToWavUsingDecoder(audioDataLeft, audioDataRight, audioFilePath, recordType, pathToDecoderExe, pathToDecoderDll, pathToFFmpegExe);
+                    await Task.Delay(200); //возможно файл не успевает сохраниться, поэтому пауза
+                }
+                else
+                {
+                    Console.WriteLine("using ffmpeg!!! recordType is " + recordType);
+                    await EncodingDecoding.ConvertToWavAsyncStream(audioDataLeft, audioDataRight, audioFilePath);
+                    await Task.Delay(200); //возможно файл не успевает сохраниться, поэтому пауза
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("ошибка в методе FFMpeg: " + ex.Message);
+        }
+    }
+
+    private async Task<(string, string)> WhisperDetectLanguage(string audioFilePath)
+    {
+        try
+        {
+            string[] recognizedLanguage = await whisper.DetectLanguageAsync(audioFilePath, Configuration);
+            return (recognizedLanguage[0].ToLower(), recognizedLanguage[1]);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("ошибка в методе WhisperDetectLanguage: " + ex.Message);
+            return ("", "");
+        }
+    }
+
+    private async Task<string> OllamaResponse(string preText, string recognizedText, string modelName)
+    {
+        if (string.IsNullOrEmpty(recognizedText)) return ("Аудио не транскрибировано");
+        try
+        {
+            (string text, int durationOllama) = await ai.SendTextForAnalysisAsync(preText, recognizedText, modelName, Configuration);
+            Console.WriteLine();
+            ConsoleCol.WriteLine("OllamaResponse => Длительность выполнения: " + durationOllama + " sec.", ConsoleColor.DarkBlue);
+
+            text = await DeleteUnnecessary(text);
+            return text;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("ошибка в методе OllamaResponse: " + ex.Message);
+            return ("ошибка в методе OllamaResponse: " + ex.Message);
+        }
+    }
+
+    private async Task<string> OllamaTranslate(string recognizedText, string modelName, string languageCode, string detectedLanguage)
+    {
+        string preTextToTranslate = "Сделай перевод текста на русский язык, ответом должен должен быть только перевод, без дополнительных фраз. Вот текст: ";
+        (string translatedText, int durationOllama) = await ai.SendTextForAnalysisAsync(preTextToTranslate, recognizedText, modelName, Configuration);
+        Console.WriteLine();
+        ConsoleCol.WriteLine("OllamaTranslate => Длительность выполнения: " + durationOllama + " sec.", ConsoleColor.Blue);
+        translatedText = await DeleteUnnecessary(translatedText);
+        translatedText = $"Перевод с {detectedLanguage.ToUpper()} языка: \n" + translatedText;
+        return translatedText;
+    }
+    // побочка от изменения параметров модели (в ответе спрашивает => Let me know if you have any other...)
+    private async Task<string> DeleteUnnecessary (string text)
+    {
+        await Task.Delay(0);
+        int startIndex1 = text.IndexOf("Let me");
+        int startIndex2 = text.IndexOf("```python");
+        if (startIndex1 != -1)
+        {
+            text = text.Remove(startIndex1, text.Length - startIndex1);
+        }
+        if (startIndex2 != -1)
+        {
+            text = text.Remove(startIndex2, text.Length - startIndex2);
+        }
+        text = text.Replace("\n\n", "\n").TrimStart('.').Trim();
+        return text;
+    }
 
 }

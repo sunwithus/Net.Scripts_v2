@@ -10,6 +10,8 @@
 @using MudBlazorWeb2.Components.Modules.Replicator
 @using MudBlazorWeb2.Components.EntityFrameworkCore
 
+@inject IConfiguration Configuration
+
     <MudSimpleTable Hover="true" Dense="true" FixedHeader="true" Style="height:200px;">
         <colgroup>
             <col span="1" style="width: 60%;">
@@ -19,7 +21,7 @@
             <tr>
                 <th>
                 <MudText Style="display: flex; justify-content: space-between; align-items: center;">
-                        <MudButton  OnClick="StartReplication" ButtonType="ButtonType.Submit" Variant="Variant.Outlined" Color="@colorButton">Пуск!</MudButton>
+                        <MudButton OnClick="@(async () => await StartReplication())" ButtonType="ButtonType.Submit" Variant="Variant.Outlined" Color="@colorButton">Пуск!</MudButton>
                     <MudText>@if (progressCircular && Scheme != "")
                         {
                             <MudText>Схема БД => @Scheme.ToUpper()</MudText>
@@ -59,8 +61,16 @@
     [Parameter]
     public EventCallback<float> OnPercentsProgress { get; set; }
 
+    string pathToFFmpegExeForReplicator = "";
 
-    //Обработка начала/окончания процесса реплакации
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.Delay(0);
+        pathToFFmpegExeForReplicator = Configuration["PathToFFmpegExeForReplicator"];
+    }
+
+    //Обработка начала/окончания процесса реплакации    
     private async Task OnProcessReplication(bool value, float percents)
     {
         await IsReplicationFinished.InvokeAsync(value);
@@ -129,7 +139,7 @@
                     await ProcessFile(context, filePath);
                 }
 
-                Console.WriteLine(DateTime.Now);
+                Console.WriteLine(DateTime.Now + "Репликация в Oracle выполнена!");
                 await context.Database.CloseConnectionAsync();
             }
         }
@@ -155,11 +165,10 @@
     {
         try
         {
-            long? maxKey = await context.SprSpeechTable.MaxAsync(x => (long?)x.Id) ?? 0;
+            Task<long?> _maxKey = context.SprSpeechTable.MaxAsync(x => (long?)x.Id);
+            var runFFmpeg = RunFFmpeg(filePath);
 
             var fileData = AudioMethods.ParseFileName(filePath); //если не удалось, возвращает {DateTime.Now, "", "", "", 2}
-
-            await RunFFmpeg(filePath);
 
             var mediaInfo = await FFProbe.AnalyseAsync(filePath);
             int durationOfWav = (int)(mediaInfo.PrimaryAudioStream?.Duration.TotalSeconds ?? 0);
@@ -168,11 +177,13 @@
             string rightChannelFileName = Path.Combine(Path.GetDirectoryName(filePath), $"{Path.GetFileNameWithoutExtension(filePath)}_right.wav");
             string monoChannelFileName = Path.Combine(Path.GetDirectoryName(filePath), $"{Path.GetFileNameWithoutExtension(filePath)}_mono.wav");
 
+            await runFFmpeg;
             byte[]? fileDataLeft = File.Exists(leftChannelFileName) ? File.ReadAllBytes(leftChannelFileName) : null;
             if (fileDataLeft == null) fileDataLeft = File.Exists(monoChannelFileName) ? File.ReadAllBytes(monoChannelFileName) : null;
 
             byte[]? fileDataRight = File.Exists(rightChannelFileName) ? File.ReadAllBytes(rightChannelFileName) : null;
 
+            long? maxKey = await _maxKey ?? 0;
             if (fileDataLeft != null)
             {
                 var speechTableEntry = new SPR_SPEECH_TABLE
@@ -182,6 +193,7 @@
                         Prelooked = 0,
                         Deviceid = "MEDIUM_R",
                         Datetime = fileData.Timestamp,
+                        //Duration = TimeSpan.Parse(string.Format("+00 {0:D2}:{1:D2}:{2:D2}.000000", durationOfWav / 3600, (durationOfWav % 3600) / 60, durationOfWav % 60)),
                         Duration = string.Format("+00 {0:D2}:{1:D2}:{2:D2}.000000", durationOfWav / 3600, (durationOfWav % 3600) / 60, durationOfWav % 60),
                         Sysnumber3 = fileData.IMEI,
                         Sourcename = sourceName,
@@ -222,12 +234,13 @@
         }
         catch (Exception ex)
         {
-            message = $"<tr><td>{filePath}</td><td> ❌ + " + ex.Message + "</td ></tr >" + message;
+            message = $"<tr><td>{filePath}</td><td> ❌ " + ex.Message + "</td ></tr >" + message;
         }
     }
 
     public async Task RunFFmpeg(string inputFileName)
     {
+        
         // Анализ аудиофайла
         var mediaInfo = await FFProbe.AnalyseAsync(inputFileName);
        
@@ -246,7 +259,10 @@
                     .WithAudioBitrate(128_000)
                     .WithAudioSamplingRate(8000)
                 )
-                .ProcessAsynchronously();
+                
+                //.ProcessAsynchronously(true, new FFOptions { BinaryFolder = "C:/dotnet/ffmpeg2", TemporaryFilesFolder = "/tmp" });
+                //.ProcessAsynchronously();
+                .ProcessAsynchronously(true, new FFOptions { BinaryFolder = pathToFFmpegExeForReplicator });
 
             await FFMpegArguments
                 .FromFileInput(inputFileName)
@@ -256,7 +272,8 @@
                     .WithAudioBitrate(128_000)
                     .WithAudioSamplingRate(8000)
                 )
-                .ProcessAsynchronously();
+                //.ProcessAsynchronously();
+                .ProcessAsynchronously(true, new FFOptions { BinaryFolder = pathToFFmpegExeForReplicator });
         }
         else
         {
@@ -271,7 +288,8 @@
                     .WithAudioSamplingRate(8000)
                     //.WithAudioChannels(1)
                 )
-                .ProcessAsynchronously();
+                //.ProcessAsynchronously();
+                .ProcessAsynchronously(true, new FFOptions { BinaryFolder = pathToFFmpegExeForReplicator });
         }
     }
 

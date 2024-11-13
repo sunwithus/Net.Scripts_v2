@@ -4,7 +4,7 @@ using System.ComponentModel;
 
 namespace MudBlazorWeb2.Components.Modules.Replicator
 {
-        public class OraSingleton
+    public class OraSingleton
     {
         private static OraSingleton instance;
         private static readonly object padlock = new object();
@@ -13,7 +13,7 @@ namespace MudBlazorWeb2.Components.Modules.Replicator
         {
         }
 
-        public static OraSingleton Instance
+        public static OraSingleton InstanceOra
         {
             get
             {
