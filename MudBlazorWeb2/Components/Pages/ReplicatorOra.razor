@@ -11,6 +11,7 @@
 @using MudBlazorWeb2.Components.Modules.Replicator
 @inject IDbContextFactory<OracleDbContext> DbFactory
 @inject IConfiguration Configuration 
+@inject SettingsService SettingsService
 
 <PageTitle>🎧 Replicator Oracle 🖥️</PageTitle>
 
@@ -24,18 +25,7 @@
         <MudText>Идёт выполнение, подождите... @OraSingleton.InstanceOra.ProgressExec %</MudText>
     </MudOverlay>
 
-    <MudText Color="@colorButton" Style="display: flex; justify-content:space-between; align-items: center; padding-bottom: 7px;" Typo="Typo.body1">
-        @if (settingsReplicator != null)
-        {
-            <MudText>
-                Текущие настройки БД: <b>@(settingsReplicator?.ReplOraItems?.DataSource) => @(settingsReplicator?.ReplOraItems?.Scheme)</b>
-            </MudText>
-        }
-        <OracleConnectionSettings nameConfigFile="@nameConfigFile" colorButton="@colorButton" OnSettingsChanged="LoadSettingsFromFile" />
-    </MudText>
-
-    <MudDivider />
-    <br />
+    <OracleConnectionSettings colorButton="@colorButton" OnSettingsChanged="OnSettingsChanged" settingsDB="@settingsDB" oraItemsDB="@settingsDB.SettingsReplicator.OraItems" propertyName="SettingsReplicator" />
 
     <MudText Style="width: 330px;">
         <OracleChooseOperator operatorsFile="@operatorsFile" colorButton="@colorButton" OnOperatorSelected="HandleOperatorSelected" />
@@ -55,7 +45,7 @@
 
     @if (isFilesLoaded)
     {
-        <OracleAudioReplication nameConfigFile="@nameConfigFile" pathToSaveTempAudio="@pathToSaveTempAudio" sourceName="@operatorName" colorButton="@colorButton" IsReplicationFinished="HandleReplicationIsFinished" OnPercentsProgress="HandlePercentsProgress" />
+        <OracleAudioReplication pathToSaveTempAudio="@pathToSaveTempAudio" sourceName="@operatorName" colorButton="@colorButton" IsReplicationFinished="HandleReplicationIsFinished" OnPercentsProgress="HandlePercentsProgress" />
     }
 
  </MudContainer>
@@ -63,25 +53,26 @@
 
 @code {
 
-    string nameConfigFile = Path.Combine(AppContext.BaseDirectory, "settingsReplicator.json"); //Настройки подключения к БД
     string operatorsFile = Path.Combine(AppContext.BaseDirectory, "replicatorOperators.txt"); //Операторы
     MudBlazor.Color colorButton = Color.Secondary;
     private string pathToSaveTempAudio = "";
     private string operatorName = ""; //имя источник
     private bool isFilesLoaded = false;
-    OraSettings? settingsReplicator = new();
+    private Settings settingsDB = null;
 
     protected override async Task OnInitializedAsync()
     {
+        await Task.Delay(0);
         pathToSaveTempAudio = Configuration["AudioPathForReplicator"] + Guid.NewGuid() +"\\";
         OraSingleton.InstanceOra.PropertyChanged += Singleton_PropertyChanged;
-        await LoadSettingsFromFile();
+        settingsDB = SettingsService.GetSettings();
     }
 
-    private async Task LoadSettingsFromFile()
+    private async Task OnSettingsChanged()
     {
-        string json = await File.ReadAllTextAsync(nameConfigFile);
-        settingsReplicator = JsonSerializer.Deserialize<OraSettings>(json);
+        await Task.Delay(1);
+        Console.WriteLine("Настройки подключения к БД для репликатора изменились");
+        //settingsDB = SettingsService.GetSettings();
     }
 
     private void HandleOperatorSelected(string value)

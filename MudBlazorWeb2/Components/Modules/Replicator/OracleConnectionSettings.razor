@@ -8,53 +8,63 @@
 @using MudBlazorWeb2.Components.Modules.Replicator
 
 @rendermode InteractiveServer
+
 @inject IDbContextFactory<OracleDbContext> DbFactory
+@inject SettingsService SettingsService
 
-<MudText>
-    <MudButton Variant="Variant.Outlined" Color="@colorButton" OnClick="@(e => ToggleOverlay(true))">Настройки БД</MudButton>
-    <MudOverlay Visible="isVisible" DarkBackground="true" Absolute="false">
-        <EditForm Model="@settings" Style="width:500px">
+<MudText Color="@colorButton" Style="display: flex; justify-content:space-between; align-items: center; padding-bottom: 7px;" Typo="Typo.body1">
+    <MudText>
+        Текущие настройки БД: <b>@oraItemsDB.DataSource => @oraItemsDB.Scheme</b>
+    </MudText>
+    <MudText>
+        <MudButton Variant="Variant.Outlined" Color="@colorButton" OnClick="@(e => ToggleOverlay(true))">Настройки БД</MudButton>
+        <MudOverlay Visible="isVisible" DarkBackground="true" Absolute="false">
+            <EditForm Model="@oraItemsDB" Style="width:500px">
 
-            <MudCard>
-                <MudCardContent>
-                    <MudTextField Label="Пользователь" @bind-Value="settings.ReplOraItems.User" For="@(() => settings.ReplOraItems.User)" />
-                    <MudTextField Label="Пароль" HelperText="По умолчанию - masterkey" Class="mt-3"
-                                  @bind-Value="settings.ReplOraItems.Password" For="@(() => settings.ReplOraItems.Password)" InputType="InputType.Password" />
-                    <MudTextField Label="IP-адрес сервера / sprutora" Class="mt-3"
-                                  @bind-Value="settings.ReplOraItems.DataSource" For="@(() => settings.ReplOraItems.DataSource)" />
-                    <MudTextField Label="Схема базы данных" Class="mt-3"
-                                  @bind-Value="settings.ReplOraItems.Scheme" For="@(() => settings.ReplOraItems.Scheme)" />
-                    @*<MudCheckBox @bind-Value="@settings.ReplOraItems.TryToParse" Color="@colorButton" Label="Попробовать найти идентификаторы"></MudCheckBox>*@
-                </MudCardContent>
+                <MudCard>
+                    <MudCardContent>
+                        <MudTextField Label="Пользователь" @bind-Value="oraItemsDB.User" For="@(() => oraItemsDB.User)" />
+                        <MudTextField Label="Пароль" HelperText="По умолчанию - masterkey" Class="mt-3"
+                                      @bind-Value="oraItemsDB.Password" For="@(() => oraItemsDB.Password)" InputType="InputType.Password" />
+                        <MudTextField Label="IP-адрес сервера / sprutora" Class="mt-3"
+                                      @bind-Value="oraItemsDB.DataSource" For="@(() => oraItemsDB.DataSource)" />
+                        <MudTextField Label="Схема базы данных" Class="mt-3"
+                                      @bind-Value="oraItemsDB.Scheme" For="@(() => oraItemsDB.Scheme)" />
+                    </MudCardContent>
 
-                <MudCardContent Style="height:85px">
-                    <MudText Style="white-space: pre-wrap; max-width: 450px; position: relative; top: -25px" Color="@colorButton">@message</MudText>
-                </MudCardContent>
+                    <MudCardContent Style="height:85px">
+                        <MudText Style="white-space: pre-wrap; max-width: 450px; position: relative; top: -25px" Color="@colorButton">@message</MudText>
+                    </MudCardContent>
 
-                <MudCardActions>
-                    <MudButton OnClick="@(e => TestButtonClick())" ButtonType="ButtonType.Submit" Variant="Variant.Outlined" Color="@colorButton">Тест подключения</MudButton>
-                    <MudButton OnClick="@(e => ApplyButtonClick())" ButtonType="ButtonType.Submit" Variant="Variant.Outlined" Color="@colorButton" Class="ml-auto">Применить</MudButton>&nbsp;
-                    <MudButton Variant="Variant.Outlined" Color="@colorButton" OnClick="@(e => CancelButtonClick())">Отмена</MudButton>
-                </MudCardActions>
-            </MudCard>
+                    <MudCardActions>
+                        <MudButton OnClick="@(e => TestButtonClick())" ButtonType="ButtonType.Submit" Variant="Variant.Outlined" Color="@colorButton">Тест подключения</MudButton>
+                        <MudButton OnClick="@(e => ApplyButtonClick())" ButtonType="ButtonType.Submit" Variant="Variant.Outlined" Color="@colorButton" Class="ml-auto">Применить</MudButton>&nbsp;
+                        <MudButton Variant="Variant.Outlined" Color="@colorButton" OnClick="@(e => CancelButtonClick())">Отмена</MudButton>
+                    </MudCardActions>
+                </MudCard>
 
-        </EditForm>
-    </MudOverlay>
+            </EditForm>
+        </MudOverlay>
+    </MudText>
 </MudText>
+<MudDivider />
+<br />
 
 @code {
-    [Parameter]
-    public string? nameConfigFile { get; set; }
+
     [Parameter]
     public MudBlazor.Color colorButton { get; set; }
     [Parameter]
+    public Settings settingsDB { get; set; }
+    [Parameter]
+    public OraItems oraItemsDB { get; set; }
+    [Parameter]
+    public string propertyName { get; set; }
+    [Parameter]
     public EventCallback<string> OnSettingsChanged { get; set; }
 
-
-    private bool isVisible;
-    string conStringDBA = "";
+    private bool isVisible = false;
     string message = "";
-    OraSettings? settings = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -64,20 +74,46 @@
 
     private async Task LoadSettingsFromFile()
     {
-        string json = await File.ReadAllTextAsync(nameConfigFile);
-        settings = JsonSerializer.Deserialize<OraSettings>(json);
-        conStringDBA = $"User Id={settings.ReplOraItems.User};Password={settings.ReplOraItems.Password};Data Source={settings.ReplOraItems.DataSource};";
+        await Task.Delay(0);
+        settingsDB = SettingsService.GetSettings();
+
+        // Обновляем соответствующее свойство в settingsDB
+        if (propertyName == "SettingsReplicator")
+        {
+            oraItemsDB = settingsDB.SettingsReplicator.OraItems;
+        }
+        else if (propertyName == "SettingsProcessing")
+        {
+            oraItemsDB = settingsDB.SettingsProcessing.OraItems;
+        }
+        else if (propertyName == "SettingsMakingWord")
+        {
+            oraItemsDB = settingsDB.SettingsMakingWord.OraItems;
+        }
+        StateHasChanged();
     }
-    private async Task SaveSettingsToFile()
+
+    private async Task SaveSettingsToFile(OraItems oraItemsDB)
     {
-        settings.ReplOraString.OracleDbConnectionString = conStringDBA;
-        settings.ReplOraString.Scheme = settings.ReplOraItems.Scheme;
-        var options = new JsonSerializerOptions { WriteIndented = true };
-        string json = JsonSerializer.Serialize(settings, options);
-        await File.WriteAllTextAsync(nameConfigFile, json);
+        // Обновляем соответствующее свойство в settingsDB
+        if (propertyName == "SettingsReplicator")
+        {
+            settingsDB.SettingsReplicator.OraItems = oraItemsDB;
+        }
+        else if (propertyName == "SettingsProcessing")
+        {
+            settingsDB.SettingsProcessing.OraItems = oraItemsDB;
+        }
+        else if (propertyName == "SettingsMakingWord")
+        {
+            settingsDB.SettingsMakingWord.OraItems = oraItemsDB;
+        }
+
+        await SettingsService.SaveSettingAsync(settingsDB);
+        StateHasChanged();
     }
-    
-    private async Task CheckDatabaseConnection()
+
+    private async Task CheckDatabaseConnection(string conStringDBA, string Scheme)
     {
         try
         {
@@ -87,10 +123,10 @@
                 if (await context.Database.CanConnectAsync())
                     message += "Соединение с Oracle установлено!\n";
 
-                await context.Database.ExecuteSqlRawAsync($"ALTER SESSION SET CURRENT_SCHEMA = {settings.ReplOraItems.Scheme}");
+                await context.Database.ExecuteSqlRawAsync($"ALTER SESSION SET CURRENT_SCHEMA = {Scheme}");
                 long? maxKey = await context.SprSpeechTable.MaxAsync(x => x.Id);
                 if (maxKey > 0)
-                    message += "Схема: " + settings.ReplOraItems.Scheme + " выбрана! \nМаксимальный идентификатор: " + maxKey + ".";
+                    message += "Схема: " + Scheme + " выбрана! \nМаксимальный идентификатор: " + maxKey + ".";
 
                 await context.Database.CloseConnectionAsync();
             }
@@ -112,30 +148,30 @@
     private async void TestButtonClick()
     {
         message = "";
-        conStringDBA = $"User Id={settings.ReplOraItems.User};Password={settings.ReplOraItems.Password};Data Source={settings.ReplOraItems.DataSource};";
-        await CheckDatabaseConnection();
+        await CheckDatabaseConnection($"User Id={oraItemsDB.User};Password={oraItemsDB.Password};Data Source={oraItemsDB.DataSource};", oraItemsDB.Scheme);
+        StateHasChanged();
     }
 
     private async void ApplyButtonClick()
     {
-        await SaveSettingsToFile();
+        await SaveSettingsToFile(oraItemsDB);
         await OnSettingsChanged.InvokeAsync(); //оповещение родительского элемента о сохранении настроек
-        ToggleOverlay(false);
+        await LoadSettingsFromFile();
+        await ToggleOverlay(false);
     }
 
     private async void CancelButtonClick()
     {
         await LoadSettingsFromFile();
-        ToggleOverlay(false);
+        await ToggleOverlay(false);
     }
 
-    public void ToggleOverlay(bool value)
+    public async Task ToggleOverlay(bool value)
     {
+        if (value == true) await LoadSettingsFromFile();
         isVisible = value;
         message = "";
         StateHasChanged();
     }
 
 }
-
-

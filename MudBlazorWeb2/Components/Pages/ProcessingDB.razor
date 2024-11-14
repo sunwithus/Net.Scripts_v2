@@ -31,17 +31,9 @@
 
     <MudText Style="position: relative;">
         <MudOverlay Visible="ProcessSingleton.Instance.IsPlayingNow" LightBackground="true" Absolute="true" />
-        <MudText Color="@colorTag" Style="display: flex; justify-content:space-between; align-items: center; padding-bottom: 7px;" Typo="Typo.body1">
-            @if (settingsProcessing != null && settingsProcessing.ReplOraItems != null)
-            {
-                <MudText>
-                    Текущие настройки БД: <b>@(settingsProcessing?.ReplOraItems?.DataSource) => @(settingsProcessing?.ReplOraItems?.Scheme)</b>
-                </MudText>
-            }
-            <OracleConnectionSettings nameConfigFile="@nameConfigFile" colorButton="@colorTag" OnSettingsChanged="LoadSettingsFromFile" />
-        </MudText>
-        <MudDivider />
-        <br />
+        
+        <OracleConnectionSettings colorButton="@colorTag" OnSettingsChanged="OnSettingsChanged" settingsDB="@settingsDB" oraItemsDB="@settingsDB.SettingsProcessing.OraItems" propertyName="SettingsProcessing" />
+
         <MudText Style="display: flex; justify-content:space-between; align-items:start; padding-bottom: 7px;">
             <MudText>
                 @* // Период *@
@@ -105,15 +97,11 @@
 @code {
 
     MudBlazor.Color colorTag = Color.Info;
+    private Settings settingsDB = null;
 
-    string nameConfigFile = Path.Combine(AppContext.BaseDirectory, "settingsProcessing.json"); //Настройки подключения к БД
-    OraSettings? settingsProcessing = null;
-    //EncodingDecoding? encodingDecoding = null;
     List<string>? _codecs = null;
     List<string>? _ignoreRecordType = null;
-    string? pathToDecoderExe;
-    string? pathToDecoderDll;
-    string? pathToFFmpegExe;
+    string? pathToDecoderExe, pathToDecoderDll, pathToFFmpegExe;
     private string preTextValue = string.Empty;
     private string? conStringDBA, preText, schemeName;
     int lagTime = 0; // время запаздывания Ollama от Whisper
@@ -126,23 +114,23 @@
         pathToDecoderDll = Configuration["PathToDecoderDll"];
         pathToFFmpegExe = Configuration["PathToFFmpegExe"];
 
-        settingsProcessing = new OraSettings ();
-        await LoadSettingsFromFile();
-        preTextValue = SettingsService.GetSetting("PreText");
-        preText = SettingsService.GetSetting("PreText");
         ProcessSingleton.Instance.PropertyChanged2 += Singleton_PropertyChanged2;
-        if (!Directory.Exists(Configuration["AudioPathForProcessing"])) Directory.CreateDirectory(Configuration["AudioPathForProcessing"]); //
+        if (!Directory.Exists(Configuration["AudioPathForProcessing"])) Directory.CreateDirectory(Configuration["AudioPathForProcessing"]);
+
+        await LoadSettingsFromFile();
     }
 
     private async Task LoadSettingsFromFile()
     {
-        string json = await File.ReadAllTextAsync(nameConfigFile);
-        settingsProcessing = JsonSerializer.Deserialize<OraSettings>(json);
-        schemeName = settingsProcessing?.ReplOraString?.Scheme;
-        conStringDBA = settingsProcessing?.ReplOraString?.OracleDbConnectionString;
+        settingsDB = SettingsService.GetSettings();
+        schemeName = settingsDB.SettingsProcessing.OraItems.Scheme;
+        conStringDBA = $"User Id={settingsDB.SettingsProcessing.OraItems.User};Password={settingsDB.SettingsProcessing.OraItems.Password};Data Source={settingsDB.SettingsProcessing.OraItems.DataSource};";
+        preTextValue = settingsDB.PreText;
+        preText = settingsDB.PreText;
+        await Task.Delay(0);
     }
 
-    private void GetPreTextValue() => preTextValue = SettingsService.GetSetting("PreText");
+    private void GetPreTextValue() => preTextValue = SettingsService.GetSettings().PreText;
 
     public void Singleton_PropertyChanged2(object sender, PropertyChangedEventArgs e) => InvokeAsync(StateHasChanged);
 
@@ -161,7 +149,7 @@
             do
             {
                 ChangeSingleton(true, false, "Обработка запускается...", 0, 0); // IsPlayingNow, IsStoped...
-                await ProcessAudioAsync(ProcessSingleton.Instance.StartDate, ProcessSingleton.Instance.EndDate, schemeName, Configuration["OllamaModelName"], preText, UpdateProgress2);
+                await ProcessAudioAsync(ProcessSingleton.Instance.StartDate, ProcessSingleton.Instance.EndDate, schemeName, Configuration["OllamaModelName"], preText, UpdateProgress2, conStringDBA);
                 await Task.Delay(2000);
                 ChangeSingleton(true, true, $"Обработка завершена. Обработано: {ProcessSingleton.Instance.ProcessedKeys} / {ProcessSingleton.Instance.TotalKeys}"); // IsPlayingNow, IsStoped...
 
@@ -219,9 +207,10 @@
         await InvokeAsync(() => StateHasChanged());
     }
 
-    public async Task ProcessAudioAsync(DateTime StartDate, DateTime EndDate, string schemeName, string modelName, string preText, Action<int, int> updateProgress)
+    public async Task ProcessAudioAsync(DateTime StartDate, DateTime EndDate, string schemeName, string modelName, string preText, Action<int, int> updateProgress, string conStringDBA)
     {
         //Task<string> loadModel = OllamaResponse("Переведи на руссий слово: ", "success", modelName); //если моделью не пользовались, для загрузки в память видеокатры, чтоб "разбудить"
+        await LoadSettingsFromFile();
 
         using (var db = new OracleDbContext(new DbContextOptionsBuilder<OracleDbContext>().UseOracle(conStringDBA).Options))
         {
@@ -285,19 +274,6 @@
 
                 lagTime = await HandleLagTime(lagTime); // если Ollama отстаёт от Whisper => ожидаем...
                 ConsoleCol.WriteLine("lagTime = " + lagTime, ConsoleColor.Magenta);
-
-        //_ = ProcessOllamaAndUpdateEntityAsync(entity.Id, recognizedText, languageCode, detectedLanguage, preText, Configuration["OllamaModelName"], schemeName);
-                /*
-                // метод ProcessOllamaAndUpdateEntityAsync для замены кода ниже, т.к. нужно сделать выполнение асинхронным
-                // OLLAMA
-                Task<string> responseOllamaText = OllamaResponse(preText, recognizedText, Configuration["OllamaModelName"]);
-                if (languageCode != "ru" && languageCode != "uk") recognizedText = await OllamaTranslate(recognizedText, modelName, languageCode, detectedLanguage);
-
-                // ORACLE => update entity
-                await EFCoreLinq.InsertCommentAsync(entity.Id, recognizedText, detectedLanguage, await responseOllamaText, db, schemeName, Configuration["OllamaModelName"]);
-
-                updateProgress(++processedKeys, totalKeys);
-            */
             }
         }
     }
@@ -322,15 +298,7 @@
 
     private async Task<int> HandleLagTime(int lagTime)
     {
-        if (lagTime <= 40) return lagTime;
-
-        /*var (delay, message) = lagTime switch
-            {
-            > 500 => (3000000, "lagTime > 220 выжидаем паузу... 300 секунд..."),
-            > 240 => (1200000, "lagTime > 220 выжидаем паузу... 120 секунд..."),
-            > 120 => (60000, "lagTime > 220 выжидаем паузу... 60 секунд..."),
-            _ => (30000, $"lagTime = {lagTime}\nвыжидаем паузу... 30 секунд..."),
-        };*/
+        if (lagTime <= 50) return lagTime;
 
         int delay = lagTime / 2;
         string message = $"lagTime = {lagTime} выжидаем паузу... {delay} секунд...";
@@ -339,7 +307,6 @@
         await Task.Delay(delay * 1000);
         return delay;
     }
-
 
     private async Task FFMpeg(byte[] audioDataLeft, byte[] audioDataRight, string? recordType, string audioFilePath, string pathToDecoderExe, string pathToDecoderDll)
     {
@@ -389,6 +356,7 @@
             (string text, int durationOllama) = await ai.SendTextForAnalysisAsync(preText, recognizedText, modelName, Configuration);
             Console.WriteLine();
             ConsoleCol.WriteLine("OllamaResponse => Длительность выполнения: " + durationOllama + " sec.", ConsoleColor.DarkBlue);
+            lagTime = durationOllama;
 
             text = await DeleteUnnecessary(text);
             return text;
@@ -408,6 +376,9 @@
         ConsoleCol.WriteLine("OllamaTranslate => Длительность выполнения: " + durationOllama + " sec.", ConsoleColor.Blue);
         translatedText = await DeleteUnnecessary(translatedText);
         translatedText = $"Перевод с {detectedLanguage.ToUpper()} языка: \n" + translatedText;
+        
+        lagTime = durationOllama;
+        
         return translatedText;
     }
     // побочка от изменения параметров модели (в ответе спрашивает => Let me know if you have any other...)
@@ -426,6 +397,12 @@
         }
         text = text.Replace("\n\n", "\n").TrimStart('.').Trim();
         return text;
+    }
+
+    private async Task OnSettingsChanged()
+    {
+        await Task.Delay(1);
+        Console.WriteLine("Настройки подключения к БД для Процесса обработки изменились");
     }
 
 }

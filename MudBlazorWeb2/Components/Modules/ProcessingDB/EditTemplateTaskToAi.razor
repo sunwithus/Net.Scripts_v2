@@ -34,12 +34,13 @@
 
     protected override void OnInitialized()
     {
-        preTextValue = SettingsService.GetSetting("PreText");
+        //preTextValue = SettingsService.GetSetting("PreText");
+        preTextValue = SettingsService.GetSettings().PreText;
     }
     
     private async Task ApplyButtonClick()
     {
-        await SettingsService.SaveSettingAsync("PreText", preTextValue);
+        await SettingsService.UpdateSettingAsync("PreText", preTextValue);
         ToggleOverlay(false);
         await OnApplyButtonClick.InvokeAsync();
     }

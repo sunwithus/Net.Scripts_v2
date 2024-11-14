@@ -12,11 +12,12 @@ using MudBlazorWeb2.Components.Modules.ProcessingDB;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Регистрация сервиса для чтения/записи настроек из appsettings.json (или другово файла)
+// Регистрация сервиса для чтения/записи настроек из appsettings.json
 builder.Services.AddSingleton<SettingsService>();
+// Регистрация сервиса для чтения/записи настроек из settingsOper.json
+builder.Services.AddSingleton<OperSettingsService>();
 
-// Oracle
-// тут настройки "по-умолчанию"
+// Oracle настройки "по-умолчанию"
 var connectionString = builder.Configuration.GetConnectionString("OracleDbConnection");
 builder.Services.AddDbContextFactory<OracleDbContext>(options =>
             options.UseOracle(connectionString, providerOptions => providerOptions
@@ -49,12 +50,12 @@ builder.Services.AddHttpClient();
 // Добавление HttpClient сервисов с настройкой таймаута
 builder.Services.AddHttpClient<WhisperService>(client =>
 {
-    client.Timeout = TimeSpan.FromMinutes(25); // Установка таймаута
+    client.Timeout = TimeSpan.FromMinutes(15); // Установка таймаута
 });
 
 builder.Services.AddHttpClient<OllamaService>(client =>
 {
-    client.Timeout = TimeSpan.FromMinutes(25);
+    client.Timeout = TimeSpan.FromMinutes(15);
 });
 
 var app = builder.Build();

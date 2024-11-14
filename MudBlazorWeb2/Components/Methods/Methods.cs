@@ -2,17 +2,26 @@
 {
     public class ConsoleCol
     {
+        private static readonly object consoleLock = new object();
+
         public static void WriteLine(string text, ConsoleColor color)
         {
-            Console.ForegroundColor = color;
-            Console.WriteLine(text);
-            Console.ResetColor();
+            lock (consoleLock)
+            {
+                Console.ForegroundColor = color;
+                Console.WriteLine(text);
+                Console.ResetColor();
+            }
         }
+
         public static void Write(string text, ConsoleColor color)
         {
-            Console.ForegroundColor = color;
-            Console.Write(text);
-            Console.ResetColor();
+            lock (consoleLock)
+            {
+                Console.ForegroundColor = color;
+                Console.Write(text);
+                Console.ResetColor();
+            }
         }
     }
 }

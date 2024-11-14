@@ -1,0 +1,34 @@
+﻿@page "/settings-oper"
+
+@inject OperSettingsService OperSettingsService
+
+<PageTitle>💬 wav, mp3, text 🖍</PageTitle>
+
+<MudContainer>
+    <MudText Typo="Typo.h5">Страница настроек оператора</MudText>
+    <MudDivider />
+    <br />
+
+    <MudPaper >
+
+        <MudElement Style="">
+
+
+        </MudElement>
+
+    </MudPaper>
+
+</MudContainer>
+
+@code {
+
+    protected override async Task OnInitializedAsync()
+
+    {
+        var operSettingsService = new OperSettingsService();
+        await operSettingsService.SaveSettingAsync("MyKey", "MyValue");
+        var value = operSettingsService.GetSetting("MyKey");
+        Console.WriteLine($"Settings loaded MyKey => {value}.");
+    }
+
+}

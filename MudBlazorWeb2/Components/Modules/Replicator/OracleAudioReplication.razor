@@ -7,10 +7,10 @@
 @using System.Diagnostics
 @using System.Text.Json
 
-@using MudBlazorWeb2.Components.Modules.Replicator
 @using MudBlazorWeb2.Components.EntityFrameworkCore
 
 @inject IConfiguration Configuration
+@inject SettingsService SettingsService
 
     <MudSimpleTable Hover="true" Dense="true" FixedHeader="true" Style="height:200px;">
         <colgroup>
@@ -51,8 +51,6 @@
     [Parameter]
     public string pathToSaveTempAudio { get; set; }
     [Parameter]
-    public string nameConfigFile { get; set; }
-    [Parameter]
     public string sourceName { get; set; }
     [Parameter]
     public MudBlazor.Color colorButton { get; set; }
@@ -62,7 +60,7 @@
     public EventCallback<float> OnPercentsProgress { get; set; }
 
     string pathToFFmpegExeForReplicator = "";
-
+    string Scheme = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -77,30 +75,18 @@
         await OnPercentsProgress.InvokeAsync(percents);
     }
 
-    OraSettings settings = new OraSettings();
-
-    string conStringDBA = "";
-    string Scheme = "";
-
-    //private string ffmpegExePath = @"C:\dotnet\ffmpeg\ffmpeg.exe";
-    private int currentProgress = 0;
     private string message = "";
     private string progress = "";
     private bool progressCircular = false;
-
-    private async Task LoadSettingsFromFile()
-    {
-        string json = await File.ReadAllTextAsync(nameConfigFile);
-        settings = JsonSerializer.Deserialize<OraSettings>(json);
-        conStringDBA = settings.ReplOraString.OracleDbConnectionString;
-        Scheme = settings.ReplOraString.Scheme;
-    }
 
     private async Task StartReplication()
     {
         await OnProcessReplication(false, 0); // передача родительскому эл-ту о начале
         progressCircular = true;
-        await LoadSettingsFromFile();
+
+        var settingsDB = SettingsService.GetSettings().SettingsReplicator.OraItems;
+        string OracleDbConnectionString = $"User Id={settingsDB.User};Password={settingsDB.Password};Data Source={settingsDB.DataSource};";
+        Scheme = settingsDB.Scheme;
 
         message = "";
         progress = "";
@@ -121,7 +107,7 @@
 
         try
         {
-            using (var context = new OracleDbContext(new DbContextOptionsBuilder<OracleDbContext>().UseOracle(conStringDBA).Options))
+            using (var context = new OracleDbContext(new DbContextOptionsBuilder<OracleDbContext>().UseOracle(OracleDbConnectionString).Options))
             {
                 await context.Database.OpenConnectionAsync();
                 await context.Database.ExecuteSqlRawAsync($"ALTER SESSION SET CURRENT_SCHEMA = {Scheme}");
@@ -139,7 +125,7 @@
                     await ProcessFile(context, filePath);
                 }
 
-                Console.WriteLine(DateTime.Now + "Репликация в Oracle выполнена!");
+                ConsoleCol.WriteLine(DateTime.Now + " Репликация в Oracle выполнена!", ConsoleColor.Yellow);
                 await context.Database.CloseConnectionAsync();
             }
         }

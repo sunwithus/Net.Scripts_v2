@@ -30,24 +30,13 @@
     <PackageReference Include="FreeSpire.Doc" Version="12.2.0" />
     <PackageReference Include="MudBlazor" Version="7.*" />
 	<PackageReference Include="FFMpegCore" Version="5.1.0" />
-	<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
 	<PackageReference Include="Oracle.EntityFrameworkCore" Version="6.21.160" />
 	  <PackageReference Include="System.Text.Encoding.CodePages" Version="8.0.0" />
   </ItemGroup>
 
 
   <ItemGroup>
-    <Content Update="settingsMakingWord.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-
-
-  <ItemGroup>
     <None Update="Components\Modules\Replicator\ffmpeg.exe">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="ffmpeg.exe">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="pattern.docx">

@@ -20,6 +20,7 @@
 @using Oracle.ManagedDataAccess.Client
 
 @inject IJSRuntime JsRuntime
+@inject SettingsService SettingsService
 
 <PageTitle>🖍 Оформление Word.doc 📃</PageTitle>
 
@@ -32,19 +33,7 @@
     <MudDivider />
     <br />
 
-    <MudText Color="@colorTag" Style="display: flex; justify-content:space-between; align-items: center; padding-bottom: 7px;" Typo="Typo.body1">
-        @if (settings != null)
-        {
-            <MudText>
-                Текущие настройки БД: <b>@(settings?.ReplOraItems?.DataSource) => @(settings?.ReplOraItems?.Scheme)</b>
-            </MudText>
-        }
-        <OracleConnectionSettings nameConfigFile="@nameConfigFile" colorButton="@colorTag" OnSettingsChanged="LoadSettingsFromFile" />
-    </MudText>
-    <MudText Color="@colorTag" Typo="Typo.body2">@message</MudText>
-
-    <MudDivider />
-    <br />
+    <OracleConnectionSettings colorButton="@colorTag" OnSettingsChanged="OnSettingsChanged" settingsDB="@settingsDB" oraItemsDB="@settingsDB.SettingsMakingWord.OraItems" propertyName="SettingsMakingWord" />
 
     <MudText Style="display: flex; align-items: center; ">
         <MudText>Введите номер поля <b>Ключ</b></MudText>
@@ -126,14 +115,12 @@
 
 @code {
 
-    string nameConfigFile = Path.Combine(AppContext.BaseDirectory, "settingsMakingWord.json"); //Настройки подключения к БД"
-
     MudBlazor.Color colorTag = Color.Success;
+    private Settings settingsDB = null;
 
     string conStringDBA = "";
     string Scheme = "";
     string message = ""; // Сообщение об ошибке
-    OraSettings? settings = new();
     private List<SpeechData> speechData = null;
 
     List<string> ColumnHeaders = new() { "Ключ", "Дата/время", "Длительность", "Собеседник", "Пользовательский номер", "Тип вызова", "CID", "LAC", "Базовая станция", "Принадлежность (язык оригинала)", "Имя источника (оператор)", "Устройство" };
@@ -150,12 +137,18 @@
         await LoadSettingsFromFile();
     }
 
+    private async Task OnSettingsChanged()
+    {
+        await Task.Delay(1);
+        Console.WriteLine("Настройки подключения к БД для создания Word изменились");
+    }
+
     private async Task LoadSettingsFromFile()
     {
-        string json = await File.ReadAllTextAsync(nameConfigFile);
-        settings = JsonSerializer.Deserialize<OraSettings>(json);
-        conStringDBA = $"User Id={settings.ReplOraItems.User};Password={settings.ReplOraItems.Password};Data Source={settings.ReplOraItems.DataSource};";
-        Scheme = settings.ReplOraString.Scheme;
+        settingsDB = SettingsService.GetSettings();
+        Scheme = settingsDB.SettingsMakingWord.OraItems.Scheme;
+        conStringDBA = $"User Id={settingsDB.SettingsMakingWord.OraItems.User};Password={settingsDB.SettingsMakingWord.OraItems.Password};Data Source={settingsDB.SettingsMakingWord.OraItems.DataSource};";
+        await Task.Delay(1);
     }
 
     private async Task QueryById()
