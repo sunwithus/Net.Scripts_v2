@@ -87,7 +87,7 @@ namespace MudBlazorWeb2.Components.EntityFrameworkCore
         [Column("S_EVENT")] //Тип события (Событие: -1 -  неизвестно, 0 - назначение трафик-канала, 1 - отключение трафик-канала...)
         public int? Event { get; set; } = -1;
 
-        [Column("S_EVENTCODE")] //Событие (оригинал) - GSM
+        [Column("S_EVENTCODE")] //Событие (оригинал) - GSM (совпадает с RecordType)
         public string? Eventcode { get; set; } = "GSM";
 
         [Column("S_STANDARD")] //стандарт системы связи - GSM_ABIS

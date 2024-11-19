@@ -1,19 +1,22 @@
 ﻿@*//OracleChooseOperator.razor*@
 
 @using System.Text.RegularExpressions
+@using MudBlazorWeb2.Components.Modules.SettingsOper.Services
+@inject OperSettingsService OperSettingsService
 
 @rendermode InteractiveServer
 
 <MudText Typo="Typo.body1" Style="display: flex;">
-    <MudSelect ValueChanged="@(value => OnOperatorSelectedChanged(value))" T="string" Label="Оператор:" Value="@operatorName" Color=@colorButton Style="width: 250px; top:-7px;">
+    <MudSelect ValueChanged="@(value => OnOperatorSelectedChanged(value))" T="string" Label="Оператор:" Value="@operatorName" Color=@colorButton Style="top:-7px;">
         @foreach (var oper in operators)
         {
             <MudSelectItem Value="@oper">@oper</MudSelectItem>
         }
     </MudSelect>
-    <MudIconButton  Icon="@Icons.Material.Outlined.Settings" Color="Color.Default" OnClick="@(e => ToggleOverlay(true))" />
 </MudText>
 
+@*<MudIconButton  Icon="@Icons.Material.Outlined.Settings" Color="Color.Default" OnClick="@(e => ToggleOverlay(true))" />*@
+@*
 <MudOverlay Visible="isVisible" DarkBackground="true" Absolute="false">
     <MudCard Style="width: 500px;">
         <MudCardContent>
@@ -27,73 +30,75 @@
         </MudCardActions>
     </MudCard>
 </MudOverlay>
+*@
 
 @code {
 
-    [Parameter]
-    public string operatorsFile {get; set;}
     [Parameter]
     public MudBlazor.Color colorButton { get; set; }
     [Parameter]
     public EventCallback<string> OnOperatorSelected { get; set; }
 
-    string operatorsString = "";
     string operatorName = "";
-
     List<string> operators = new();
-
-    bool isVisible;
 
     private async void OnOperatorSelectedChanged(string value)
     {
         operatorName = value;
         await OnOperatorSelected.InvokeAsync(value);
     }
-    
+
     protected override async Task OnInitializedAsync()
     {
-        await LoadSettingsFromFile();
-        isVisible = false;
+        await Task.Delay(0);
+        var settings = await OperSettingsService.ReadAllItemsFromFile();
+        operators = settings.OrderBy(x => x.Key).Select(x => x.Key).ToList();
     }
+/*
+ * 
+        [Parameter]
+        public string operatorsFile { get; set; }
+        string operatorsString = "";
+        bool isVisible;
 
-    private async Task LoadSettingsFromFile()
-    {
-        string readFile = await File.ReadAllTextAsync(operatorsFile);
-        operators = Regex.Replace(readFile, @"\s+", " ").Trim().Split(',').ToList()
-            .Select(op => op.Trim().TrimEnd(',', '.'))
-            .Where(op => !string.IsNullOrWhiteSpace(op))
-            .OrderBy(op => op)
+        private async Task LoadSettingsFromFile()
+            {
+            string readFile = await File.ReadAllTextAsync(operatorsFile);
+            operators = Regex.Replace(readFile, @"\s+", " ").Trim().Split(',').ToList()
+                .Select(op => op.Trim().TrimEnd(',', '.'))
+                .Where(op => !string.IsNullOrWhiteSpace(op))
+                .OrderBy(op => op)
             .ToList();
-        operatorsString = string.Join(", ", operators);
-    }
+            operatorsString = string.Join(", ", operators);
+        }
 
-    private async Task SaveSettingsToFile()
-    {
-        await File.WriteAllTextAsync(operatorsFile, Regex.Replace(operatorsString, @"\s+", " ").Trim());
-    }
+        private async Task SaveSettingsToFile()
+            {
+            await File.WriteAllTextAsync(operatorsFile, Regex.Replace(operatorsString, @"\s+", " ").Trim());
+        }
 
-    private async void ApplyButtonClick()
-    {
-        await SaveSettingsToFile();
-        await ReloadSettings();
-    }
+        private async void ApplyButtonClick()
+            {
+            await SaveSettingsToFile();
+            await ReloadSettings();
+        }
 
-    private async void CancelButtonClick()
-    {
-        await ReloadSettings();
-    }
+        private async void CancelButtonClick()
+            {
+            await ReloadSettings();
+        }
 
-    public void ToggleOverlay(bool value)
-    {
-        isVisible = value;
-    }
+        public void ToggleOverlay(bool value)
+            {
+            isVisible = value;
+        }
 
-    private async Task ReloadSettings()
-    {
-        await LoadSettingsFromFile();
-        ToggleOverlay(false);
-        StateHasChanged();
-    }
-
+        private async Task ReloadSettings()
+            {
+            await LoadSettingsFromFile();
+            ToggleOverlay(false);
+            StateHasChanged();
+            }
+    */
 
 }

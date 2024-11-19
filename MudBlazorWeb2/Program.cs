@@ -1,4 +1,5 @@
- //Program.cs
+//Program.cs
+global using MudBlazorWeb2.Components.Methods;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -6,16 +7,20 @@ using MudBlazorWeb2.Components.EntityFrameworkCore;
 
 using MudBlazor.Services;
 using MudBlazorWeb2.Components;
-using static MudBlazorWeb2.Components.Pages.ReplicatorOra;
-using MudBlazorWeb2.Components.Methods;
-using MudBlazorWeb2.Components.Modules.ProcessingDB;
+using MudBlazorWeb2.Components.Modules.MakingWord.Services;
+using MudBlazorWeb2.Components.Modules.SettingsOper.Services;
+using MudBlazorWeb2.Components.Modules.WhOllProcessWithDb.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Регистрация сервиса для чтения/записи настроек из appsettings.json
+// Регистрация сервиса для чтения/записи настроек из settingsApp.json и settingsOper.json
 builder.Services.AddSingleton<SettingsService>();
-// Регистрация сервиса для чтения/записи настроек из settingsOper.json
 builder.Services.AddSingleton<OperSettingsService>();
+
+builder.Services.AddScoped<SpeechDataService>();
+builder.Services.AddScoped<WordDocumentService>();
+builder.Services.AddSingleton<StateService>();
+
 
 // Oracle настройки "по-умолчанию"
 var connectionString = builder.Configuration.GetConnectionString("OracleDbConnection");

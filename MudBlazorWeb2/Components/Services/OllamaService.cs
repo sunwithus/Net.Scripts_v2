@@ -6,6 +6,8 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using MudBlazorWeb2.Components.Methods;
 using Microsoft.Extensions.Configuration;
+using MudBlazorWeb2.Components.Modules.WhOllProcessWithDb;
+using System.Configuration;
 
 public class OllamaService
 {
@@ -20,6 +22,36 @@ public class OllamaService
     {
         public string response { get; set; }
         public long total_duration { get; set; }
+    }
+
+    public async Task<(string, int)> OllamaResponse(string preText, string recognizedText, string modelName, IConfiguration Configuration)
+    {
+        if (string.IsNullOrEmpty(recognizedText)) return ("Аудио не транскрибировано", -1);
+        try
+        {
+            (string text, int durationOllama) = await SendTextForAnalysisAsync(preText, recognizedText, modelName, Configuration);
+            ConsoleCol.WriteLine("\nOllamaResponse => Длительность выполнения: " + durationOllama + " sec.", ConsoleColor.DarkBlue);
+
+            text = await Text.DeleteUnnecessary(text);
+            return (text, durationOllama);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("ошибка в методе OllamaResponse: " + ex.Message);
+            return ("ошибка в методе OllamaResponse: " + ex.Message, -1);
+        }
+    }
+
+    public async Task<(string, int)> OllamaTranslate(string recognizedText, string modelName, string languageCode, string detectedLanguage, IConfiguration Configuration, SettingsService SettingsService)
+    {
+        string preTextToTranslate = SettingsService.GetSettings().PreTextTranslate;
+        (string translatedText, int durationOllama) = await SendTextForAnalysisAsync(preTextToTranslate, recognizedText, modelName, Configuration);
+        Console.WriteLine();
+        ConsoleCol.WriteLine("OllamaTranslate => Длительность выполнения: " + durationOllama + " sec.", ConsoleColor.Blue);
+        translatedText = await Text.DeleteUnnecessary(translatedText);
+        translatedText = $"Перевод с {detectedLanguage.ToUpper()} языка: \n" + translatedText;
+
+        return (translatedText, durationOllama);
     }
 
     public async Task<(string, int)> SendTextForAnalysisAsync(string preText, string recognizedText, string modelName, IConfiguration configuration)

@@ -13,18 +13,6 @@
     <None Remove="Components\Pages\SprSpeechTables\**" />
   </ItemGroup>
 
-  <ItemGroup>
-    <None Remove="Components\Modules\ProcessingDB\ProcessingStatus.txt" />
-    <None Remove="replicatorOperators.txt" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="Components\Modules\ProcessingDB\ProcessingStatus.txt" />
-    <Content Include="replicatorOperators.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-
 
   <ItemGroup>
     <PackageReference Include="FreeSpire.Doc" Version="12.2.0" />
@@ -36,9 +24,6 @@
 
 
   <ItemGroup>
-    <None Update="Components\Modules\Replicator\ffmpeg.exe">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <None Update="pattern.docx">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

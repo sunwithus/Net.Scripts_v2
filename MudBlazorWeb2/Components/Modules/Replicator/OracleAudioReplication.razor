@@ -9,7 +9,7 @@
 
 @using MudBlazorWeb2.Components.EntityFrameworkCore
 
-@inject IConfiguration Configuration
+@inject IConfiguration conf
 @inject SettingsService SettingsService
 
     <MudSimpleTable Hover="true" Dense="true" FixedHeader="true" Style="height:200px;">
@@ -59,13 +59,15 @@
     [Parameter]
     public EventCallback<float> OnPercentsProgress { get; set; }
 
-    string pathToFFmpegExeForReplicator = "";
-    string Scheme = "";
+    private string Scheme = "";
+
+    private string message = "";
+    private string progress = "";
+    private bool progressCircular = false;
 
     protected override async Task OnInitializedAsync()
     {
         await Task.Delay(0);
-        pathToFFmpegExeForReplicator = Configuration["PathToFFmpegExeForReplicator"];
     }
 
     //Обработка начала/окончания процесса реплакации    
@@ -74,10 +76,6 @@
         await IsReplicationFinished.InvokeAsync(value);
         await OnPercentsProgress.InvokeAsync(percents);
     }
-
-    private string message = "";
-    private string progress = "";
-    private bool progressCircular = false;
 
     private async Task StartReplication()
     {
@@ -100,13 +98,14 @@
         {
             progressCircular = false;
             message = $"<tr><td>Файлы в директории отсутствуют </td><td></td ></tr >";
-            Console.WriteLine(message);
+            Console.WriteLine("Файлы в директории отсутствуют!");
             await OnProcessReplication(true, 0); // передача родительскому эл-ту об окончании
             return;
         }
 
         try
         {
+
             using (var context = new OracleDbContext(new DbContextOptionsBuilder<OracleDbContext>().UseOracle(OracleDbConnectionString).Options))
             {
                 await context.Database.OpenConnectionAsync();
@@ -185,7 +184,8 @@
                         Sourcename = sourceName,
                         Talker = fileData.Talker, // второй в 79841944120_79242505061_Call_In_2023-11-23_16_15_36.mp3
                         Usernumber = fileData.Caller, // первый в 79841944120_79242505061_Call_In_2023-11-23_16_15_36.mp3
-                        Calltype = fileData.Calltype
+                        Calltype = fileData.Calltype,
+                        Eventcode = "PCMA"
                     };
 
                 var data1TableEntry = new SPR_SP_DATA_1_TABLE
@@ -248,7 +248,7 @@
                 
                 //.ProcessAsynchronously(true, new FFOptions { BinaryFolder = "C:/dotnet/ffmpeg2", TemporaryFilesFolder = "/tmp" });
                 //.ProcessAsynchronously();
-                .ProcessAsynchronously(true, new FFOptions { BinaryFolder = pathToFFmpegExeForReplicator });
+                .ProcessAsynchronously(true, new FFOptions { BinaryFolder = conf["PathToFFmpegExeForReplicator"] });
 
             await FFMpegArguments
                 .FromFileInput(inputFileName)
@@ -259,7 +259,7 @@
                     .WithAudioSamplingRate(8000)
                 )
                 //.ProcessAsynchronously();
-                .ProcessAsynchronously(true, new FFOptions { BinaryFolder = pathToFFmpegExeForReplicator });
+                .ProcessAsynchronously(true, new FFOptions { BinaryFolder = conf["PathToFFmpegExeForReplicator"] });
         }
         else
         {
@@ -275,7 +275,7 @@
                     //.WithAudioChannels(1)
                 )
                 //.ProcessAsynchronously();
-                .ProcessAsynchronously(true, new FFOptions { BinaryFolder = pathToFFmpegExeForReplicator });
+                .ProcessAsynchronously(true, new FFOptions { BinaryFolder = conf["PathToFFmpegExeForReplicator"] });
         }
     }
 

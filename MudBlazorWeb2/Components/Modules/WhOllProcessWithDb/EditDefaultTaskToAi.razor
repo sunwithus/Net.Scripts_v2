@@ -1,20 +1,17 @@
-﻿@* EditTemplateTaskToAi.razor *@
+﻿@* EditDefaultTaskToAi.razor *@
 
-@page "/edit-parameterss2"
 @rendermode InteractiveServer
 
 @inject SettingsService SettingsService
 
-
-
 <MudText Typo="Typo.body2">
-    edit ai request
+    запрос по-умолчанию
     <MudIconButton style="width: 48px; height: 48px" Icon="@Icons.Material.Filled.SettingsEthernet" Color="@colorButton" OnClick="@(()=>ToggleOverlay(true))" />
 </MudText>
 <MudOverlay Visible="isVisible" DarkBackground="true" Absolute="false">
     <MudCard Style="width:500px">
         <MudCardHeader>Редактирование.</MudCardHeader>
-        <MudTextField Style="margin:10px;" @bind-Value="preTextValue" Lines="14" Label="Запрос к модели ИИ:" Variant="Variant.Outlined"></MudTextField>
+        <MudTextField Style="margin:10px;" @bind-Value="preTextValue" Lines="14" Label="Запрос (если не задан в пользовательских настройках):" Variant="Variant.Outlined"></MudTextField>
         <MudCardActions>
             <MudButton OnClick="ApplyButtonClick" ButtonType="ButtonType.Submit" Variant="Variant.Outlined" Color="@colorButton" Class="ml-auto">Применить</MudButton>&nbsp;
             <MudButton Variant="Variant.Outlined" Color="@colorButton" OnClick="CancelButtonClick">Отмена</MudButton>
@@ -35,7 +32,7 @@
     protected override void OnInitialized()
     {
         //preTextValue = SettingsService.GetSetting("PreText");
-        preTextValue = SettingsService.GetSettings().PreText;
+        preTextValue = SettingsService.GetSettings().PreTextDefault;
     }
     
     private async Task ApplyButtonClick()

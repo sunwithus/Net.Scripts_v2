@@ -1,34 +1,89 @@
-﻿@page "/settings-oper"
+﻿@*SettingsOper.razor*@
 
+@page "/source-settings"
+
+@using MudBlazorWeb2.Components.Modules.SettingsOper
+@using MudBlazorWeb2.Components.Modules.SettingsOper.Services
+@using MudBlazor
+
+@inject IDialogService DialogService
 @inject OperSettingsService OperSettingsService
 
-<PageTitle>💬 wav, mp3, text 🖍</PageTitle>
+<PageTitle>⚙️ Configuration 🛠</PageTitle>
 
 <MudContainer>
-    <MudText Typo="Typo.h5">Страница настроек оператора</MudText>
+    <MudText Typo="Typo.h5">Пользовательские настройки</MudText>
     <MudDivider />
     <br />
 
-    <MudPaper >
+    <MudText Style="top:-17px; position:relative;">
+        <MudText Style="display:flex;">
+            <MudTextField @bind-Value="newKey" T="string" Label="Имя источника (оператор)" />
+            <MudButton OnClick="AddOrUpdateSetting">Сохранить 💾</MudButton>
+        </MudText>
+        <MudTextField @bind-Value="newValue" Lines="5" FullWidth Label="Шаблон запроса" Variant="Variant.Outlined" />
 
-        <MudElement Style="">
+  
+        
+    <MudSimpleTable RowClass="cursor-pointer" Hover="true" Dense="true" FixedHeader="true">
+        <thead>
+            <tr>
+                    <th>№ &emsp; Имя источника</th>
+                <th style="width:80px;">Действия</th>
+            </tr>
+        </thead>
 
-
-        </MudElement>
-
-    </MudPaper>
-
+            <tbody>
+                @foreach (var (setting, index) in Settings.Select((setting, index) => (setting, index + 1)))
+                {
+                    <tr>
+                        <MudButton FullWidth Style="justify-content: flex-start; padding:0; border-bottom:1px solid #e0e0e0;" OnClick="@(e => EditSetting(setting.Key, setting.Value))">
+                            <td>@index</td>
+                            <td><MudText>@setting.Key</MudText></td>
+                        </MudButton>
+                        <td>
+                            <MudButton Style="padding:0;" OnClick="@(e => DeleteSetting(setting.Key))">✖️</MudButton>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+    </MudSimpleTable>
+    </MudText>
 </MudContainer>
 
 @code {
+    private Dictionary<string, string> Settings { get; set; } = new Dictionary<string, string>();
+    private string newKey { get; set; } = string.Empty;
+    private string newValue { get; set; } = string.Empty;
 
     protected override async Task OnInitializedAsync()
-
     {
-        var operSettingsService = new OperSettingsService();
-        await operSettingsService.SaveSettingAsync("MyKey", "MyValue");
-        var value = operSettingsService.GetSetting("MyKey");
-        Console.WriteLine($"Settings loaded MyKey => {value}.");
+        await Task.Delay(0);
+        Settings = await OperSettingsService.ReadAllItemsFromFile();
+        Settings = Settings.OrderBy(x => x.Key).ToDictionary(x => x.Key, x => x.Value);
+    }
+
+    private async Task AddOrUpdateSetting()
+    {
+        if (!string.IsNullOrEmpty(newKey) && !string.IsNullOrEmpty(newValue))
+        {
+            await OperSettingsService.SaveItemAsync(newKey, newValue);
+            Settings = await OperSettingsService.ReadAllItemsFromFile();
+            newKey = string.Empty;
+            newValue = string.Empty;
+        }
+    }
+
+    private void EditSetting(string key, string value)
+    {
+        newKey = key;
+        newValue = value;
+    }
+
+    private async Task DeleteSetting(string key)
+    {
+        await OperSettingsService.DeleteItemByKey(key);
+        Settings = await OperSettingsService.ReadAllItemsFromFile();
     }
 
 }

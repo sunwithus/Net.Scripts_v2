@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 public class Settings
 {
-    public string PreText { get; set; }
+    public string PreTextTranslate { get; set; }
     public string PreTextDefault { get; set; }
     public SettingsReplicator SettingsReplicator { get; set; }
     public SettingsProcessing SettingsProcessing { get; set; }
@@ -84,8 +84,8 @@ public class SettingsService
 
         switch (key)
         {
-            case "PreText":
-                settings.PreText = (string)value;
+            case "PreTextTranslate":
+                settings.PreTextTranslate = (string)value;
                 break;
             case "PreTextDefault":
                 settings.PreTextDefault = (string)value;
