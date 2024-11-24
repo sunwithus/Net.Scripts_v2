@@ -12,12 +12,12 @@
 @inject IDbContextFactory<OracleDbContext> DbFactory
 @inject SettingsService SettingsService
 
-<MudText Color="@colorButton" Style="display: flex; justify-content:space-between; align-items: center; padding-bottom: 7px;" Typo="Typo.body1">
+<MudText Color="@colorButton" Typo="Typo.body1" Style="position:relative; top:-5px; display: flex; justify-content:space-between; align-items: center;">
     <MudText>
         Текущие настройки БД: <b>@oraItemsDB.DataSource => @oraItemsDB.Scheme</b>
     </MudText>
     <MudText>
-        <MudButton Variant="Variant.Outlined" Color="@colorButton" OnClick="@(e => ToggleOverlay(true))">Настройки БД</MudButton>
+        <MudButton Style="top:-5px;" Variant="Variant.Outlined" Color="@colorButton" OnClick="@(e => ToggleOverlay(true))">Настройки БД</MudButton>
         <MudOverlay Visible="isVisible" DarkBackground="true" Absolute="false">
             <EditForm Model="@oraItemsDB" Style="width:500px">
 
@@ -86,6 +86,10 @@
         {
             oraItemsDB = settingsDB.SettingsProcessing.OraItems;
         }
+        else if (propertyName == "SettingsSputnik")
+        {
+            oraItemsDB = settingsDB.SettingsSputnik.OraItems;
+        }
         else if (propertyName == "SettingsMakingWord")
         {
             oraItemsDB = settingsDB.SettingsMakingWord.OraItems;
@@ -103,6 +107,10 @@
         else if (propertyName == "SettingsProcessing")
         {
             settingsDB.SettingsProcessing.OraItems = oraItemsDB;
+        }
+        else if (propertyName == "SettingsSputnik")
+        {
+            settingsDB.SettingsSputnik.OraItems = oraItemsDB;
         }
         else if (propertyName == "SettingsMakingWord")
         {

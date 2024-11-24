@@ -1,13 +1,12 @@
 ﻿//SpeechDataService.cs
 using Microsoft.EntityFrameworkCore;
 using MudBlazorWeb2.Components.EntityFrameworkCore;
-using MudBlazorWeb2.Components.Modules.MakingWord.Modules;
 
-namespace MudBlazorWeb2.Components.Modules.MakingWord.Services
+namespace MudBlazorWeb2.Components.Modules.MakingWord.Modules
 {
-    public class SpeechDataService
+    public class DbQuery
     {
-        public async Task<List<SpeechData>> GetSpeechDataByIdAsync(long? id, string schema, string conStringDBA)
+        public static async Task<List<SpeechData>> GetSpeechDataByIdAsync(long? id, string schema, string conStringDBA)
         {
             using (var context = new OracleDbContext(new DbContextOptionsBuilder<OracleDbContext>().UseOracle(conStringDBA).Options))
             {
@@ -44,7 +43,7 @@ namespace MudBlazorWeb2.Components.Modules.MakingWord.Services
                 await context.Database.CloseConnectionAsync();
 
                 return speechData;
-            }           
+            }
         }
     }
 }

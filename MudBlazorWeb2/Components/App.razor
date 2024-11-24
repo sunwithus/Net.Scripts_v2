@@ -5,8 +5,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <base href="/" />  
-    <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet" />
     <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />  
+    <link href="css-player/all.min.css" rel="stylesheet" />
+    <link href="css-player/style.css" rel="stylesheet" />
     <link rel="icon" type="image/ico" href="favicon.png" />
     <HeadOutlet @rendermode="InteractiveServer" />
 </head>
@@ -14,10 +15,11 @@
 <body>
     <Routes @rendermode="InteractiveServer" />
 
-    <script src="js/scripts.js"></script>
-    <script src="~/wwwroot/js/scripts.js"></script>
     <script src="_framework/blazor.web.js"></script>
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
+    <script src="js/scripts.js"></script>
+    <script src="js/wavesurfer.min.js"></script>
+    <script src="js/multitrack.min.js"></script>
     
 </body>
 

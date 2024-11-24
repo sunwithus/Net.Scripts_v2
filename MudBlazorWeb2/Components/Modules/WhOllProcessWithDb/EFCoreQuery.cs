@@ -26,12 +26,12 @@ namespace MudBlazorWeb2.Components.Modules.WhOllProcessWithDb
             return (hours * 3600 + minutes * 60 + seconds);
         }
 
-        public static async Task<List<SPR_SPEECH_TABLE>> GetSpeechRecords(StateService StateService, OracleDbContext db, List<string> _ignoreRecordType)
+        public static async Task<List<SPR_SPEECH_TABLE>> GetSpeechRecords(DateTime StartDate, DateTime EndDate, string TimeInterval, OracleDbContext db, List<string> _ignoreRecordType)
         {
             var parameters = new OracleParameter[]
             {
-                new OracleParameter("startDate", StateService.StartDate),
-                new OracleParameter("endDate", StateService.EndDate)
+                new OracleParameter("startDate", StartDate),
+                new OracleParameter("endDate", EndDate)
             };
 
             var sqlQuery = $@"
@@ -39,7 +39,7 @@ namespace MudBlazorWeb2.Components.Modules.WhOllProcessWithDb
                 WHERE S_DATETIME BETWEEN :startDate AND :endDate
                 AND S_TYPE = 0
                 AND (S_NOTICE IS NULL OR S_NOTICE = '')
-                AND S_DURATION > INTERVAL '{EFCoreQuery.ConvertDurationStringToSeconds(StateService.TimeInterval)}' SECOND
+                AND S_DURATION > INTERVAL '{EFCoreQuery.ConvertDurationStringToSeconds(TimeInterval)}' SECOND
                 AND S_EVENTCODE NOT IN ({string.Join(",", _ignoreRecordType.Select(e => $"'{e}'"))})
                 ORDER BY S_DATETIME DESC";
 

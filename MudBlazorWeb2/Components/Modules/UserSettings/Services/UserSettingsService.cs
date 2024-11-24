@@ -8,11 +8,11 @@ using System.Threading.Tasks;
 
 namespace MudBlazorWeb2.Components.Modules.SettingsOper.Services
 {
-    public class OperSettingsService
+    public class UserSettingsService
     {
         private readonly string _settingsFilePath;
 
-        public OperSettingsService()
+        public UserSettingsService()
         {
             _settingsFilePath = Path.Combine(AppContext.BaseDirectory, "settingsOper.json");
         }
@@ -49,7 +49,7 @@ namespace MudBlazorWeb2.Components.Modules.SettingsOper.Services
 
         private async Task WriteAllItemsToFile(Dictionary<string, string> settings)
         {
-            var json = JsonSerializer.Serialize(settings);
+            var json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
             await File.WriteAllTextAsync(_settingsFilePath, json);
         }
     }

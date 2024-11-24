@@ -75,8 +75,9 @@ public class WhisperService
             return responseText;
         }
         catch (Exception ex) {
+            
             ConsoleCol.WriteLine("ошибка в методе RecognizeSpeechAsync: " + ex.Message, ConsoleColor.Red);
-            return ("");
+            return ("Error в методе RecognizeSpeechAsync: " + ex.Message);
         }
     }
 }

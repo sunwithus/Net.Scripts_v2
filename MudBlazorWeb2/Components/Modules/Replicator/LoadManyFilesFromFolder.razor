@@ -1,6 +1,6 @@
 ﻿@*LoadManyFilesFromFolder.razor*@
 
-Выберите необходимые аудиофайлы@* (до @maxAllowedFiles шт., до @(maxFileSize / 1024 / 1024) Мб)*@:
+Выберите необходимые аудиофайлы:
 <br />
 <MudButton Variant="Variant.Outlined" Color="@colorButton" StartIcon="@Icons.Material.Filled.CloudUpload">
     <InputFile OnChange="LoadFiles" multiple />
@@ -45,12 +45,6 @@ else if (isVisibleFilesList)
     [Parameter]
     public EventCallback<bool> OnFinishLoading { get; set; }
 
-    //Обработка выбора файлов для загрузки
-    private async Task OnChangeFilesToLoad(bool value)
-    {
-        await OnFinishLoading.InvokeAsync(value);
-    }
-
     private List<IBrowserFile> loadedFiles = new();
     private long maxFileSize = 1024 * 1024 * 512;
     private int maxAllowedFiles = 10000;
@@ -62,7 +56,7 @@ else if (isVisibleFilesList)
 
     private async Task LoadFiles(InputFileChangeEventArgs e)
     {
-        await OnChangeFilesToLoad(false);
+        await OnFinishLoading.InvokeAsync(false);
 
         isLoading = true;
         isVisibleFilesList = false;
@@ -73,7 +67,9 @@ else if (isVisibleFilesList)
 
         progressPercent = 0;
 
-        var files = e.GetMultipleFiles(maxAllowedFiles).Where(file => file.ContentType.Contains("audio")).ToList();
+        var files = e.GetMultipleFiles(maxAllowedFiles)
+            .Where(file => onlyAudioType ? file.ContentType.Contains("audio") : true)
+            .ToList();
         int totalFiles = files.Count;
         int processedFiles = 0;
 
@@ -98,7 +94,6 @@ else if (isVisibleFilesList)
                     }
 
                     Console.WriteLine($"File saved: {filePath}");
-
                 }
                 catch (Exception ex)
                 {
@@ -117,9 +112,8 @@ else if (isVisibleFilesList)
 
         isLoading = false; // проценты выполнения
         isVisibleFilesList = true; // таблица с файлами
-        await OnChangeFilesToLoad(true); // оповещение в родительском компоненте о завершении загрузки
-
-    }
+        await OnFinishLoading.InvokeAsync(true);
+}
 
     public async Task ClearDirectory(string folder)
     {

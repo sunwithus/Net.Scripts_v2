@@ -1,0 +1,111 @@
+﻿@* WaveFormPlayer.razor *@
+
+@page "/temp-audio"
+
+@using System;
+@using System.IO;
+@using System.Threading.Tasks;
+@using Microsoft.AspNetCore.Components;
+@using FFMpegCore.Pipes;
+@using FFMpegCore;
+
+@using MudBlazorWeb2.Components.Methods
+
+@inject IConfiguration conf
+@inject IJSRuntime JSRuntime
+@inject IWebHostEnvironment HostEnvironment
+@inject NavigationManager NavigationManager
+
+<style>
+    #playercontainer .audio {
+        width:300px !important;
+    }
+
+    #playercontainer {
+        background-color: white !important;
+    }
+</style>
+<MudText style="align-items:center; display: flex; flex-direction: row; min-width: 300px; max-width:90%; position: relative;">
+    <MudButtonGroup Color="@colorTag" Variant="Variant.Text" Vertical="true" Style="width: 50px;">
+        <MudButton id="playbutton" Color="@colorTag">▶</MudButton>
+        <MudButton id="stopbutton" Color="@colorTag">◼</MudButton>
+        <MudButton id="forwardbutton" Color="@colorTag">⏭</MudButton>
+        <MudButton id="backwardbutton" Color="@colorTag">⏮</MudButton>
+        
+        <input style="display:none;" id="volumeslider" type="range" min="0" max="100" value="80">
+
+    </MudButtonGroup>
+    <div style="width: 100%; margin-left: 20px;">
+        <div id="playercontainer" style="background: #2d2d2d; color: #fff"></div>
+    </div>
+
+
+</MudText>
+
+
+@code {
+    [Parameter]
+    public MudBlazor.Color colorTag { get; set; }
+    [Parameter]
+    public byte[] AudioDataLeft { get; set; }
+    [Parameter]
+    public byte[] AudioDataRight { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadAudioData();
+        }
+    }
+
+    private async Task LoadAudioData()
+    {
+        var path = Path.Combine(HostEnvironment.WebRootPath, "files", "1.wav");
+        try
+        {
+            await UsingStreamsMakeStereoAsync(AudioDataLeft, AudioDataRight, path, conf);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Ошибка при выполнении UsingStreamsMakeStereoAsync в WaveFormPlayer.razor, проверьте кеш браузера");
+            Console.WriteLine(ex.Message);
+        }
+        string url = NavigationManager.BaseUri +"files/1.wav";
+        try 
+        {
+            await JSRuntime.InvokeVoidAsync("createAudioSingletrack", url);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Ошибка при выполнении JSRuntime в WaveFormPlayer.razor, проверьте кеш браузера");
+            Console.WriteLine(ex.Message);
+        }
+
+    }
+
+    public static async Task UsingStreamsMakeStereoAsync(byte[] audioDataLeft, byte[] audioDataRight, string outputFilePath, IConfiguration conf)
+    {
+        using var streamLeft = new MemoryStream(audioDataLeft);
+        using var streamRight = audioDataRight != null ? new MemoryStream(audioDataRight) : null;
+        var ffmpegArgs = FFMpegArguments.FromPipeInput(new StreamPipeSource(streamLeft));
+        string rightArgument = "";
+
+        if (streamRight != null)
+        {
+            ffmpegArgs = ffmpegArgs.AddPipeInput(new StreamPipeSource(streamRight));
+            rightArgument = "-filter_complex amerge=inputs=2 -ac 2";
+        }
+        await ffmpegArgs
+        .OutputToFile(outputFilePath, true, options => options
+            .ForceFormat("wav")
+            //.WithAudioCodec(AudioCodec.LibOpus) //Опус (Opus) Опус является одним из самых высококачественных.lossy аудио кодеков, поддерживаемых FFmpeg.Он известен своей высокой эффективностью и широкой поддержко
+            .WithCustomArgument("-codec:a pcm_s16le -b:a 128k -ar 16000 ")
+            .WithCustomArgument($"{rightArgument}")
+        ).ProcessAsynchronously(true, new FFOptions { BinaryFolder = conf["PathToFFmpegExe"] });
+        Console.WriteLine("UsingStreamAsync success!!! outputFilePath: " + outputFilePath);
+    }
+
+
+
+}

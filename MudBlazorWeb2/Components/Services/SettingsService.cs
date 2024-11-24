@@ -12,6 +12,7 @@ public class Settings
     public string PreTextDefault { get; set; }
     public SettingsReplicator SettingsReplicator { get; set; }
     public SettingsProcessing SettingsProcessing { get; set; }
+    public SettingsProcessing SettingsSputnik { get; set; }
     public SettingsMakingWord SettingsMakingWord { get; set; }
 }
 
@@ -21,6 +22,11 @@ public class SettingsReplicator
 }
 
 public class SettingsProcessing
+{
+    public OraItems OraItems { get; set; }
+}
+
+public class SettingsSputnik
 {
     public OraItems OraItems { get; set; }
 }
@@ -58,22 +64,6 @@ public class SettingsService
 
     public Settings GetSettings()
     {
-    if (!File.Exists(_settingsFilePath))
-    {
-        var defaultSettings = new Settings
-        {
-            SettingsReplicator = new SettingsReplicator
-            {
-                OraItems = new OraItems()
-            },
-            SettingsProcessing = new SettingsProcessing
-            {
-                OraItems = new OraItems()
-            }
-        };
-        return defaultSettings;
-    }
-
         var json = File.ReadAllText(_settingsFilePath);
         return JsonSerializer.Deserialize<Settings>(json);
     }
@@ -117,6 +107,20 @@ public class SettingsService
                 break;
             case "SettingsProcessing.OraItems.Scheme":
                 settings.SettingsProcessing.OraItems.Scheme = (string)value;
+                break;
+
+            // SettingsSputnik
+            case "SettingsSputnik.OraItems.User":
+                settings.SettingsSputnik.OraItems.User = (string)value;
+                break;
+            case "SettingsSputnik.OraItems.Password":
+                settings.SettingsSputnik.OraItems.Password = (string)value;
+                break;
+            case "SettingsSputnik.OraItems.DataSource":
+                settings.SettingsSputnik.OraItems.DataSource = (string)value;
+                break;
+            case "SettingsSputnik.OraItems.Scheme":
+                settings.SettingsSputnik.OraItems.Scheme = (string)value;
                 break;
 
             // SettingsMakingWord

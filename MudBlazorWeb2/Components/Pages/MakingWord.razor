@@ -1,39 +1,18 @@
 ﻿@page "/word-document"
 @rendermode InteractiveServer
 
-
-@using MudBlazorWeb2.Components.EntityFrameworkCore
 @using MudBlazorWeb2.Components.Modules._Shared
 @using MudBlazorWeb2.Components.Modules.MakingWord
-@inject IDbContextFactory<OracleDbContext> DbFactory
 
 @using MudBlazorWeb2.Components.Modules.MakingWord.Modules
-@using MudBlazorWeb2.Components.Modules.MakingWord.Services
 
-@using Spire.Doc
-@using Spire.Doc.Documents
-@using Spire.Doc.Fields
-
-@using System
 @using System.Text
-@using System.Linq
-@using System.Collections.Generic
-@using Microsoft.EntityFrameworkCore
-@using System.Text.Json
-@using Oracle.EntityFrameworkCore
 @using Oracle.ManagedDataAccess.Client
 
 @inject IJSRuntime JsRuntime
 @inject SettingsService SettingsService
 
-@inject WordDocumentService WordService
-@inject SpeechDataService SpeechService
-
-<PageTitle>🖍 Оформление Word.doc 📃</PageTitle>
-
-@*  добавить плеер
-    https://www.codeproject.com/Tips/5338983/Build-Custom-Audio-Player-with-Waveform-in-JavaScript
-*@
+<PageTitle>🖍 Create Word</PageTitle>
 
 <MudContainer>
     <MudText Typo="Typo.h5">Оформление АЖ => 🖍 + 📃</MudText>
@@ -42,49 +21,39 @@
 
     <OracleConnectionSettings colorButton="@colorTag" OnSettingsChanged="OnSettingsChanged" settingsDB="@settingsDB" oraItemsDB="@settingsDB.SettingsMakingWord.OraItems" propertyName="SettingsMakingWord" />
 
-    <MudText Style="display: flex; align-items: center; ">
-        <MudText>Введите номер поля <b>Ключ</b></MudText>
-        <MudNumericField @bind-Value="Id" Label="Ключ записи" Variant="Variant.Outlined" Min="0" Step="1" Style="height: 35px; width: 120px;" Class="ml-3" />
+    <MudText Style="display: flex; justify-content=start;">
+        <MudText Style="display: flex; align-items: center;">
+            <MudText>Введите номер поля <b>Ключ</b></MudText>
+            <MudNumericField @bind-Value="Id" Label="Ключ записи" Variant="Variant.Outlined" Min="0" Step="1" Style="height: 35px; width: 120px;" Class="ml-3" />
+        </MudText>
+
+        <MudText Style="display: flex; align-items: center; float: left; margin-left: 30px;">
+            <MudIconButton Icon="@Icons.Material.Filled.PlayCircleFilled" Color="@colorTag" OnClick="QueryRecordById" Size="Size.Large" />
+            @if (speechData != null && speechData.Count > 0 && speechData.FirstOrDefault().Id == Id)
+            {
+                <MudButton OnClick="@(e => GenerateWord())" Variant="Variant.Filled" Color="@colorTag" Class="ml-3">💾</MudButton>    
+            }
+            <MudText Color="@colorTag">&emsp; @message</MudText>
+        </MudText>
     </MudText>
 
     <MudDivider />
 
-    <MudText Style="display: flex; align-items: center; float: left;">
-        <MudIconButton Icon="@Icons.Material.Filled.PlayCircleFilled" Color="@colorTag" OnClick="QueryRecordById" Size="Size.Large" />
-        @if (speechData != null && speechData.Count > 0 && speechData.FirstOrDefault().Id == Id)
-        {
-            <MudButton OnClick="@(e => GenerateWord())" Variant="Variant.Filled" Color="@colorTag" Class="ml-3">💾</MudButton>    
-        }
-        <MudText Color="@colorTag">&emsp; @message</MudText>
-    </MudText>
-
-    
-
     @if (speechData != null && speechData.Count > 0 && speechData.FirstOrDefault().Id == Id)
     {
-        <br /><br /><br />
-        <div style="align-items:center; display: flex; flex-direction: row;">
-            <MudButtonGroup Color="@colorTag" Variant="Variant.Text" Vertical="true">
-                <MudIconButton Icon="@Icons.Material.Filled.PlayCircleOutline" OnClick="@(e => PlayStereoAudio())" Color="@colorTag" aria-label="play" />
-                <MudIconButton Icon="@Icons.Material.Filled.PauseCircleOutline" OnClick="@(e => PauseStereoAudio())" Color="@colorTag" aria-label="pause" />
-                <MudIconButton Icon="@Icons.Material.Filled.Stop" OnClick="@(e => StopStereoAudio())" Color="@colorTag" aria-label="stop" />
-            </MudButtonGroup>
-            <div style="width: 100%; margin-left: 10px;">
-                <div style="display: flex; align-items:center; ">1:&nbsp;&nbsp;<audio style="width: 100%;" id="leftAudio" controls></audio></div>
-                <div style="display: flex; align-items:center; ">2:&nbsp;&nbsp;<audio style="width: 100%;" id="rightAudio" controls></audio></div>
-            </div>
-        </div>
+
+        <WaveFormPlayer AudioDataLeft="speechData?.FirstOrDefault()?.AudioF" AudioDataRight="speechData?.FirstOrDefault()?.AudioR" />
         <br />
 
         <MudTable Items="@speechData" Dense="true" Hover="true" Bordered="true" Striped="true">
-            <HeaderContent>
+            <HeaderContent >
                 @foreach (var header in ColumnHeaders)
                 {
-                    <MudTh>@header</MudTh>
+                    <MudTh Style="line-height: 0.9rem !important;">@header</MudTh>
                 }
             </HeaderContent>
-            <RowTemplate>
-                <MudTd>@context.Id</MudTd>
+            <RowTemplate >
+                <MudTd >@context.Id</MudTd>
                 <MudTd>@context.Datetime</MudTd>
                 <MudTd>@context.Duration.TrimStart('+').Trim('0').TrimEnd('.')</MudTd>
                 <MudTd>@context.Talker</MudTd>
@@ -168,7 +137,7 @@
 
         try 
         {
-            speechData = await SpeechService.GetSpeechDataByIdAsync(Id, Scheme, conStringDBA);
+            speechData = await DbQuery.GetSpeechDataByIdAsync(Id, Scheme, conStringDBA);
             if (speechData != null)
             {
                 Console.WriteLine("Id = " + Id);
@@ -200,82 +169,10 @@
     {
         if (speechData.FirstOrDefault() is { } data)
         {
-            using var stream = WordService.GenerateWord(data, Path.Combine(AppContext.BaseDirectory, "pattern.docx"));
+            using var stream = SpireDoc.GenerateWord(data, Path.Combine(AppContext.BaseDirectory, "pattern.docx"));
             var base64 = Convert.ToBase64String(stream.ToArray());
             await JsRuntime.InvokeVoidAsync("downloadFile", "Document.docx", base64);
         }
     }
 
-    private async Task PlayStereoAudio()
-    {
-        await PlayLeftAudio();
-        await PlayRightAudio();
-    }
-
-    private async Task StopStereoAudio()
-    {
-        await StopLeftAudio();
-        await StopRightAudio();
-    }
-
-    private async Task PauseStereoAudio()
-    {
-        await PauseLeftAudio();
-        await PauseRightAudio();
-    }
-
-    private async Task PlayLeftAudio()
-    {
-        try
-        {
-            if (speechData.FirstOrDefault().AudioF != null)
-            {
-                using var streamRef = new DotNetStreamReference(new MemoryStream(speechData.FirstOrDefault().AudioF));
-                await JsRuntime.InvokeVoidAsync("PlayAudioFileStream", streamRef, "leftAudio");
-                await JsRuntime.InvokeVoidAsync("PlayAudio", "leftAudio");
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine("PlayLeftAudio exception: " + ex);
-        }
-
-    }
-
-    private async Task PauseLeftAudio()
-    {
-        await JsRuntime.InvokeVoidAsync("PauseAudio", "leftAudio");
-    }
-
-    private async Task StopLeftAudio()
-    {
-        await JsRuntime.InvokeVoidAsync("StopAudio", "leftAudio");
-    }
-
-    private async Task PlayRightAudio()
-    {
-        try
-        {
-            if (speechData.FirstOrDefault().AudioR != null)
-            {
-                using var streamRef = new DotNetStreamReference(new MemoryStream(speechData.FirstOrDefault().AudioR));
-                await JsRuntime.InvokeVoidAsync("PlayAudioFileStream", streamRef, "rightAudio");
-                await JsRuntime.InvokeVoidAsync("PlayAudio", "rightAudio");
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine("PlayRightAudio exception: " + ex);
-        }
-    }
-
-    private async Task PauseRightAudio()
-    {
-        await JsRuntime.InvokeVoidAsync("PauseAudio", "rightAudio");
-    }
-
-    private async Task StopRightAudio()
-    {
-        await JsRuntime.InvokeVoidAsync("StopAudio", "rightAudio");
-    }
 }

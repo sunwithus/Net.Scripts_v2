@@ -1,328 +1,44 @@
-﻿@* WhOllProcessWithDb.razor *@
+﻿@* WhOllProcessWithDb2.razor *@
 
-@page "/db-processing2"
+@page "/temp-page"
 @rendermode InteractiveServer
 
-@using Microsoft.EntityFrameworkCore
-@using System.Text.Json
-@using System.Net.Http
-@using System.Text
-@using System.ComponentModel
-
-@using MudBlazorWeb2.Components.EntityFrameworkCore
-@using MudBlazorWeb2.Components.Modules._Shared
 @using MudBlazorWeb2.Components.Modules.WhOllProcessWithDb
-@using MudBlazorWeb2.Components.Modules.WhOllProcessWithDb.Services
-@using MudBlazorWeb2.Components.Modules.SettingsOper.Services
-
-@inject StateService StateService
-
-@inject OperSettingsService OperSettingsService
-@inject SettingsService SettingsService
 @inject IConfiguration Configuration
-
-@inject IDbContextFactory<OracleDbContext> DbFactory
-@inject WhisperService whisper
-@inject OllamaService ai
-
+@inject SettingsService SettingsService
 
 <PageTitle>💬 Process Oracle 🚀</PageTitle>
 
 <MudContainer>
-    <MudText Typo="Typo.h5">Обработка аудиоданных Oracle => 💬 + 🚀</MudText>
+    <MudText Typo="Typo.h5" Style="display:flex; justify-content:space-between;">Обработка аудиоданных Oracle => 💬 + 🚀 <MudText Style="height:30px;"><EditDefaultTaskToAi colorButton="@colorTag" OnApplyButtonClick="LoadSettings" /></MudText></MudText>
     <MudDivider />
     <br />
-
-    <MudText Style="position: relative;">
-        <MudOverlay Visible="@StateService.IsPlayingNow" LightBackground="true" Absolute="true" />
-        
-        <OracleConnectionSettings colorButton="@colorTag" OnSettingsChanged="OnSettingsChanged" settingsDB="@settingsDB" oraItemsDB="@settingsDB.SettingsProcessing.OraItems" propertyName="SettingsProcessing" />
-
-        <MudText Style="display: flex; justify-content:space-between; align-items:start; padding-bottom: 7px;">
-            <MudText>
-                @* // Период, Длительность *@
-                <MudGrid Spacing="8" Justify="Justify.FlexStart">
-                    <MudItem>
-                        <MudTextField T="DateTime" Format="s" Label="От даты:" InputType="InputType.DateTimeLocal" @bind-Value="@StateService.StartDate" />
-                    </MudItem>
-                    <MudItem>
-                        <MudTextField T="DateTime" Format="yyyy-MM-ddTHH:mm:ss" Label="По дату:" InputType="InputType.DateTimeLocal" @bind-Value="@StateService.EndDate" />
-                    </MudItem>
-                    <MudItem style="max-width:180px">
-                        <MudTextField T="string" Label="Длительность от:" @bind-Value="StateService.TimeInterval" />
-                    </MudItem>
-                </MudGrid>
-
-                @* // Повторный запуск *@
-                <MudGrid Spacing="3" Justify="Justify.FlexStart">
-                    <MudItem>
-                        <MudCheckBox @bind-Value="StateService.IsCycle" Size="Size.Small" Label="С интервалом повторного запуска (мин.):" Color="@colorTag" />
-                    </MudItem>
-                    <MudItem>
-                        <MudNumericField Style="width:50px; top:7px;" @bind-Value="StateService.CycleInterval" Min="0" Step="1" Variant="Variant.Text" />
-                    </MudItem>
-                </MudGrid>
-            </MudText>
-            <EditDefaultTaskToAi colorButton="@colorTag" OnApplyButtonClick="LoadSettings" />
-        </MudText>
-    </MudText>
-
-    <MudDivider />
-
-    <MudText>
-        @* // Кнопки управления *@
-        <MudIconButton Icon="@Icons.Material.Filled.PlayCircleFilled" Color="@colorTag" OnClick="PressStart" Size="Size.Large" />
-        <MudIconButton Icon="@Icons.Material.Filled.StopCircle" Color="@colorTag" OnClick="PressStop" Size="Size.Large" />
-
-        @* // Состояние выполнения *@
-        <MudText>@StateService.ProcessingMessage</MudText>
-        @if (StateService.IsPlayingNow) // прогресс ProcessedKeys / TotalKeys
-        {
-            @if (!StateService.IsStoped)
-            {
-                <MudText>
-                    <MudProgressLinear Color="@colorTag" Indeterminate="true" Size="Size.Large" Style="width: 350px; margin-top: 12px;">
-                        <MudText Typo="Typo.subtitle1" Color="Color.Default">
-                            <b>Процесс: @StateService.ProcessedKeys / @StateService.TotalKeys</b>
-                        </MudText>
-                    </MudProgressLinear>
-                </MudText>
-            }
-            else if (StateService.IsCycle) // повторный запуск
-            {
-                <MudText>
-                    Ожидание повторного запуска каждые @(StateService.CycleInterval * 60) сек. &nbsp;&nbsp;&nbsp;
-                    <MudProgressCircular Color="@colorTag" Size="Size.Small" Indeterminate="true" />
-                </MudText>
-            }
-        }
-    </MudText>
-
+    @if (settingsDB != null)
+    {
+        <Processor colorTag="@colorTag" settingsDB="@settingsDB" oraItemsDB="@settingsDB.SettingsSputnik.OraItems" propertyName="SettingsSputnik" Scheme="@Scheme" />
+    }
+    
 </MudContainer>
 
 
 @code {
 
-    MudBlazor.Color colorTag = Color.Info;
+    MudBlazor.Color colorTag = Color.Tertiary;
     private Settings settingsDB = null;
+    private string Scheme = "sputnik";
 
-    int lagTime = 0; // время запаздывания Ollama от Whisper
-    int ProcessedAi = 0; // количество выполненных Ollama 
 
     protected override async Task OnInitializedAsync()
     {
-        StateService.PropertyChanged += StateService_PropertyChanged;
-        if (!Directory.Exists(Configuration["AudioPathForProcessing"])) Directory.CreateDirectory(Configuration["AudioPathForProcessing"]);
-
         await LoadSettings();
+        if (!Directory.Exists(Configuration["AudioPathForProcessing"])) Directory.CreateDirectory(Configuration["AudioPathForProcessing"]);
+        await Task.Delay(0);
     }
 
     private async Task LoadSettings()
     {
         settingsDB = SettingsService.GetSettings();
-        await Task.Delay(1);
-    }
-
-    public void StateService_PropertyChanged(object sender, PropertyChangedEventArgs e) => InvokeAsync(StateHasChanged);
-
-    public async Task PressStart()
-    {
-        StateService.IsStopPressed = false;
-        if (StateService.IsPlayingNow)
-        {
-            StateService.ProcessingMessage = "Обработка запущена, сначала выполните остановку.";
-            return;
-        }
-
-        StateService.ProcessingMessage = "Обработка запускается...";
-        try
-        {
-            do
-            {
-                settingsDB = SettingsService.GetSettings();
-                string conStringDBA = $"User Id={settingsDB.SettingsProcessing.OraItems.User};Password={settingsDB.SettingsProcessing.OraItems.Password};Data Source={settingsDB.SettingsProcessing.OraItems.DataSource};";
-                string schemeName = settingsDB.SettingsProcessing.OraItems.Scheme;
-
-                StateService.ChangeState(true, false, "Обработка запускается...", 0, 0); // IsPlayingNow, IsStoped...
-                await RunAiForDbAudioAsync(StateService, schemeName, Configuration["OllamaModelName"], UpdateProgressWhOll, conStringDBA);
-                await Task.Delay(3000);
-                StateService.ChangeState(true, true, $"Обработка завершена. Обработано: {StateService.ProcessedKeys} / {StateService.TotalKeys}"); // IsPlayingNow, IsStoped...
-
-                if (StateService.IsCycle && !StateService.IsStopPressed)
-                {
-                    StateService.ProcessingMessage = "Обработка завершена. Ожидание новых записей...";
-                    await Task.Delay(StateService.CycleInterval * 60 * 1000);
-                }
-
-            }
-            while (!StateService.IsStopPressed && StateService.IsCycle);
-            StateService.IsPlayingNow = false;
-
-        }
-        catch (Exception ex)
-        {
-            StateService.ChangeState(false, true, $"Произошла ошибка: {ex.Message}");
-            StateService.IsStoped = true;
-        }
-    }
-
-    public async Task PressStop()
-    {
-        StateService.IsStopPressed = true;
-        StateService.ProcessingMessage = StateService.IsStoped ? "Обработка остановлена." : "Выполняется остановка, подождите...";
-        while (StateService.IsStoped == false)
-        {
-            await Task.Delay(1000);
-        }
-        StateService.IsPlayingNow = false;
-    }
-
-    public async void UpdateProgressWhOll(int processed, int total)
-    {
-        if (StateService.ProcessedKeys < processed) StateService.ProcessingMessage = "Обработка выполняется..."; // если процесс продолжается запираем ошибку
-        StateService.ProcessedKeys = processed;
-        StateService.TotalKeys = total;
-        await InvokeAsync(() => StateHasChanged());
-    }
-
-    public async Task RunAiForDbAudioAsync(StateService StateService, string schemeName, string modelName, Action<int, int> updateProgress, string conStringDBA)
-    {
-        using (var db = new OracleDbContext(new DbContextOptionsBuilder<OracleDbContext>().UseOracle(conStringDBA).Options))
-        {
-            await db.Database.OpenConnectionAsync();
-            await db.Database.ExecuteSqlRawAsync($"ALTER SESSION SET CURRENT_SCHEMA = {schemeName}");
-            ConsoleCol.WriteLine($"RunAiForDbAudioAsync => Выбранная схема: {schemeName}", ConsoleColor.DarkCyan);
-
-            var ignoreRecordTypes = Configuration.GetSection("AudioConverter:IgnoreRecordTypes").Get<List<string>>();
-            // Получить список аудио по фильтру пользователя в StateService(даты, интервал) и кодекам ignoreRecordTypes
-            var audioList = await EFCoreQuery.GetSpeechRecords(StateService, db, ignoreRecordTypes);
-
-            int processedKeys = 0;
-            ProcessedAi = 0;
-
-            int totalKeys = audioList.Count;
-
-            foreach (var entity in audioList)
-            {
-                // Остановить процесс, если нажата кнопка
-                if (StateService.IsStopPressed)
-                {
-                    StateService.ChangeState(false, true, $"Обработка завершена. Обработано: {StateService.ProcessedKeys} / {StateService.TotalKeys}", StateService.ProcessedKeys, StateService.TotalKeys); // IsPlayingNow, IsStoped...
-                    break;
-                }
-
-                // Update Progress
-                updateProgress(processedKeys, totalKeys);
-                StateService.IsStoped = false;
-                StateService.ProcessingMessage = "Обработка выполняется...";
-
-                // ORACLE => get audio (left, right, recordType)
-                var (audioDataLeft, audioDataRight, recordType) = await EFCoreQuery.GetAudioDataAsync(entity.Id, db);
-                Console.WriteLine($"Audio data for key {entity.Id} loaded successfully. recordType = " + recordType);
-
-                // PreText => get PreText for operator or PreTextDefault
-                string preText = await GetPreTextForOperatorAsync(entity.Sourcename);
-
-                // FFMpeg or Decoder => audio to folder
-                string audioFilePath = Path.Combine(Configuration["AudioPathForProcessing"], $"{entity.Id}.wav");
-                bool result = await AudioConverter.FFMpegDecoder(audioDataLeft, audioDataRight, recordType, audioFilePath, Configuration);
-                if (!result) continue;
-
-                // WHISPER
-                Task<string> _recognizedText = whisper.RecognizeSpeechAsync(audioFilePath, Configuration); //асинхронно, не ждём
-                (string languageCode, string detectedLanguage) = await whisper.DetectLanguageAsync(audioFilePath, Configuration);
-                string recognizedText = await _recognizedText; //дожидаемся _recognizedText...
-
-                // Temprorary push string to Notice to aviod repeated process with entity
-                entity.Notice = "TempRecord";
-                db.SprSpeechTable.Update(entity);
-                await db.SaveChangesAsync();
-
-                // Delete earlier created file
-                Files.DeleteFilesByPath(audioFilePath);
-
-                // OLLAMA + ORACLE => Run task !!!_WITHOUT await
-                ProcessOllamaAndUpdateEntityAsync(entity.Id, recognizedText, languageCode, detectedLanguage, preText, Configuration["OllamaModelName"], schemeName, conStringDBA, Configuration, SettingsService, entity, db);
-
-                // lag - задержка => если Ollama отстаёт от Whisper => ожидаем...
-                lagTime = await ApplyLagTimePause(lagTime);
-                ConsoleCol.WriteLine("\nlagTime = " + lagTime, ConsoleColor.Magenta);
-
-                // TODO
-                // разрешить "вырываться вперёд не более чем на N раз" и ProcessedAi вывести в Прогресс + Singleton
-                while (processedKeys - 10 > ProcessedAi)
-                {
-                    await Task.Delay(10000);
-                }
-
-                updateProgress(++processedKeys, totalKeys);
-            }
-            await db.Database.CloseConnectionAsync();
-        }
-    }
-
-    // TODO "обнуление" Notice для какой-н БД
-
-    public async void ProcessOllamaAndUpdateEntityAsync(long? entityId, string recognizedText, string languageCode, string detectedLanguage, string preText, string modelName, string schemeName, string conStringDBA, IConfiguration Configuration, SettingsService SettingsService, SPR_SPEECH_TABLE entity, OracleDbContext db)
-    {
-        // OLLAMA
-        try
-        {
-            (string responseOllamaText, lagTime) = await ai.OllamaResponse(preText, recognizedText, modelName, Configuration);
-            if (languageCode != "ru" && languageCode != "uk" && !string.IsNullOrEmpty(languageCode))
-            {
-                (recognizedText, lagTime) = await ai.OllamaTranslate(recognizedText, modelName, languageCode, detectedLanguage, Configuration, SettingsService);
-            }
-            await EFCoreQuery.InsertCommentAsync(entityId, recognizedText, detectedLanguage, responseOllamaText, modelName, schemeName, conStringDBA);
-            ProcessedAi++;
-            ConsoleCol.WriteLine("ProcessedAi = " + ProcessedAi, ConsoleColor.Yellow);
-        }
-        catch (Exception ex)
-        {
-            // EFCoreQuery - "обнуление" Notice при ошибке
-            await EFCoreQuery.UpdateNoticeValueAsync(entityId, schemeName, conStringDBA, null);
-            Console.WriteLine("Ошибка при обработке Ollama и обновлении сущности EFCore: " + ex.Message);
-        }
-
-    }
-
-    private async Task<string> GetPreTextForOperatorAsync(string operatorName)
-    {
-        await Task.Delay(1);
-        ConsoleCol.WriteLine("operatorName: " + operatorName, ConsoleColor.DarkYellow);
-        string preText = "";
-
-        try
-        {
-            preText = await OperSettingsService.ReadItemValueByKey(operatorName);
-            if (string.IsNullOrEmpty(preText))
-            {
-                preText = SettingsService.GetSettings().PreTextDefault;
-            }
-
-        }
-        catch (Exception ex)
-        {
-            ConsoleCol.WriteLine("Error getting Operator: " + ex, ConsoleColor.Red);
-            preText = SettingsService.GetSettings().PreTextDefault;
-        }
-        finally
-        {
-            ConsoleCol.WriteLine("preText: " + preText, ConsoleColor.DarkYellow);
-        }
-        return preText;
-    }
-
-    private async Task<int> ApplyLagTimePause(int lagTime)
-    {
-        if (lagTime <= 50) return lagTime;
-
-        int delay = lagTime / 2;
-        string message = $"lagTime = {lagTime} выжидаем паузу... {delay} секунд...";
-
-        ConsoleCol.WriteLine(message, ConsoleColor.Red);
-        await Task.Delay(delay * 1000);
-        return delay;
+        await Task.Delay(0);
     }
 
     private async Task OnSettingsChanged()

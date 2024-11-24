@@ -8,22 +8,24 @@
 @using System.ComponentModel
 
 @using MudBlazorWeb2.Components.EntityFrameworkCore
+@using MudBlazorWeb2.Components.Modules.Replicator.Services
 @using MudBlazorWeb2.Components.Modules.Replicator
 @using MudBlazorWeb2.Components.Modules._Shared
 @inject IDbContextFactory<OracleDbContext> DbFactory
 @inject IConfiguration Configuration 
 @inject SettingsService SettingsService
+@inject ReplSingletonService ReplSingleton
 
-<PageTitle>🎧 Replicator Oracle 🖥️</PageTitle>
+<PageTitle>🛢 Replicator Ora</PageTitle>
 
 <MudContainer>
-    <MudText Typo="Typo.h5">Аудио в Oracle 🎧 => 🖥️</MudText>
+    <MudText Typo="Typo.h5">Аудио в Oracle 🎧 => 📦</MudText>
     <MudDivider />
     <br />
 
-    <MudOverlay Visible="!OraSingleton.InstanceOra.IsStoped" LightBackground="true" Absolute="true">
+    <MudOverlay Visible="!ReplSingleton.IsStoped" LightBackground="true" Absolute="true" Style="height: 100%;">
         <MudText>Процесс занят.</MudText>
-        <MudText>Идёт выполнение, подождите... @OraSingleton.InstanceOra.ProgressExec %</MudText>
+        <MudText>Идёт выполнение, подождите... @ReplSingleton.ProgressExec %</MudText>
     </MudOverlay>
 
     <OracleConnectionSettings colorButton="@colorButton" OnSettingsChanged="OnSettingsChanged" settingsDB="@settingsDB" oraItemsDB="@settingsDB.SettingsReplicator.OraItems" propertyName="SettingsReplicator" />
@@ -46,7 +48,7 @@
 
     @if (isFilesLoaded)
     {
-        <OracleAudioReplication pathToSaveTempAudio="@pathToSaveTempAudio" sourceName="@operatorName" colorButton="@colorButton" IsReplicationFinished="HandleReplicationIsFinished" OnPercentsProgress="HandlePercentsProgress" />
+        <OracleAudioReplication pathToAudio="@pathToSaveTempAudio" sourceName="@operatorName" colorButton="@colorButton" IsReplicationFinished="HandleReplicationIsFinished" OnPercentsProgress="HandlePercentsProgress" />
     }
 
  </MudContainer>
@@ -54,7 +56,7 @@
 
 @code {
 
-    MudBlazor.Color colorButton = Color.Tertiary;
+    MudBlazor.Color colorButton = Color.Surface;
     private string pathToSaveTempAudio = "";
     private string operatorName = ""; //имя источник
     private bool isFilesLoaded = false;
@@ -62,11 +64,13 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await Task.Delay(0);
+        ReplSingleton.PropertyChanged += Singleton_PropertyChanged;
+        await base.OnInitializedAsync();
+
         pathToSaveTempAudio = Configuration["AudioPathForReplicator"] + Guid.NewGuid() +"\\";
-        OraSingleton.InstanceOra.PropertyChanged += Singleton_PropertyChanged;
         settingsDB = SettingsService.GetSettings();
     }
+
 
     private async Task OnSettingsChanged()
     {
@@ -90,12 +94,13 @@
 
     private void HandleReplicationIsFinished (bool value)
     {
-        OraSingleton.InstanceOra.IsStoped = value;
+        ReplSingleton.IsStoped = value;
     }
 
-    private void HandlePercentsProgress(float PercentsProgress)
+    private void HandlePercentsProgress(int PercentsProgress)
     {
-        OraSingleton.InstanceOra.ProgressExec = (int)PercentsProgress;
+        ReplSingleton.ProgressExec = PercentsProgress;
+        StateHasChanged();
     }
 
     private void Singleton_PropertyChanged(object sender, PropertyChangedEventArgs e)

@@ -7,19 +7,21 @@ using MudBlazorWeb2.Components.EntityFrameworkCore;
 
 using MudBlazor.Services;
 using MudBlazorWeb2.Components;
-using MudBlazorWeb2.Components.Modules.MakingWord.Services;
 using MudBlazorWeb2.Components.Modules.SettingsOper.Services;
 using MudBlazorWeb2.Components.Modules.WhOllProcessWithDb.Services;
+using MudBlazorWeb2.Components.Modules.Replicator.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Регистрация сервиса для чтения/записи настроек из settingsApp.json и settingsOper.json
 builder.Services.AddSingleton<SettingsService>();
-builder.Services.AddSingleton<OperSettingsService>();
+builder.Services.AddSingleton<UserSettingsService>();
 
-builder.Services.AddScoped<SpeechDataService>();
-builder.Services.AddScoped<WordDocumentService>();
+builder.Services.AddHostedService<AudioReplicationService>();
+
 builder.Services.AddSingleton<StateService>();
+builder.Services.AddSingleton<StateService2>();
+builder.Services.AddSingleton<ReplSingletonService>();
 
 
 // Oracle настройки "по-умолчанию"

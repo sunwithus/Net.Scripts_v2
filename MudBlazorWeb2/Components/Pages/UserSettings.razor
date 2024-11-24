@@ -7,12 +7,12 @@
 @using MudBlazor
 
 @inject IDialogService DialogService
-@inject OperSettingsService OperSettingsService
+@inject UserSettingsService UserSettingsService
 
-<PageTitle>⚙️ Configuration 🛠</PageTitle>
+<PageTitle>🛠 Configuration</PageTitle>
 
 <MudContainer>
-    <MudText Typo="Typo.h5">Пользовательские настройки</MudText>
+    <MudText Typo="Typo.h5">Пользовательские настройки => ⚙️</MudText>
     <MudDivider />
     <br />
 
@@ -59,7 +59,7 @@
     protected override async Task OnInitializedAsync()
     {
         await Task.Delay(0);
-        Settings = await OperSettingsService.ReadAllItemsFromFile();
+        Settings = await UserSettingsService.ReadAllItemsFromFile();
         Settings = Settings.OrderBy(x => x.Key).ToDictionary(x => x.Key, x => x.Value);
     }
 
@@ -67,8 +67,8 @@
     {
         if (!string.IsNullOrEmpty(newKey) && !string.IsNullOrEmpty(newValue))
         {
-            await OperSettingsService.SaveItemAsync(newKey, newValue);
-            Settings = await OperSettingsService.ReadAllItemsFromFile();
+            await UserSettingsService.SaveItemAsync(newKey, newValue);
+            Settings = await UserSettingsService.ReadAllItemsFromFile();
             newKey = string.Empty;
             newValue = string.Empty;
         }
@@ -82,8 +82,8 @@
 
     private async Task DeleteSetting(string key)
     {
-        await OperSettingsService.DeleteItemByKey(key);
-        Settings = await OperSettingsService.ReadAllItemsFromFile();
+        await UserSettingsService.DeleteItemByKey(key);
+        Settings = await UserSettingsService.ReadAllItemsFromFile();
     }
 
 }

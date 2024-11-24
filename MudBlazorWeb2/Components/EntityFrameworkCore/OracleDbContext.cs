@@ -24,11 +24,11 @@ namespace MudBlazorWeb2.Components.EntityFrameworkCore
             base.OnConfiguring(optionsBuilder);
             optionsBuilder
                  //тут изменять настройки, для другой схемы, другой базы
-                 /*.UseOracle("User Id=SYSDBA;Password=masterkey;Data Source=192.168.2.125 / sprutora;", providerOptions => providerOptions
+                 .UseOracle("User Id=SYSDBA;Password=masterkey;Data Source=localhost / sprutora;", providerOptions => providerOptions
                                 .CommandTimeout(60)
                                 .UseRelationalNulls(true)
                                 .MinBatchSize(2))
-                 */
+                 
                  .EnableDetailedErrors(false)
                  .EnableSensitiveDataLogging(false)
                  //.LogTo(System.Console.WriteLine)
