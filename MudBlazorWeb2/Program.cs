@@ -17,7 +17,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSingleton<SettingsService>();
 builder.Services.AddSingleton<UserSettingsService>();
 
-builder.Services.AddHostedService<AudioReplicationService>();
+//BackgroundService - запуск репликации в фоновом процессе
+//builder.Services.AddHostedService<ReplBackgrouundService>();
 
 builder.Services.AddSingleton<StateService>();
 builder.Services.AddSingleton<StateService2>();

@@ -10,13 +10,13 @@ using System.Threading.Tasks;
 using MudBlazorWeb2.Components.EntityFrameworkCore;
 using MudBlazorWeb2.Components.Modules.Replicator;
 
-public class AudioReplicationService : BackgroundService
+public class ReplBackgrouundService : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IConfiguration _configuration;
     private readonly SettingsService _settingsService;
 
-    public AudioReplicationService(IServiceScopeFactory scopeFactory, IConfiguration configuration, SettingsService settingsService)
+    public ReplBackgrouundService(IServiceScopeFactory scopeFactory, IConfiguration configuration, SettingsService settingsService)
     {
         _scopeFactory = scopeFactory;
         _configuration = configuration;
@@ -34,12 +34,12 @@ public class AudioReplicationService : BackgroundService
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Ошибка в AudioReplicationService: {ex.Message}");
+                Console.WriteLine($"Ошибка в ReplBackgrouundService: {ex.Message}");
             }
 
             // Задержка между циклами
             //await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken); // Пауза 5 минут
-            await Task.Delay(TimeSpan.FromSeconds(15), stoppingToken); // Пауза 5 минут
+            await Task.Delay(TimeSpan.FromSeconds(15), stoppingToken);
         }
     }
 
@@ -53,7 +53,6 @@ public class AudioReplicationService : BackgroundService
             return;
         }
 
-        //TODO расширить форматы аудио
         var files = Directory.GetFiles(pathToAudio, "*.wav");
         if (!files.Any())
         {

@@ -1,6 +1,7 @@
 ﻿//SpeechData.cs
-namespace MudBlazorWeb2.Components.Modules.MakingWord.Modules
-{    public class SpeechData
+namespace MudBlazorWeb2.Components.Modules.MakingWord
+{
+    public class SpeechData
     {
         public long? Id { get; set; }
         public string? Deviceid { get; set; }

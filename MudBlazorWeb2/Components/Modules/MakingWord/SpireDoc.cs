@@ -3,7 +3,7 @@ using Spire.Doc;
 using Spire.Doc.Documents;
 using System.Text;
 
-namespace MudBlazorWeb2.Components.Modules.MakingWord.Modules
+namespace MudBlazorWeb2.Components.Modules.MakingWord
 {
     public class SpireDoc
     {

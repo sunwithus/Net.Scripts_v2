@@ -48,8 +48,6 @@
 
 @code {
     [Parameter]
-    public FileLogger Logger { get; set; }
-    [Parameter]
     public string pathToAudio { get; set; }
     [Parameter]
     public string sourceName { get; set; }
@@ -98,13 +96,15 @@
 
                 int filesCount = files.Length;
 
-                for (int i = 0; i < files.Length; i++)
+                var tasks = files.Select(file => Task.Run(async () =>
                 {
-                    await ProcessFile(context, files[i]);
+                    await ProcessFile(context, file, filesCount);
+                }));
 
-                    progress = $"{i + 1} / {filesCount}";
-                    await NotifyParent(false, (i + 1) * 100 / filesCount);
-                }
+                await Task.WhenAll(tasks);
+
+                progress = $"{filesCount} / {filesCount}";
+                await NotifyParent(false, 100);
             }
         }
         catch (Exception ex)
@@ -124,13 +124,12 @@
         }
     }
 
-    private async Task ProcessFile(OracleDbContext context, string filePath)
+    private async Task ProcessFile(OracleDbContext context, string filePath, int filesCount)
     {
         try
         {
             string codec = "PCMA";
-            var _maxKey = context.SprSpeechTable.MaxAsync(x => (long?)x.Id);
-
+            var _maxKey =  context.SprSpeechTable.MaxAsync(x => (long?)x.Id);
             (int durationOfWav, byte[]? audioDataLeft, byte[]? audioDataRight) = await AudioToDbConverter.FFmpegStream(filePath, conf["PathToFFmpegExeForReplicator"]);
             Parse.ParsedIdenties fileData = Parse.FormFileName(filePath); //если не удалось, возвращает {DateTime.Now, "", "", "", 2}
 
@@ -151,7 +150,11 @@
                 message = $"<tr><td>{filePath}</td><td> ✅ Успешно записан! </td ></tr >" + message;
             }
 
-            Logger.Log($"Key: {maxKey}, Duration: {durationOfWav}, SourceName {sourceName}");
+            //////////////////////////////////////////////
+            ///        // Update progress
+            int filesProcessed = Interlocked.Increment(ref filesProcessedCount);
+            progress = $"{filesProcessed} / {filesCount}";
+            await NotifyParent(false, (filesProcessed * 100) / filesCount);
 
         }
         catch (Exception ex)
@@ -161,6 +164,7 @@
         }
 
     }
+    private int filesProcessedCount = 0;
 
     //Обработка начала/окончания процесса реплакации
     private async Task NotifyParent(bool isFinished, int percent)

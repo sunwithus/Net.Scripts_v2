@@ -2,7 +2,9 @@
 Replicator revision => background service + Codec G.728 decoder
 https://mudblazor.com/components/fileupload#form-validation
 репликатор многопоточность + BackgroungService
-log событий
+
+создать файл одноименный как и папка с данными о пользователе и
+выводить лог информации о загруженных данных в консоль репликатора
 
 
 
@@ -10,13 +12,11 @@ WhOllProcessWithDb => AudioConverter
 
 Postgres, InterBase
 
-Skeleton на MakingWord
-
 
 
 Обработка аудиоданных Oracle подвисает при запросе к БД (видно при длительном или неверном)
 
-waveplayer - mute F or R, зацикливание проигрывателя при выделении правой кнопкой
+waveplayer - mute F or R, зацикливание проигрывателя при выделении правой кнопкой; Skeleton на MakingWord
 
 Запуск по расписанию
 При WhOllProcessWithDb отложенная выборка при пуске (без await) и вывод инф о старте

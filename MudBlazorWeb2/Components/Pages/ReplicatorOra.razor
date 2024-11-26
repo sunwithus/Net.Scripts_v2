@@ -48,13 +48,15 @@
 
     @if (isFilesLoaded)
     {
-        <OracleAudioReplication pathToAudio="@pathToSaveTempAudio" sourceName="@operatorName" colorButton="@colorButton" IsReplicationFinished="HandleReplicationIsFinished" OnPercentsProgress="HandlePercentsProgress" />
+        <OracleAudioReplication pathToAudio="@pathToSaveTempAudio" sourceName="@operatorName" colorButton="@colorButton" Logger="@_logger" IsReplicationFinished="HandleReplicationIsFinished" OnPercentsProgress="HandlePercentsProgress" />
     }
 
  </MudContainer>
 
 
 @code {
+
+    private FileLogger _logger;
 
     MudBlazor.Color colorButton = Color.Surface;
     private string pathToSaveTempAudio = "";
@@ -69,6 +71,8 @@
 
         pathToSaveTempAudio = Configuration["AudioPathForReplicator"] + Guid.NewGuid() +"\\";
         settingsDB = SettingsService.GetSettings();
+
+        _logger = new FileLogger(Path.Combine(AppContext.BaseDirectory, "Logs/replicator.log"));
     }
 
 

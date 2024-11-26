@@ -14,13 +14,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Remove="Components\Modules\MakingWord\Modules\WaveFormPlayer.razor~RF724471.TMP" />
-    <None Remove="Components\Modules\Replicator\Services\AudioReplicationService.cs~RF540b76f.TMP" />
-    <None Remove="settingsApp.json~RF5384f46.TMP" />
-  </ItemGroup>
-
-
-  <ItemGroup>
     <PackageReference Include="FreeSpire.Doc" Version="12.2.0" />
     <PackageReference Include="MudBlazor" Version="7.*" />
 	<PackageReference Include="FFMpegCore" Version="5.1.0" />

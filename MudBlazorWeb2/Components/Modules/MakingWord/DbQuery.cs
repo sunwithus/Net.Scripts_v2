@@ -2,7 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using MudBlazorWeb2.Components.EntityFrameworkCore;
 
-namespace MudBlazorWeb2.Components.Modules.MakingWord.Modules
+namespace MudBlazorWeb2.Components.Modules.MakingWord
 {
     public class DbQuery
     {

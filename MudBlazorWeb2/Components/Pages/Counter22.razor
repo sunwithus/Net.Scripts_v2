@@ -1,0 +1,42 @@
+﻿@page "/counter-1"
+
+@using MudBlazorWeb2.Components.Methods
+@inject ILogger<Counter22> Logger
+
+<PageTitle>Counter 1</PageTitle>
+
+<h1>Counter 1</h1>
+
+<p>Current count: @currentCount</p>
+
+<button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
+
+@code {
+    private int currentCount = 0;
+    private FileLogger _logger;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        _logger = new FileLogger(Path.Combine(AppContext.BaseDirectory, "Logs/replicator.log"));
+    }
+
+    private void IncrementCount()
+    {
+        Logger.LogWarning("LogWarning");
+        Logger.LogCritical("LogCritical");
+        Logger.LogError("LogError");
+        Logger.LogInformation("LogInformation");
+        Logger.LogDebug("LogDebug");
+
+
+        _logger.Log("LogDebug");
+        _logger.Log("LogWarning");
+        _logger.Log("LogError");
+        _logger.Log("LogInformation");
+        _logger.Log("LogDebug");
+
+
+
+        currentCount++;
+    }
+}

@@ -40,6 +40,13 @@ namespace MudBlazorWeb2.Components.Methods
             }
 
         }
+        public static void CreateDirectory(string directoryPath)
+        {
+            if (!Directory.Exists(directoryPath))
+            {
+                Directory.CreateDirectory(directoryPath);
+            }
+        }
     }
     public class Cmd
     {
@@ -78,5 +85,22 @@ namespace MudBlazorWeb2.Components.Methods
             }
         }
 
+    }
+
+    public class FileLogger
+    {
+        private readonly string _filePath;
+
+        public FileLogger(string filePath)
+        {
+            _filePath = filePath;
+            Files.CreateDirectory(Path.GetDirectoryName(_filePath));
+        }
+
+        public void Log(string message)
+        {
+            var logEntry = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - {message}";
+            File.AppendAllText(_filePath, logEntry + Environment.NewLine);
+        }
     }
 }
