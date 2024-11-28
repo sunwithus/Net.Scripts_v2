@@ -1,5 +1,4 @@
-﻿
-@*OracleAudioReplication.razor*@
+﻿@*OracleAudioReplication.razor*@
 
 @using Microsoft.EntityFrameworkCore
 @using FFMpegCore
@@ -47,6 +46,8 @@
     </MudSimpleTable>
 
 @code {
+    [Parameter]
+    public FileLogger Logger { get; set; }
     [Parameter]
     public string pathToAudio { get; set; }
     [Parameter]
@@ -96,15 +97,13 @@
 
                 int filesCount = files.Length;
 
-                var tasks = files.Select(file => Task.Run(async () =>
+                for (int i = 0; i < files.Length; i++)
                 {
-                    await ProcessFile(context, file, filesCount);
-                }));
+                    await ProcessFile(context, files[i]);
 
-                await Task.WhenAll(tasks);
-
-                progress = $"{filesCount} / {filesCount}";
-                await NotifyParent(false, 100);
+                    progress = $"{i + 1} / {filesCount}";
+                    await NotifyParent(false, (i + 1) * 100 / filesCount);
+                }
             }
         }
         catch (Exception ex)
@@ -114,22 +113,19 @@
         }
         finally
         {
-            DirectoryInfo dir = new DirectoryInfo(pathToAudio);
-            if (dir.Exists)
-            {
-                dir.Delete(true);
-            }
+            Files.DeleteDirectory(pathToAudio);
             progressCircular = false;
             await NotifyParent(true, 0); // передача родительскому эл-ту об окончании
         }
     }
 
-    private async Task ProcessFile(OracleDbContext context, string filePath, int filesCount)
+    private async Task ProcessFile(OracleDbContext context, string filePath)
     {
         try
         {
             string codec = "PCMA";
-            var _maxKey =  context.SprSpeechTable.MaxAsync(x => (long?)x.Id);
+            var _maxKey = context.SprSpeechTable.MaxAsync(x => (long?)x.Id);
+
             (int durationOfWav, byte[]? audioDataLeft, byte[]? audioDataRight) = await AudioToDbConverter.FFmpegStream(filePath, conf["PathToFFmpegExeForReplicator"]);
             Parse.ParsedIdenties fileData = Parse.FormFileName(filePath); //если не удалось, возвращает {DateTime.Now, "", "", "", 2}
 
@@ -150,11 +146,7 @@
                 message = $"<tr><td>{filePath}</td><td> ✅ Успешно записан! </td ></tr >" + message;
             }
 
-            //////////////////////////////////////////////
-            ///        // Update progress
-            int filesProcessed = Interlocked.Increment(ref filesProcessedCount);
-            progress = $"{filesProcessed} / {filesCount}";
-            await NotifyParent(false, (filesProcessed * 100) / filesCount);
+            //Logger.Log($"Key: {maxKey}, Duration: {durationOfWav}, SourceName {sourceName}");
 
         }
         catch (Exception ex)
@@ -164,7 +156,6 @@
         }
 
     }
-    private int filesProcessedCount = 0;
 
     //Обработка начала/окончания процесса реплакации
     private async Task NotifyParent(bool isFinished, int percent)

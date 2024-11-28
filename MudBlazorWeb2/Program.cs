@@ -1,44 +1,27 @@
 //Program.cs
 global using MudBlazorWeb2.Components.Methods;
 
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using MudBlazorWeb2.Components.EntityFrameworkCore;
-
 using MudBlazor.Services;
 using MudBlazorWeb2.Components;
 using MudBlazorWeb2.Components.Modules.SettingsOper.Services;
 using MudBlazorWeb2.Components.Modules.WhOllProcessWithDb.Services;
 using MudBlazorWeb2.Components.Modules.Replicator.Services;
+using MudBlazorWeb2.Components.Modules._Shared;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Регистрация сервиса для чтения/записи настроек из settingsApp.json и settingsOper.json
+// settingsApp.json settingsOper.json
 builder.Services.AddSingleton<SettingsService>();
 builder.Services.AddSingleton<UserSettingsService>();
 
-//BackgroundService - запуск репликации в фоновом процессе
-//builder.Services.AddHostedService<ReplBackgrouundService>();
+//BackgroundService
+builder.Services.AddHostedService<ReplBackgroundService>();
 
 builder.Services.AddSingleton<StateService>();
 builder.Services.AddSingleton<StateService2>();
-builder.Services.AddSingleton<ReplSingletonService>();
+//builder.Services.AddSingleton<ReplSingletonService>(); //for old vervion
 
-
-// Oracle настройки "по-умолчанию"
-var connectionString = builder.Configuration.GetConnectionString("OracleDbConnection");
-builder.Services.AddDbContextFactory<OracleDbContext>(options =>
-            options.UseOracle(connectionString, providerOptions => providerOptions
-                                .CommandTimeout(60)
-                                .UseRelationalNulls(true)
-                                .MinBatchSize(2))
-                 .EnableDetailedErrors(false)
-                 .EnableSensitiveDataLogging(false)
-                 .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking));
-
-//#####
-
-// Настройки SignalR
+// SignalR
 builder.Services.AddSignalR(options =>
 {
     options.MaximumReceiveMessageSize = 1024 * 1024 * 512;
@@ -55,10 +38,10 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.AddHttpClient();
-// Добавление HttpClient сервисов с настройкой таймаута
+// HttpClient
 builder.Services.AddHttpClient<WhisperService>(client =>
 {
-    client.Timeout = TimeSpan.FromMinutes(15); // Установка таймаута
+    client.Timeout = TimeSpan.FromMinutes(15); //
 });
 
 builder.Services.AddHttpClient<OllamaService>(client =>
@@ -67,6 +50,11 @@ builder.Services.AddHttpClient<OllamaService>(client =>
 });
 
 var app = builder.Build();
+
+////////////////////////////////////////////
+app.UseRouting();
+app.UseAntiforgery();
+app.MapHub<ReplicatorHub>("/replicatorhub");
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
@@ -79,7 +67,6 @@ if (!app.Environment.IsDevelopment())
 //app.UseHttpsRedirection();
 
 app.UseStaticFiles();
-app.UseAntiforgery();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();

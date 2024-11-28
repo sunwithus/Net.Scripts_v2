@@ -37,16 +37,20 @@
         
         <!-- Transcription -->
         <br />
-        <MudButton Variant="Variant.Filled" OnClick="@TranscribeAudio" Disabled="@(isTranscribing || string.IsNullOrEmpty(fileName))">
-            @if (isTranscribing)
-            {
-                <MudProgressCircular Indeterminate="true" Size="Size.Small" Class="mr-2" /> <MudText>Идёт выполнение...</MudText>
-            }
-            else
-            {
-                <MudText>Выполнить</MudText>
-            }
-        </MudButton>
+        @if (!string.IsNullOrEmpty(fileName))
+        {
+            <MudButton Variant="Variant.Filled" OnClick="@TranscribeAudio" Disabled="@(isTranscribing)">
+                @if (isTranscribing)
+                {
+                    <MudProgressCircular Indeterminate="true" Size="Size.Small" Class="mr-2" />
+                    <MudText>Идёт выполнение...</MudText>
+                }
+                else
+                {
+                    <MudText>Выполнить</MudText>
+                }
+            </MudButton>
+        }
 
         <!-- Result -->
         @if (!string.IsNullOrEmpty(transcriptionResult))

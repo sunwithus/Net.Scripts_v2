@@ -114,11 +114,7 @@
         }
         finally
         {
-            DirectoryInfo dir = new DirectoryInfo(pathToAudio);
-            if (dir.Exists)
-            {
-                dir.Delete(true);
-            }
+            Files.DeleteDirectory(pathToAudio);
             progressCircular = false;
             await NotifyParent(true, 0); // передача родительскому эл-ту об окончании
         }

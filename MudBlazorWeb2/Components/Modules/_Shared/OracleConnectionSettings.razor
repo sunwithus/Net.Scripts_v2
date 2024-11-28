@@ -9,7 +9,6 @@
 
 @rendermode InteractiveServer
 
-@inject IDbContextFactory<OracleDbContext> DbFactory
 @inject SettingsService SettingsService
 
 <MudText Color="@colorButton" Typo="Typo.body1" Style="position:relative; top:-5px; display: flex; justify-content:space-between; align-items: center;">
@@ -125,7 +124,8 @@
     {
         try
         {
-            using (var context = new OracleDbContext(new DbContextOptionsBuilder<OracleDbContext>().UseOracle(conStringDBA).Options))
+            var optionsBuilder = OracleDbContext.ConfigureOptionsBuilder(conStringDBA);
+            using (var context = new OracleDbContext(optionsBuilder.Options))
             {
                 await context.Database.OpenConnectionAsync();
                 if (await context.Database.CanConnectAsync())

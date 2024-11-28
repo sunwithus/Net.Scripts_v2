@@ -21,7 +21,6 @@
 @inject SettingsService SettingsService
 @inject IConfiguration Configuration
 
-@inject IDbContextFactory<OracleDbContext> DbFactory
 @inject WhisperService whisper
 @inject OllamaService ai
 
@@ -34,7 +33,7 @@
     <br />
 
     <MudText Style="position:relative;">
-        
+
         <MudOverlay Visible="@StateService.IsPlayingNow" LightBackground="true" Absolute="true" />
         <OracleConnectionSettings colorButton="@colorTag" OnSettingsChanged="OnSettingsChanged" settingsDB="@settingsDB" oraItemsDB="@settingsDB.SettingsProcessing.OraItems" propertyName="SettingsProcessing" />
 
@@ -63,7 +62,7 @@
                     </MudItem>
                 </MudGrid>
             </MudText>
-            
+
         </MudText>
     </MudText>
 
@@ -77,7 +76,7 @@
         @if (StateService.IsPlayingNow) // прогресс ProcessedKeys / TotalKeys
         {
             <MudText>&emsp;&emsp;</MudText>
-            
+
             @if (!StateService.IsStoped)
             {
                 <MudText>
@@ -109,7 +108,7 @@
     private Settings settingsDB = null;
 
     int lagTime = 0; // время запаздывания Ollama от Whisper
-    int ProcessedAi = 0; // количество выполненных Ollama 
+    int ProcessedAi = 0; // количество выполненных Ollama
 
     protected override async Task OnInitializedAsync()
     {
@@ -286,7 +285,7 @@
             await EFCoreQuery.UpdateNoticeValueAsync(entityId, schemeName, conStringDBA, null);
             Console.WriteLine("Ошибка при обработке Ollama и обновлении сущности EFCore: " + ex.Message);
 
-            // TODO if (MistakesCount > 10) 
+            // TODO if (MistakesCount > 10)
             //StateService.IsStopPressed = true;
         }
 

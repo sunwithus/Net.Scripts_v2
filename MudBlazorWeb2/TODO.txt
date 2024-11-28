@@ -1,25 +1,32 @@
-﻿Replicator => AudioMethods (InputFiles) дублирует 
-Replicator revision => background service + Codec G.728 decoder
-https://mudblazor.com/components/fileupload#form-validation
-репликатор многопоточность + BackgroungService
+﻿Replicator revision => background service + Codec G.728 decoder
 
-создать файл одноименный как и папка с данными о пользователе и
-выводить лог информации о загруженных данных в консоль репликатора
-
-
-
-WhOllProcessWithDb => AudioConverter
+WhOllProcessWithDb => AudioConverter + SignalR
 
 Postgres, InterBase
 
+Кнопка - очистить примечание
 
-
-Обработка аудиоданных Oracle подвисает при запросе к БД (видно при длительном или неверном)
-
-waveplayer - mute F or R, зацикливание проигрывателя при выделении правой кнопкой; Skeleton на MakingWord
+mini PostWorks
+waveplayer - mute F or R, зацикливание проигрывателя при выделении правой кнопкой;
 
 Запуск по расписанию
 При WhOllProcessWithDb отложенная выборка при пуске (без await) и вывод инф о старте
-Настройка подсветки важной инфы
+!!!!!!!! Настройка подсветки важной инфы
 Очередь и приоритет перевода
 
+
+изучить: asp net core магазин, чат, игра, efcore
+game find pair 
+https://learn.microsoft.com/ru-ru/visualstudio/get-started/csharp/tutorial-windows-forms-create-match-game?view=vs-2022
+
+Запуск приложений ASP.NET MVC в контейнерах Windows
+https://learn.microsoft.com/ru-ru/aspnet/mvc/overview/deployment/docker-aspnetmvc
+
+ASP.NET Core
+https://metanit.com/sharp/aspnet6/2.2.php
+
+автопостинг вконтакте, телеграмм, TikTok
+
+выбор даты, выбор времени
+https://mudblazor.com/components/datepicker#range-picker-usage
+https://mudblazor.com/components/timepicker#read-only

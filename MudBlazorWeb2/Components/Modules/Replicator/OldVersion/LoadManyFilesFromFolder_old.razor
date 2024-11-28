@@ -3,10 +3,8 @@
 @using System.Text.Json;
 @using System.Text.Json.Serialization;
 
-@using MudBlazorWeb2.Components.Modules.Replicator
-
 @inject SettingsService SettingsService
-@inject IConfiguration Configuration 
+@inject IConfiguration Configuration
 
 Выберите необходимые аудиофайлы:
 <br />
@@ -45,9 +43,11 @@ else if (isVisibleFilesList)
 
 @code {
     [Parameter]
+    public string pathToSaveTempAudio { get; set; } = "";
+    [Parameter]
     public string sourceName { get; set; } = "";
     [Parameter]
-    public OraItems oraItems { get; set; }
+    public Settings settingsDB { get; set; }
     [Parameter]
     public bool onlyAudioType { get; set; } = true;
     [Parameter]
@@ -64,17 +64,39 @@ else if (isVisibleFilesList)
 
     private int filesPerBatch = 10; // Количество файлов на одну партию
 
+    public class DataForBackgroungService
+    {
+        public string SourceName { get; set; }
+        public string PathToSaveTempAudio { get; set; }
+        public string DbConnectionSettings { get; set; }
+        public string DbScheme { get; set; }
+    }
+
     private async Task LoadFiles(InputFileChangeEventArgs e)
     {
+        var settingsDB = SettingsService.GetSettings().SettingsReplicator.OraItems;
+        
+        DataForBackgroungService DataForBack = new();
+        DataForBack.PathToSaveTempAudio = Configuration["AudioPathForReplicator"] + Guid.NewGuid() +"\\";
+        DataForBack.SourceName = sourceName;
+        DataForBack.DbScheme = settingsDB.Scheme;
+        DataForBack.DbConnectionSettings = $"User Id={settingsDB.User};Password={settingsDB.Password};Data Source={settingsDB.DataSource};";
 
+        
         await OnFinishLoading.InvokeAsync(false);
 
         isLoading = true;
         isVisibleFilesList = false;
         loadedFiles.Clear();
 
-        string pathToSaveTempAudio = Configuration["AudioPathForReplicator"] + Guid.NewGuid();
-        Files.CreateDirectory(pathToSaveTempAudio+"\\");
+        // Предварительная очистка директории и создание снова
+        //Files.DeleteDirectory(pathToSaveTempAudio);
+        Files.CreateDirectory(pathToSaveTempAudio);
+        string pathToJson = pathToSaveTempAudio.TrimEnd('\\') + ".json";
+    
+        var options = new JsonSerializerOptions { WriteIndented = true, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
+        var json = JsonSerializer.Serialize(DataForBack, options);
+        await File.WriteAllTextAsync(pathToJson, json);
 
         progressPercent = 0;
 
@@ -120,29 +142,10 @@ else if (isVisibleFilesList)
 
             await Task.WhenAll(tasks);
         }
-        await CreateJsonForBackgroungService (pathToSaveTempAudio);
+
         isLoading = false; // проценты выполнения
         isVisibleFilesList = true; // таблица с файлами
         await OnFinishLoading.InvokeAsync(true);
-    }
-
-    public async Task CreateJsonForBackgroungService (string pathToSaveTempAudio) 
-    {
-        DataForBackgroungService DataForBack = new();
-        DataForBack.PathToSaveTempAudio = pathToSaveTempAudio + "//";
-        DataForBack.SourceName = sourceName;
-        DataForBack.DbScheme = oraItems.Scheme;
-        DataForBack.DbConnectionSettings = $"User Id={oraItems.User};Password={oraItems.Password};Data Source={oraItems.DataSource};";
-
-        string pathToJson = pathToSaveTempAudio + ".json";
-    
-        var options = new JsonSerializerOptions { 
-            WriteIndented = true, 
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping //for cirillica
-        };
-        var json = JsonSerializer.Serialize(DataForBack, options);
-        await File.WriteAllTextAsync(pathToJson, json); 
     }
 
 }

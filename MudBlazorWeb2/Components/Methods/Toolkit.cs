@@ -38,13 +38,20 @@ namespace MudBlazorWeb2.Components.Methods
                     File.Delete(fileName);
                 }
             }
-
         }
         public static void CreateDirectory(string directoryPath)
         {
             if (!Directory.Exists(directoryPath))
             {
                 Directory.CreateDirectory(directoryPath);
+            }
+        }
+        public static void DeleteDirectory(string directoryPath)
+        {
+            DirectoryInfo dir = new DirectoryInfo(directoryPath);
+            if (dir.Exists)
+            {
+                dir.Delete(true);
             }
         }
     }
@@ -100,7 +107,17 @@ namespace MudBlazorWeb2.Components.Methods
         public void Log(string message)
         {
             var logEntry = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - {message}";
-            File.AppendAllText(_filePath, logEntry + Environment.NewLine);
+            var maxLines = 800; // Максимальное количество строк
+            var lines = File.ReadAllLines(_filePath);
+            var newLines = new List<string>(lines);
+
+            if (newLines.Count >= maxLines)
+            {
+                newLines.RemoveAt(0); // Удалить самую старую строку
+            }
+
+            newLines.Add(logEntry);
+            File.WriteAllLines(_filePath, newLines);
         }
     }
 }

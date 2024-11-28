@@ -10,7 +10,6 @@ namespace MudBlazorWeb2.Components.EntityFrameworkCore
     // Определение контекста базы данных для работы с Entity Framework Core
     public class OracleDbContext : DbContext
     {
-        // Конструктор, принимающий параметры конфигурации контекста
         public OracleDbContext(DbContextOptions<OracleDbContext> options) : base(options)
         {
         }
@@ -19,22 +18,20 @@ namespace MudBlazorWeb2.Components.EntityFrameworkCore
         public DbSet<SPR_SP_DATA_1_TABLE> SprSpData1Table{ get; set; }
         public DbSet<SPR_SP_COMMENT_TABLE> SprSpCommentTable { get; set; }
 
-        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    public static DbContextOptionsBuilder<OracleDbContext> ConfigureOptionsBuilder(string connectionString)
+    {
+        var optionsBuilder = new DbContextOptionsBuilder<OracleDbContext>();
+        optionsBuilder.UseOracle(connectionString, providerOptions =>
         {
-            base.OnConfiguring(optionsBuilder);
-            optionsBuilder
-                 //тут изменять настройки, для другой схемы, другой базы
-                 .UseOracle("User Id=SYSDBA;Password=masterkey;Data Source=localhost / sprutora;", providerOptions => providerOptions
-                                .CommandTimeout(60)
-                                .UseRelationalNulls(true)
-                                .MinBatchSize(2))
-                 
-                 .EnableDetailedErrors(false)
-                 .EnableSensitiveDataLogging(false)
-                 //.LogTo(System.Console.WriteLine)
-                 .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
-
-        }
+            providerOptions.CommandTimeout(60);
+            providerOptions.UseRelationalNulls(true);
+            providerOptions.MinBatchSize(2);
+        })
+        .EnableDetailedErrors(false)
+        .EnableSensitiveDataLogging(false)
+        .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
+        return optionsBuilder;
+    }
 
         // Переопределение метода для настройки моделей (сопоставления сущностей с таблицами)
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -138,9 +135,11 @@ namespace MudBlazorWeb2.Components.EntityFrameworkCore
         [Column("S_POSTID")] //bмя поста регистрации
         public string? Postid { get; set; }
 
-
         [Column("S_CALLTYPE")] //тип вызова 0-входящий, 1-исходящий, 2-неизвестный...
         public int? Calltype { get; set; } = 2;
+
+        [Column("S_SELSTATUS")] //1 - собеседник, 2 - слово в тексте, 3 - геофильтр, 4 - номер в тексте
+        public int? Selstatus { get; set; } // Статус отбора - Наличие признака отбора default = -1
     }
 
     [Table("SPR_SP_DATA_1_TABLE")]
