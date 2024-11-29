@@ -60,6 +60,28 @@ namespace MudBlazorWeb2.Components.Methods
             Console.WriteLine("UsingStreamAsync success!!! outputFilePath: " + outputFilePath);
         }
 
+        public static async Task UsingStreamsMakeStereoAsync(byte[] audioDataLeft, byte[] audioDataRight, string outputFilePath, IConfiguration conf)
+        {
+            using var streamLeft = new MemoryStream(audioDataLeft);
+            using var streamRight = audioDataRight != null ? new MemoryStream(audioDataRight) : null;
+            var ffmpegArgs = FFMpegArguments.FromPipeInput(new StreamPipeSource(streamLeft));
+            string rightArgument = "";
+
+            if (streamRight != null)
+            {
+                ffmpegArgs = ffmpegArgs.AddPipeInput(new StreamPipeSource(streamRight));
+                rightArgument = "-filter_complex amerge=inputs=2 -ac 2";
+            }
+            await ffmpegArgs
+            .OutputToFile(outputFilePath, true, options => options
+                .ForceFormat("wav")
+                //.WithAudioCodec(AudioCodec.LibOpus) //Опус (Opus) Опус является одним из самых высококачественных.lossy аудио кодеков, поддерживаемых FFmpeg.Он известен своей высокой эффективностью и широкой поддержко
+                .WithCustomArgument("-codec:a pcm_s16le -b:a 128k -ar 16000 ")
+                .WithCustomArgument($"{rightArgument}")
+            ).ProcessAsynchronously(true, new FFOptions { BinaryFolder = conf["PathToFFmpegExe"] });
+            Console.WriteLine("UsingStreamAsync success!!! outputFilePath: " + outputFilePath);
+        }
+
         public static async Task UsingFilesAsync(byte[] audioDataLeft, byte[] audioDataRight, string outputFilePath, IConfiguration conf)
         {
             var ramdomFileName = Path.GetRandomFileName();

@@ -1,19 +1,18 @@
-﻿Replicator revision => background service + Codec G.728 decoder
+﻿Replicator => Codec G.728 decoder
 
 WhOllProcessWithDb => AudioConverter + SignalR
+Запуск по расписанию
+При WhOllProcessWithDb отложенная выборка при пуске (без await) и вывод инф о старте
+Очередь и приоритет перевода
+выбор даты, выбор времени
+https://mudblazor.com/components/datepicker#range-picker-usage
+https://mudblazor.com/components/timepicker#read-only
 
 Postgres, InterBase
 
-Кнопка - очистить примечание
+Кнопка - очистить примечание, где 
 
 mini PostWorks
-waveplayer - mute F or R, зацикливание проигрывателя при выделении правой кнопкой;
-
-Запуск по расписанию
-При WhOllProcessWithDb отложенная выборка при пуске (без await) и вывод инф о старте
-!!!!!!!! Настройка подсветки важной инфы
-Очередь и приоритет перевода
-
 
 изучить: asp net core магазин, чат, игра, efcore
 game find pair 
@@ -25,8 +24,8 @@ https://learn.microsoft.com/ru-ru/aspnet/mvc/overview/deployment/docker-aspnetmv
 ASP.NET Core
 https://metanit.com/sharp/aspnet6/2.2.php
 
-автопостинг вконтакте, телеграмм, TikTok
+автопостинг вконтакте, телеграмм, TikTok, ИИ Высоцкий
+Чат-бот о Высоцком Виртуальный помощник
+Общение "от имени" Высоцкого: С помощью продвинутых моделей ИИ создать чат, где бот "от лица" Владимира Высоцкого отвечает на вопросы пользователей.
+Игра-путешествие: Создание квеста "По следам Высоцкого", где пользователи проходят задания, связанные с его песнями и биографией.
 
-выбор даты, выбор времени
-https://mudblazor.com/components/datepicker#range-picker-usage
-https://mudblazor.com/components/timepicker#read-only

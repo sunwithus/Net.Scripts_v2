@@ -97,6 +97,12 @@ namespace MudBlazorWeb2.Components.Modules.WhOllProcessWithDb
                 byte[] commentBytes = Encoding.GetEncoding(1251).GetBytes(sb.ToString());
 
                 string dangerLevelText = int.TryParse(responseOllamaText.Substring(0, 1), out int dangerLevel) ? dangerLevel.ToString() : "unknown";
+                //Selstatus //1 - собеседник, 2 - слово в тексте, 3 - геофильтр, 4 - номер в тексте
+                int selStatus = -1;
+                if (dangerLevel == 1 || dangerLevel == 2 || dangerLevel == 3 || dangerLevel == 4 || dangerLevel == 5)
+                {
+                    selStatus = 2;
+                }
 
                 try
                 {
@@ -127,6 +133,7 @@ namespace MudBlazorWeb2.Components.Modules.WhOllProcessWithDb
                         speech.Notice = dangerLevelText;
                         speech.Postid = modelName;
                         speech.Deviceid = "MEDIUM_R";
+                        speech.Selstatus = selStatus;
                         db.SprSpeechTable.Update(speech);
                     }
                     else
@@ -137,7 +144,8 @@ namespace MudBlazorWeb2.Components.Modules.WhOllProcessWithDb
                             Belong = detectedLanguage,
                             Notice = dangerLevelText,
                             Postid = modelName,
-                            Deviceid = "MEDIUM_R"
+                            Deviceid = "MEDIUM_R",
+                            Selstatus = selStatus
                         };
                         await db.SprSpeechTable.AddAsync(speech);
                     }

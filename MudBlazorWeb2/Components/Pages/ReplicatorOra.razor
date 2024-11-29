@@ -38,7 +38,7 @@
             <br />
             <MudText Style="float:right; height:0px;" Class="pa-4">
                 <MudStack Spacing="2">
-                    <MudCollapse Style="z-index: 2; border: 1px solid lightgrey; border-radius: 5px; width: 100%; max-height: 70vh; overflow: auto; white-space: pre; display: block;" Expanded="_expanded">
+                    <MudCollapse Style="z-index: 2; border: 1px solid lightgrey; border-radius: 5px; width: 100%; max-width: 70vh; max-height: 70vh; overflow: auto; white-space: pre; display: block;" Expanded="_expanded">
                         @if (!string.IsNullOrEmpty(logContent))
                         {
                             <MudText Typo="Typo.body2">
@@ -73,13 +73,15 @@
         <br />
         <MudText Style="opacity: 0.5;" Typo="Typo.body2" Color="@colorButton">Файлы сохранены на сервере, после преобразования аудиоданные будут записаны в БД.</MudText>
     }
-    <br /><MudDivider />
+    
     @if (!string.IsNullOrEmpty(statusText))
     {
+        <br />
+        <MudDivider />
         <MudText Typo="Typo.body1">События:</MudText>
         <MudText Typo="Typo.caption">@((MarkupString)statusText)</MudText>
     }
-    <MudText Style="opacity: 0.8; position: fixed; bottom: 0; right: 50px;" Typo="Typo.caption" Color="@colorButton">@($"Hub State: {_hubConnection?.State}")</MudText>
+    <MudText Style="opacity: 0.8; position: fixed; bottom: 0; right: 40px;" Typo="Typo.caption" Color="@colorButton">@($"Hub State: {_hubConnection?.State}")</MudText>
 
 </MudContainer>
 

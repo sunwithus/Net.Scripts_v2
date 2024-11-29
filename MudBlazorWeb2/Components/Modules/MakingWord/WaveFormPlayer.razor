@@ -14,34 +14,48 @@
 @inject IWebHostEnvironment HostEnvironment
 @inject NavigationManager NavigationManager
 
+<!--
 <style>
-    #playercontainer .audio {
-        width:300px !important;
-    }
-
     #playercontainer {
         background-color: white !important;
     }
 </style>
-<MudText style="align-items:center; display: flex; flex-direction: row; min-width: 300px; max-width:90%; position: relative;">
-    <MudButtonGroup Color="@colorTag" Variant="Variant.Text" Vertical="true" Style="width: 50px;">
-        <MudButton id="playbutton" Color="@colorTag">▶</MudButton>
-        <MudButton id="stopbutton" Color="@colorTag">◼</MudButton>
-        <MudButton id="forwardbutton" Color="@colorTag">⏭</MudButton>
-        <MudButton id="backwardbutton" Color="@colorTag">⏮</MudButton>
-        
-        <input style="display:none;" id="volumeslider" type="range" min="0" max="100" value="80">
+-->
+<style>
+    #buttonsgroup {
+        font-size: 12px;
+    }
+</style>
 
+
+<MudText Typo="Typo.body1" style="align-items:center; display: flex; flex-direction: row; min-width: 300px; max-width:100%; position: relative;">
+    <MudButtonGroup id="buttonsgroup" Color="@colorTag" Variant="Variant.Text" Vertical="true" Style="width: 110px;">
+        <label>
+            <input type="checkbox" id="loopregions" checked="${loop}" /> Зацикливание
+        </label>
+        <MudDivider />
+        <label>
+            Скорость: <span id="currentspeed">1.00</span>x <input type="range" id="speedlevel" min="0" max="6" value="3" style="width: 100px;" />
+        </label>
+        <MudDivider />
+        <label>
+            Увеличение: <input type="range" id="zoomlevel" min="10" max="500" value="0" style="width: 100px;" />
+        </label>
+        <MudDivider />
+        <div style="display: flex; justify-content:space-between;">
+            <button id="backwardbutton">⏮</button>|<button id="forwardbutton">⏭</button>
+        </div>
+        <div id="saveaudio">
+            <MudFab StartIcon="@Icons.Material.Filled.Save" Label="Скачать" />
+        </div>
     </MudButtonGroup>
-    <div style="width: 100%; margin-left: 20px;">
-        <div id="playercontainer" style="background: #2d2d2d; color: #fff"></div>
-    </div>
-
-
+    <div id="playercontainer" style="width: 100%; margin-left: 10px;"></div>
 </MudText>
 
 
 @code {
+    [Parameter]
+    public string FileName { get; set; }
     [Parameter]
     public MudBlazor.Color colorTag { get; set; }
     [Parameter]
@@ -60,9 +74,10 @@
     private async Task LoadAudioData()
     {
         var path = Path.Combine(HostEnvironment.WebRootPath, "files", "1.wav");
+        Files.CreateDirectory(Path.GetDirectoryName(path));
         try
         {
-            await UsingStreamsMakeStereoAsync(AudioDataLeft, AudioDataRight, path, conf);
+            await DbToAudioConverter.UsingStreamsMakeStereoAsync(AudioDataLeft, AudioDataRight, path, conf);
         }
         catch (Exception ex)
         {
@@ -72,7 +87,7 @@
         string url = NavigationManager.BaseUri +"files/1.wav";
         try 
         {
-            await JSRuntime.InvokeVoidAsync("createAudioSingletrack", url);
+            await JSRuntime.InvokeVoidAsync("createAudioSingletrack", url, FileName);
         }
         catch (Exception ex)
         {
@@ -81,29 +96,6 @@
         }
 
     }
-
-    public static async Task UsingStreamsMakeStereoAsync(byte[] audioDataLeft, byte[] audioDataRight, string outputFilePath, IConfiguration conf)
-    {
-        using var streamLeft = new MemoryStream(audioDataLeft);
-        using var streamRight = audioDataRight != null ? new MemoryStream(audioDataRight) : null;
-        var ffmpegArgs = FFMpegArguments.FromPipeInput(new StreamPipeSource(streamLeft));
-        string rightArgument = "";
-
-        if (streamRight != null)
-        {
-            ffmpegArgs = ffmpegArgs.AddPipeInput(new StreamPipeSource(streamRight));
-            rightArgument = "-filter_complex amerge=inputs=2 -ac 2";
-        }
-        await ffmpegArgs
-        .OutputToFile(outputFilePath, true, options => options
-            .ForceFormat("wav")
-            //.WithAudioCodec(AudioCodec.LibOpus) //Опус (Opus) Опус является одним из самых высококачественных.lossy аудио кодеков, поддерживаемых FFmpeg.Он известен своей высокой эффективностью и широкой поддержко
-            .WithCustomArgument("-codec:a pcm_s16le -b:a 128k -ar 16000 ")
-            .WithCustomArgument($"{rightArgument}")
-        ).ProcessAsynchronously(true, new FFOptions { BinaryFolder = conf["PathToFFmpegExe"] });
-        Console.WriteLine("UsingStreamAsync success!!! outputFilePath: " + outputFilePath);
-    }
-
 
 
 }

@@ -40,10 +40,10 @@
     @if (speechData != null && speechData.Count > 0 && speechData.FirstOrDefault().Id == Id)
     {
 
-        <WaveFormPlayer AudioDataLeft="speechData?.FirstOrDefault()?.AudioF" AudioDataRight="speechData?.FirstOrDefault()?.AudioR" />
+        <WaveFormPlayer FileName="@fileNameForSaveAudioViaPlayer" AudioDataLeft="speechData?.FirstOrDefault()?.AudioF" AudioDataRight="speechData?.FirstOrDefault()?.AudioR" />
         <br />
 
-        <MudTable Items="@speechData" Dense="true" Hover="true" Bordered="true" Striped="true">
+        <MudTable Style="min-width: 525px;" Items="@speechData" Dense="true" Hover="true" Bordered="true" Striped="true">
             <HeaderContent >
                 @foreach (var header in ColumnHeaders)
                 {
@@ -96,6 +96,8 @@
 
 @code {
 
+    string fileNameForSaveAudioViaPlayer = "";
+
     MudBlazor.Color colorTag = Color.Success;
     private Settings settingsDB = null;
 
@@ -140,6 +142,19 @@
         try 
         {
             speechData = await DbQuery.GetSpeechDataByIdAsync(Id, Scheme, conStringDBA);
+            ///////////////
+            var ind = speechData.FirstOrDefault();
+            string? durationString = ind.Duration;
+            if (durationString.StartsWith("+00"))
+            {
+                durationString = durationString.Substring(3); // Удалить "+00" с начала
+            }
+            if (durationString.EndsWith(".000000"))
+            {
+                durationString = durationString.Substring(0, durationString.Length - 7); // Удалить ".000000" с конца
+            }
+            fileNameForSaveAudioViaPlayer = $"" + ind.Datetime.ToString() + "_" + durationString + "_" + ind.Sourcename + "_" + ind.Usernumber + "_" + ind.Talker + "_" + ind.Lac + "_" + ind.Cid + "_" + ind.Basestation + ".wav";
+            ///////////////////
             if (speechData != null)
             {
                 Console.WriteLine("Id = " + Id);

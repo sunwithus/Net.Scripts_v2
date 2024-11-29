@@ -107,33 +107,31 @@ public class ReplBackgroundService : BackgroundService
         {
             try
             {
-                await ProcessSingleAudio(context, filePath);
+                await ProcessSingleAudio(context, filePath, JsonData.SourceName);
                 Console.WriteLine($"Файл обработан: {filePath}");
                 //File.Delete(filePath);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Ошибка при обработке файла {filePath}: {ex.Message}");
-                await _hubContext.Clients.All.SendAsync("ReceiveMessage", $"Ошибка при обработке файла {filePath}: {ex.Message}", cancellationToken);
+                await _hubContext.Clients.All.SendAsync("ReceiveMessage", $"❌ Ошибка при обработке файла {filePath}: {ex.Message}", cancellationToken);
                 throw;
             }
         }
         _fileLogger.Log($"Выполнено. Источник: {JsonData.SourceName}, схема БД: {JsonData.DbScheme} Записано {filesAudio.Count()} файлов.");
     }
 
-    private async Task ProcessSingleAudio(OracleDbContext context, string filePath)
+    private async Task ProcessSingleAudio(OracleDbContext context, string filePath, string sourceName)
     {
         string codec = "PCMA";
         var _maxKey = context.SprSpeechTable.MaxAsync(x => (long?)x.Id);
 
-        //long maxKey = await context.SprSpeechTable.MaxAsync(x => (long?)x.Id) ?? 0;
-
         var (durationOfWav, audioDataLeft, audioDataRight) = await AudioToDbConverter.FFmpegStream(filePath, _configuration["PathToFFmpegExeForReplicator"]);
         long maxKey = await _maxKey ?? 0;
         Parse.ParsedIdenties fileData = Parse.FormFileName(filePath); //если не удалось, возвращает {DateTime.Now, "", "", "", 2}
-        string isIdentificators = (fileData.Talker == "" && fileData.Caller == "" && fileData.IMEI == "") ? "с идентификаторами" : "без идентификаторов";
+        string isIdentificators = (fileData.Talker == "" && fileData.Caller == "" && fileData.IMEI == "") ? "✔️ без идентификаторов" : "✅ с идентификаторами";
         // Создание талиц записи
-        var speechTableEntity = CreateSpeechTableEntity(fileData, durationOfWav, codec, maxKey);
+        var speechTableEntity = CreateSpeechTableEntity(fileData, durationOfWav, codec, maxKey, sourceName);
         var data1TableEntity = CreateData1TableEntity(audioDataLeft, audioDataRight, codec, maxKey);
 
         await SaveEntitiesToDatabase(context, speechTableEntity, data1TableEntity);
@@ -141,7 +139,7 @@ public class ReplBackgroundService : BackgroundService
 
     }
 
-    private SPR_SPEECH_TABLE CreateSpeechTableEntity(Parse.ParsedIdenties fileData, int durationOfWav, string codec, long maxKey)
+    private SPR_SPEECH_TABLE CreateSpeechTableEntity(Parse.ParsedIdenties fileData, int durationOfWav, string codec, long maxKey, string sourceName)
     {
         return new SPR_SPEECH_TABLE
         {
@@ -152,7 +150,7 @@ public class ReplBackgroundService : BackgroundService
             Datetime = fileData.Timestamp,
             Duration = string.Format("+00 {0:D2}:{1:D2}:{2:D2}.000000", durationOfWav / 3600, (durationOfWav % 3600) / 60, durationOfWav % 60),
             Sysnumber3 = fileData.IMEI,
-            Sourcename = "sourceName",
+            Sourcename = sourceName,
             Talker = fileData.Talker,
             Usernumber = fileData.Caller,
             Calltype = fileData.Calltype,
