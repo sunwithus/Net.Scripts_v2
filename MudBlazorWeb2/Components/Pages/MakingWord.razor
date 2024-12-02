@@ -35,11 +35,11 @@
         </MudText>
     </MudText>
 
-    <MudDivider />
+    
 
     @if (speechData != null && speechData.Count > 0 && speechData.FirstOrDefault().Id == Id)
     {
-
+        <MudDivider />
         <WaveFormPlayer FileName="@fileNameForSaveAudioViaPlayer" AudioDataLeft="speechData?.FirstOrDefault()?.AudioF" AudioDataRight="speechData?.FirstOrDefault()?.AudioR" />
         <br />
 
@@ -87,7 +87,7 @@
             <p>Ошибка декодирования комментария: @ex.Message</p>
         }
     }
-    else if (message == " Операция выполняется...")
+    else if (IsSkeleton)
     {
         <Skeleton />
     }
@@ -97,6 +97,7 @@
 @code {
 
     string fileNameForSaveAudioViaPlayer = "";
+    bool IsSkeleton = false;
 
     MudBlazor.Color colorTag = Color.Success;
     private Settings settingsDB = null;
@@ -134,7 +135,7 @@
 
     private async Task QueryRecordById()
     {
-        message = " Операция выполняется...";
+        IsSkeleton = true;
         speechData = null;
         await LoadSettingsFromFile();
         ConsoleCol.WriteLine("conStringDBA: " + conStringDBA + "\nScheme: " + Scheme, ConsoleColor.Blue);
@@ -165,6 +166,7 @@
                 message = $"Ключ записи №{Id} не существует ";
                 Console.WriteLine($"Ключ записи не существует Id: {Id}");
             }
+            IsSkeleton = false;
         }
         catch (OracleException ex)
         {

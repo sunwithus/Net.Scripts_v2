@@ -44,7 +44,8 @@ public class WhisperService
         catch (Exception ex)
         {
             ConsoleCol.WriteLine("ошибка в методе WhisperDetectLanguage: " + ex.Message, ConsoleColor.Red);
-            return ("", "");
+            //return ("", "");
+            throw;
         }
     }
 
@@ -77,7 +78,8 @@ public class WhisperService
         catch (Exception ex) {
             
             ConsoleCol.WriteLine("ошибка в методе RecognizeSpeechAsync: " + ex.Message, ConsoleColor.Red);
-            return ("Error в методе RecognizeSpeechAsync: " + ex.Message);
+            //return ("Error в методе RecognizeSpeechAsync: " + ex.Message);
+            throw;
         }
     }
 }

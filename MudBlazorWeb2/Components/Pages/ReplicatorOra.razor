@@ -18,6 +18,8 @@
 @inject NavigationManager Navigation
 @inject IDialogService DialogService
 
+@inject ISnackbar SnackbarService
+
 <PageTitle>🛢 Replicator Ora</PageTitle>
 
 <MudContainer>
@@ -31,31 +33,7 @@
         <MudText Style="width: 325px;">
             <OracleChooseOperator colorButton="@colorButton" OnOperatorSelected="HandleOperatorSelected" />
         </MudText>
-
-        <!-- #LogReplicator-->
-        <MudText Style="position: relative; width: 0px;">
-            <MudButton Style="float:right;" OnClick="OnExpandCollapseClick">@(_expanded ? "▲" : "▼")</MudButton>
-            <br />
-            <MudText Style="float:right; height:0px;" Class="pa-4">
-                <MudStack Spacing="2">
-                    <MudCollapse Style="z-index: 2; border: 1px solid lightgrey; border-radius: 5px; width: 100%; max-width: 70vh; max-height: 70vh; overflow: auto; white-space: pre; display: block;" Expanded="_expanded">
-                        @if (!string.IsNullOrEmpty(logContent))
-                        {
-                            <MudText Typo="Typo.body2">
-                                <MudPaper Class="pa-4">
-                                    @logContent
-                                </MudPaper>
-                            </MudText>
-                        }
-                        else if (_expanded)
-                        {
-                            <MudProgressCircular Color="@colorButton" Size="Size.Small" Indeterminate="true" />
-                        }
-                    </MudCollapse>
-                </MudStack>
-            </MudText>
-        </MudText>
-
+        <LogContent />
     </MudText>
 
 
@@ -78,7 +56,7 @@
     {
         <br />
         <MudDivider />
-        <MudText Typo="Typo.body1">События:</MudText>
+        <MudText Typo="Typo.body1">Текущие события:</MudText>
         <MudText Typo="Typo.caption">@((MarkupString)statusText)</MudText>
     }
     <MudText Style="opacity: 0.8; position: fixed; bottom: 0; right: 40px;" Typo="Typo.caption" Color="@colorButton">@($"Hub State: {_hubConnection?.State}")</MudText>
@@ -87,14 +65,9 @@
 
 
 @code {
-    bool _expanded = false;
-
     private HubConnection _hubConnection;
     private string statusText = string.Empty;
-
-    private FileLogger _logger;
-    private string logContent = string.Empty;
-    private bool isLogPanelVisible = false;
+    FileLogger _logger = null;
 
     MudBlazor.Color colorButton = Color.Surface;
     private string pathToSaveTempAudio = "";
@@ -119,14 +92,17 @@
             await StateHasChangedAsync();
         });
 
-        try
+        if (_hubConnection?.State == HubConnectionState.Disconnected)
         {
-            await _hubConnection.StartAsync();
-            Console.WriteLine("SignalR connection started.");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine("Failed to start SignalR connection: " + ex.Message);
+            try
+            {
+                await _hubConnection.StartAsync();
+                Console.WriteLine("SignalR connection started.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Failed to start SignalR connection: " + ex.Message);
+            }
         }
 
 
@@ -142,35 +118,6 @@
         _hubConnection.DisposeAsync().GetAwaiter().GetResult();
     }
     
-    private async void OnExpandCollapseClick()
-    {
-        _expanded = !_expanded;
-        logContent = _expanded ? await ReadLogContent() : "";
-    }
-
-    private async Task<string> ReadLogContent()
-    {
-        await Task.Delay(0);
-        try
-        {
-            var logFilePath = Path.Combine(Path.Combine(AppContext.BaseDirectory, "Logs/replicator.log"));
-            if (File.Exists(logFilePath))
-            {
-                var logLines = await File.ReadAllLinesAsync(logFilePath);
-                Array.Reverse(logLines); // Переворачиваем массив строк
-                return string.Join(Environment.NewLine, logLines);
-            }
-            else
-            {
-                return "Лог-файл не найден.";
-            }
-        }
-        catch (Exception ex)
-        {
-            return $"Ошибка чтения лог-файла: {ex.Message}";
-        }
-    }
-
 
     private async Task OnSettingsChanged()
     {

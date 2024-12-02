@@ -32,13 +32,14 @@ public class OllamaService
             (string text, int durationOllama) = await SendTextForAnalysisAsync(preText, recognizedText, modelName, Configuration);
             ConsoleCol.WriteLine("\nOllamaResponse => Длительность выполнения: " + durationOllama + " sec.", ConsoleColor.DarkBlue);
 
-            text = await Text.DeleteUnnecessary(text);
+            text = await SideEffect.DeleteUnnecessary(text);
             return (text, durationOllama);
         }
         catch (Exception ex)
         {
             Console.WriteLine("ошибка в методе OllamaResponse: " + ex.Message);
-            return ("ошибка в методе OllamaResponse: " + ex.Message, -1);
+            //return ("ошибка в методе OllamaResponse: " + ex.Message, -1);
+            throw;
         }
     }
 
@@ -48,7 +49,7 @@ public class OllamaService
         (string translatedText, int durationOllama) = await SendTextForAnalysisAsync(preTextToTranslate, recognizedText, modelName, Configuration);
         Console.WriteLine();
         ConsoleCol.WriteLine("OllamaTranslate => Длительность выполнения: " + durationOllama + " sec.", ConsoleColor.Blue);
-        translatedText = await Text.DeleteUnnecessary(translatedText);
+        translatedText = await SideEffect.DeleteUnnecessary(translatedText);
         translatedText = $"Перевод с {detectedLanguage.ToUpper()} языка: \n" + translatedText;
 
         return (translatedText, durationOllama);

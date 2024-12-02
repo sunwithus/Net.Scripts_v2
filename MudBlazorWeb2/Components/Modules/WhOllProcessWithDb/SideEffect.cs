@@ -2,7 +2,7 @@
 
 namespace MudBlazorWeb2.Components.Modules.WhOllProcessWithDb
 {
-    public class Text
+    public class SideEffect
     {
 
         // побочка от изменения параметров модели (в ответе спрашивает => Let me know if you have any other...)

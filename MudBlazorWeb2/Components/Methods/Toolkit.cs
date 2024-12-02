@@ -1,4 +1,7 @@
-﻿using System.Diagnostics;
+﻿using MudBlazorWeb2.Components.Pages;
+using System.Diagnostics;
+using System.Drawing.Imaging;
+using System.Text.Json;
 
 namespace MudBlazorWeb2.Components.Methods
 {
@@ -118,6 +121,68 @@ namespace MudBlazorWeb2.Components.Methods
 
             newLines.Add(logEntry);
             File.WriteAllLines(_filePath, newLines);
+        }
+    }
+
+    public class SimpleJson<T> where T : class, new()
+    {
+        private readonly string filePath;
+        private List<T> items = new();
+
+        public SimpleJson(string filePath)
+        {
+            this.filePath = filePath;
+        }
+
+        public async Task LoadItemsAsync()
+        {
+            if (File.Exists(filePath))
+            {
+                var json = await File.ReadAllTextAsync(filePath);
+                if (string.IsNullOrWhiteSpace(json))
+                {
+                    items = new List<T>();
+                    await SaveItemsAsync(); // Сохранить начальную структуру
+                }
+                else
+                {
+                    items = JsonSerializer.Deserialize<List<T>>(json) ?? new List<T>();
+                }
+            }
+            else
+            {
+                items = new List<T>();
+                await SaveItemsAsync(); // Создать новый файл
+            }
+        }
+
+        public async Task SaveItemsAsync()
+        {
+            var json = JsonSerializer.Serialize(items);
+            await File.WriteAllTextAsync(filePath, json);
+        }
+
+        public async Task AddItemAsync(T newItem)
+        {
+            if (newItem != null)
+            {
+                items.Add(newItem);
+                await SaveItemsAsync();
+            }
+        }
+
+        public async Task DeleteItemAsync(T item)
+        {
+            if (items.Contains(item))
+            {
+                items.Remove(item);
+                await SaveItemsAsync();
+            }
+        }
+
+        public List<T> GetItems()
+        {
+            return new List<T>(items);
         }
     }
 }

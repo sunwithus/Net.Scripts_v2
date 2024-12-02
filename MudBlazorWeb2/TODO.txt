@@ -1,4 +1,4 @@
-﻿Replicator => Codec G.728 decoder
+﻿Replicator => Codec G.728 decoder вместо SignalR => Singleton
 
 WhOllProcessWithDb => AudioConverter + SignalR
 Запуск по расписанию
@@ -8,11 +8,20 @@ WhOllProcessWithDb => AudioConverter + SignalR
 https://mudblazor.com/components/datepicker#range-picker-usage
 https://mudblazor.com/components/timepicker#read-only
 
+//TODO
 Postgres, InterBase
-
-Кнопка - очистить примечание, где 
-
+"обнуление" Notice для какой-н БД //Кнопка - очистить примечание, где... комментарии пусто
 mini PostWorks
+
+
+
+// изучить
+
+контейнерного приложения на основе микрослужб (магазин)
+https://github.com/dotnet/eShop
+
+Создание минимального API
+https://learn.microsoft.com/ru-ru/aspnet/core/tutorials/min-web-api?cid=kerryherger&view=aspnetcore-7.0&tabs=visual-studio
 
 изучить: asp net core магазин, чат, игра, efcore
 game find pair 

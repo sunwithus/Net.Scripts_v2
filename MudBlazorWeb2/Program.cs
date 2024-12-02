@@ -16,6 +16,7 @@ builder.Services.AddSingleton<UserSettingsService>();
 
 //BackgroundService
 builder.Services.AddHostedService<ReplBackgroundService>();
+builder.Services.AddHostedService<AiBackgroundService>();
 
 builder.Services.AddSingleton<StateService>();
 builder.Services.AddSingleton<StateService2>();

@@ -5,11 +5,29 @@
 
 <PageTitle>Counter 1</PageTitle>
 
-<h1>Counter 1</h1>
+<MudExpansionPanels MultiExpansion="true">
+    <MudExpansionPanel Text="Panel One">
+        Panel One Content
+    </MudExpansionPanel>
+    <MudExpansionPanel Text="Panel Two">
+        Panel Two Content
+    </MudExpansionPanel>
+</MudExpansionPanels>
 
-<p>Current count: @currentCount</p>
+<MudTooltip Text="Delete">
+    <MudIconButton Icon="@Icons.Material.Outlined.Delete" />
+</MudTooltip>
+<MudTooltip Text="Edit">
+    <MudIconButton Icon="@Icons.Material.Outlined.Edit" />
+</MudTooltip>
+<MudTooltip Text="Add">
+    <MudIconButton StartIcon="@Icons.Material.Outlined.Add" />
+</MudTooltip>
 
-<button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
+<MudSpacer />
+
+<button class="btn btn-primary" @onclick="IncrementCount">IncrementCount => @currentCount</button>
+
 
 @code {
     private int currentCount = 0;
