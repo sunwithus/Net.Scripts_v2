@@ -4,6 +4,7 @@ namespace MudBlazorWeb2.Components.Modules.WhOllProcessWithDb.TodoList
 {
     public class TodoItem
     {
+        public Guid Id { get; set; } = Guid.NewGuid();
         public string? Title { get; set; }
         public bool IsDone { get; set; } = false;
         public bool IsRunning { get; set; } = false;

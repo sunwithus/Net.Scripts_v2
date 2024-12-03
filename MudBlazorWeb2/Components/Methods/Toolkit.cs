@@ -184,5 +184,17 @@ namespace MudBlazorWeb2.Components.Methods
         {
             return new List<T>(items);
         }
+
+        public async Task UpdateItemAsync(T item, Func<T, bool> predicate)
+        {
+            var existingItem = items.FirstOrDefault(predicate);
+            if (existingItem != null)
+            {
+                var index = items.IndexOf(existingItem);
+                items[index] = item;
+                await SaveItemsAsync();
+            }
+        }
+
     }
 }

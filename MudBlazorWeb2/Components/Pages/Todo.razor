@@ -8,10 +8,11 @@
 @using MudBlazorWeb2.Components.EntityFrameworkCore
 
 @using Microsoft.EntityFrameworkCore
-
 @using System.Text.Json
 
 @inject IDialogService DialogService
+@inject ISnackbar SnackbarService
+@inject ProgressService ProgressService
 
 <PageTitle>🚀 WhisperOllama </PageTitle>
 
@@ -22,15 +23,15 @@
 
     <MudText Typo="Typo.h6">Список задач (@todos.Count(todo => !todo.IsDone))</MudText>
 
-    <MudExpansionPanels MultiExpansion="true">
+    <MudExpansionPanels MultiExpansion="true" >
         @foreach (var todo in todos)
         {
-            <MudExpansionPanel @key="todo" Disabled="(todo.IsRunPressed)" Expanded="@IsPanelExpanded">
+            <MudExpansionPanel @key="todo.Id" Expanded="@IsPanelExpanded">
                 <TitleContent>
                     <MudText Style="display:flex;">
                         <MudText Typo="Typo.caption" Color="@colorTag" Style="width: 250px;">@todo.Title.PadRight(25) &emsp;<b>→ @todo.Scheme</b></MudText>
                         <MudText Class="d-flex mr-auto" Style="width: 150px;">
-                            <MudButton Disabled="todo.IsRunning" Variant="Variant.Filled" Style="height:32px; width: 32px;" Color="@colorTag" OnClick="@(async () => await StartButtonPressed(todo))">▶︎</MudButton>
+                            <MudButton Disabled="todo.IsRunPressed" Variant="Variant.Filled" Style="height:32px; width: 32px;" Color="@colorTag" OnClick="@(async () => await StartButtonPressed(todo))">▶︎</MudButton>
                             <MudText>&nbsp;</MudText>
                             <MudButton Disabled="false" Variant="Variant.Filled" Style="height:32px; width: 32px;" Color="@colorTag" OnClick="@(async () => await StopButtonPressed(todo))">◼</MudButton>
                         </MudText>
@@ -47,27 +48,31 @@
                     </MudText>
                 </TitleContent>
                 <ChildContent>
-                    <MudTextField T="string" @bind-Value="todo.Title" Variant="Variant.Filled" Margin="Margin.Dense" Style="width: 50%;" />
-                    <MudText Style="display: flex;">
-                        <MudTextField @bind-Value="todo.User" Label="User" Variant="Variant.Outlined" Margin="Margin.Dense" /><MudText>&nbsp;</MudText>
-                        <MudTextField @bind-Value="todo.Password" Label="Password" Variant="Variant.Outlined" Margin="Margin.Dense" /><MudText>&nbsp;</MudText>
-                        <MudTextField @bind-Value="todo.ServerAddress" Label="ServerAddress" Variant="Variant.Outlined" Margin="Margin.Dense" /><MudText>&nbsp;</MudText>
-                        <MudTextField @bind-Value="todo.Scheme" Label="Scheme" Variant="Variant.Outlined" Margin="Margin.Dense" /><MudText>&nbsp;</MudText>
-                        <MudBadge @key="todo" Color="@todoColors[todo]" Overlap="true" Bordered="true" Icon="@Icons.Material.Filled.Circle">
-                            <MudButton Style="top:10px;" Color="@colorTag" OnClick="@(async () => await TestDatabaseConnection(todo))">Тест</MudButton>
-                        </MudBadge>
-                    </MudText>
-                    <MudTextField T="DateTime" Format="s" Label="От даты:" InputType="InputType.DateTimeLocal" @bind-Value="@todo.StartDateTime" />
-                    <MudTextField T="DateTime" Format="yyyy-MM-ddTHH:mm:ss" Label="По дату:" InputType="InputType.DateTimeLocal" @bind-Value="@todo.EndDateTime" />
-                    <MudTextField T="string" Label="Длительность от:" @bind-Value="todo.DurationString" />
-                    <MudText Style="display:flex; justify-content: space-between;">
-                        <MudCheckBox @bind-Value="todo.IsCyclic" Size="Size.Small" Label="С интервалом повторного запуска (мин.): " Color="@colorTag" />
-                        <MudNumericField Style="margin-left:auto; width: 55px;" @bind-Value="todo.CycleInterval" Min="1" Step="1" Variant="Variant.Text" />
-                    </MudText>
-                    <MudText Style="display: flex; justify-content: flex-end;">
-                        <MudIconButton OnClick="@(async () => await SaveTodosAndCollapse())" Icon="@Icons.Material.Outlined.Save" />
-                        <MudIconButton OnClick="@(async () => await DialogDeleteTodoAndCollapse(todo))" Icon="@Icons.Material.Outlined.Delete" />
-                    </MudText>
+                    <MudPaper Style="position: relative;">
+                        <MudTextField T="string" @bind-Value="todo.Title" Variant="Variant.Text" Margin="Margin.Dense" />
+                        <MudText Style="display: flex;">
+                            <MudTextField @bind-Value="todo.User" Label="User" Variant="Variant.Outlined" Margin="Margin.Dense" /><MudText>&nbsp;</MudText>
+                            <MudTextField @bind-Value="todo.Password" Label="Password" Variant="Variant.Outlined" Margin="Margin.Dense" /><MudText>&nbsp;</MudText>
+                            <MudTextField @bind-Value="todo.ServerAddress" Label="ServerAddress" Variant="Variant.Outlined" Margin="Margin.Dense" /><MudText>&nbsp;</MudText>
+                            <MudTextField @bind-Value="todo.Scheme" Label="Scheme" Variant="Variant.Outlined" Margin="Margin.Dense" /><MudText>&nbsp;</MudText>
+                            <MudButton Size="Size.Small" Color="@colorTag" OnClick="@(async () => await TestConnection(todo))">Тест</MudButton>
+                        </MudText>
+                        <MudTextField T="DateTime" Format="s" Label="От даты:" InputType="InputType.DateTimeLocal" @bind-Value="@todo.StartDateTime" />
+                        <MudTextField T="DateTime" Format="yyyy-MM-ddTHH:mm:ss" Label="По дату:" InputType="InputType.DateTimeLocal" @bind-Value="@todo.EndDateTime" />
+                        <MudTextField T="string" Label="Длительность от:" @bind-Value="todo.DurationString" />
+                        <MudText Style="display:flex; justify-content: space-between;">
+                            <MudCheckBox @bind-Value="todo.IsCyclic" Size="Size.Small" Label="С интервалом повторного запуска (мин.): " Color="@colorTag" />
+                            <MudNumericField Style="margin-left:auto; width: 55px;" @bind-Value="todo.CycleInterval" Min="1" Step="1" Variant="Variant.Text" />
+                        </MudText>
+                        <MudText Style="display: flex; justify-content: flex-end;">
+                            <MudIconButton OnClick="@(async () => await SaveTodosAndCollapse(todo))" Icon="@Icons.Material.Outlined.Save" />
+                            <MudIconButton OnClick="@(async () => await DialogDeleteTodoAndCollapse(todo))" Icon="@Icons.Material.Outlined.Delete" />
+                        </MudText>
+                        @if (todo.IsRunPressed)
+                        {
+                            <MudOverlay LockScroll="false"  LightBackground="true" Visible="true" Absolute="true" />
+                        }
+                    </MudPaper>
                 </ChildContent>
             </MudExpansionPanel>
         }
@@ -88,108 +93,69 @@
     }
 </style>
 
+
 @code {
     MudBlazor.Color colorTag = Color.Info;
     private List<TodoItem> todos = new();
     private string? newTodo;
     private bool IsPanelExpanded = false;
 
-    MudBlazor.Color colorConnection = Color.Info;
-    private Dictionary<TodoItem, MudBlazor.Color> todoColors = new();
-
-    private readonly string FilePath = Path.Combine(AppContext.BaseDirectory, "todoitems.json");
+    private static readonly string FilePath = Path.Combine(AppContext.BaseDirectory, "todoitems.json");
+    private SimpleJson<TodoItem> JsonTodoItems { get; set; }
 
     private int _processedKeys = 0;
     private int _totalKeys = 0;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadTodos();
-        // Subscribe to the shared service to get updates
+        JsonTodoItems = new SimpleJson<TodoItem>(FilePath);
+        await JsonTodoItems.LoadItemsAsync();
+        todos = JsonTodoItems.GetItems();
+
         ProgressService.OnProgressUpdated += UpdateProgress;
     }
-
-    private void UpdateProgress(int processed, int total)
+    private void UpdateProgress(object sender, ProgressUpdateEventArgs e)
     {
-        _processedKeys = processed;
-        _totalKeys = total;
-        StateHasChanged();
-    }
-
-    // Shared service example
-    public class ProgressService
-    {
-        public static event Action<int, int> OnProgressUpdated;
-
-        public static void UpdateProgress(int processed, int total)
+        InvokeAsync(() =>
         {
-            OnProgressUpdated?.Invoke(processed, total);
-        }
+            _processedKeys = e.ProcessedKeys;
+            _totalKeys = e.TotalKeys;
+            StateHasChanged();
+        });
     }
-    /*
-    In your background service, update the UpdateProgress method to use the shared service:
-    csharp
-    private void UpdateProgress(int processed, int total)
-    {
-    ProgressService.UpdateProgress(processed, total);
-    }
-    */
 
+    ////////////////////////////////////////////////////////////////
     private async Task StartButtonPressed (TodoItem todo)
     {
-        await Task.Delay(1);
         todo.IsRunPressed = true;
-        todo.IsStopPressed = false;
         todo.IsRunning = true;
+        todo.IsStopPressed = false;
+        await JsonTodoItems.UpdateItemAsync(todo, x => x.Id == todo.Id);
+        todos = JsonTodoItems.GetItems();
+        StateHasChanged();
 
         ConsoleCol.WriteLine("StartButtonPressed", ConsoleColor.Blue);
     }
 
     private async Task StopButtonPressed(TodoItem todo)
     {
-        await Task.Delay(1);
         todo.IsStopPressed = true;
         todo.IsRunPressed = false;
         todo.IsRunning = false;
+        await JsonTodoItems.UpdateItemAsync(todo, x => x.Id == todo.Id);
+        StateHasChanged();
+
         ConsoleCol.WriteLine("StopButtonPressed", ConsoleColor.Blue);
     }
 
-    private async Task TestDatabaseConnection(TodoItem todo)
+    private async Task TestConnection(TodoItem todo)
     {
-        try
-        {
-            long? maxKey = null;
-            string conStringDBA = $"User Id={todo.User};Password={todo.Password};Data Source={todo.ServerAddress};";
-            var optionsBuilder = OracleDbContext.ConfigureOptionsBuilder(conStringDBA);
-            using (var context = new OracleDbContext(optionsBuilder.Options))
-            {
-                await context.Database.OpenConnectionAsync();
-                if (await context.Database.CanConnectAsync())
-                {
-                    await context.Database.ExecuteSqlRawAsync($"ALTER SESSION SET CURRENT_SCHEMA = {todo.Scheme}");
-                    maxKey = await context.SprSpeechTable.MaxAsync(x => x.Id);
-                    ConsoleCol.WriteLine($"maxKey = {maxKey}", ConsoleColor.Green);
-                    await context.Database.CloseConnectionAsync();
-                }
-            }
-            if (maxKey != null)
-            {
-                todoColors[todo] = Color.Success;
-            }
-            else
-            {
-                todoColors[todo] = Color.Warning;
-            }
-        }
-        catch (Exception ex)
-        {
-            ConsoleCol.WriteLine($"Connection Error: {ex.Message}", ConsoleColor.Red);
-            todoColors[todo] = Color.Error;
-        }
-        finally
-        {
-            StateHasChanged();
-        }
+        var (result, status) = await TodoPage.TestDatabaseConnection(todo);
+        string relultString = result ? "Соединение установлено!" : "Соединение не установлено!";
+        SnackbarService.Configuration.PositionClass = Defaults.Classes.Position.BottomRight;
+        SnackbarService.Configuration.VisibleStateDuration = 1000;
+        SnackbarService.Configuration.PreventDuplicates = true;
+        SnackbarService.Add(@<span>@relultString<br />@status</span>, key: "mudblazor");
     }
 
 
@@ -203,71 +169,29 @@
         if (!result.Canceled)
         {
             IsPanelExpanded = false;
-            await DeleteTodo(todo);
+            await JsonTodoItems.DeleteItemAsync(todo);
+            todos = JsonTodoItems.GetItems();
             StateHasChanged();
         }
     }
 
-    private async Task SaveTodosAndCollapse()
+    private async Task SaveTodosAndCollapse(TodoItem todo)
     {
-        IsPanelExpanded = false;
-        await SaveTodos();
+        await JsonTodoItems.UpdateItemAsync(todo, x => x.Id == todo.Id);
         StateHasChanged();
     }
 
-    private async Task LoadTodos()
-    {
-        if (File.Exists(FilePath))
-        {
-            var json = await File.ReadAllTextAsync(FilePath);
-            if (string.IsNullOrWhiteSpace(json))
-            {
-                todos = new List<TodoItem>();
-                await SaveTodos(); // Сохранить начальную структуру
-            }
-            else
-            {
-                todos = JsonSerializer.Deserialize<List<TodoItem>>(json) ?? new List<TodoItem>();
-            }
-        }
-        else
-        {
-            todos = new List<TodoItem>();
-            await SaveTodos(); // Создать новый файл
-        }
-        // Инициализация цветов
-        foreach (var todo in todos)
-        {
-            if (!todoColors.ContainsKey(todo))
-            {
-                todoColors[todo] = colorTag; // Цвет по умолчанию
-            }
-        }
-    }
-
-    private async Task SaveTodos()
-    {
-        var json = JsonSerializer.Serialize(todos);
-        await File.WriteAllTextAsync(FilePath, json);
-    }
 
     private async Task AddTodo()
     {
         if (!string.IsNullOrWhiteSpace(newTodo))
         {
-            var NewItem = new TodoItem { Title = newTodo };
-            todos.Add(NewItem);
-            todoColors[NewItem] = colorTag;
-            newTodo = string.Empty;
-            await SaveTodos();
+            var newItem = new TodoItem { Title = newTodo };
+            await JsonTodoItems.AddItemAsync(newItem);
+            todos = JsonTodoItems.GetItems();
+            newTodo = "";
+            StateHasChanged();
         }
-    }
-
-    private async Task DeleteTodo(TodoItem todo)
-    {
-        todos.Remove(todo);
-        todoColors.Remove(todo); // Удаляем цвет из словаря
-        await SaveTodos();
     }
 
     private async Task LoadSettings()

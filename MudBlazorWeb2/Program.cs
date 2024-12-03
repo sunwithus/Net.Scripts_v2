@@ -5,6 +5,7 @@ using MudBlazor.Services;
 using MudBlazorWeb2.Components;
 using MudBlazorWeb2.Components.Modules.SettingsOper.Services;
 using MudBlazorWeb2.Components.Modules.WhOllProcessWithDb.Services;
+using MudBlazorWeb2.Components.Modules.WhOllProcessWithDb.TodoList;
 using MudBlazorWeb2.Components.Modules.Replicator.Services;
 using MudBlazorWeb2.Components.Modules._Shared;
 
@@ -20,6 +21,7 @@ builder.Services.AddHostedService<AiBackgroundService>();
 
 builder.Services.AddSingleton<StateService>();
 builder.Services.AddSingleton<StateService2>();
+builder.Services.AddSingleton<ProgressService>();
 //builder.Services.AddSingleton<ReplSingletonService>(); //for old vervion
 
 // SignalR
