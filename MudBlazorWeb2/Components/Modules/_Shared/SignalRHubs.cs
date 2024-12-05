@@ -16,7 +16,7 @@ namespace MudBlazorWeb2.Components.Modules._Shared
 
     public class TodoHub : Hub
     {
-        public async Task BroadcastUpdate(TodoItem Todos)
+        public async Task BroadcastUpdateTodos(TodoItem Todos)
         {
             await Clients.All.SendAsync("UpdateTodos", Todos);
         }

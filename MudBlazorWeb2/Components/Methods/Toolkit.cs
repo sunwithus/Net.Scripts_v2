@@ -1,4 +1,5 @@
-﻿using MudBlazorWeb2.Components.Pages;
+﻿using MudBlazorWeb2.Components.Modules.WhOllProcessWithDb.TodoList;
+using MudBlazorWeb2.Components.Pages;
 using System.Diagnostics;
 using System.Drawing.Imaging;
 using System.Text.Json;
@@ -123,7 +124,12 @@ namespace MudBlazorWeb2.Components.Methods
             File.WriteAllLines(_filePath, newLines);
         }
     }
-
+    /// <summary>
+    /// Usage
+    /// string FilePath = Path.Combine(AppContext.BaseDirectory, "todoitems.json");
+    /// var JsonTodoItems = new SimpleJson<TodoItem>(FilePath);
+    /// await JsonTodoItems.LoadItemsAsync();
+    /// </summary>
     public class SimpleJson<T> where T : class, new()
     {
         private readonly string filePath;

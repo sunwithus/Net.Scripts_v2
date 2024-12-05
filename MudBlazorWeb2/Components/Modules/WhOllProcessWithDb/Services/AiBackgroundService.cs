@@ -1,17 +1,12 @@
 ﻿//AiBackGroundService.cs
 
-using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Components;
 using MudBlazorWeb2.Components.EntityFrameworkCore;
-
-using MudBlazorWeb2.Components.Modules.WhOllProcessWithDb;
-using static MudBlazorWeb2.Components.Pages.Todo;
-using MudBlazorWeb2.Components.Methods;
 using MudBlazorWeb2.Components.Modules.WhOllProcessWithDb.TodoList;
 using MudBlazorWeb2.Components.Pages;
-using static MudBlazor.Colors;
-using System.Diagnostics;
-using System.Threading;
-using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.SignalR;
+using SQLitePCL;
+using MudBlazorWeb2.Components.Modules._Shared;
 
 public class AiBackgroundService : BackgroundService
 {
@@ -20,17 +15,19 @@ public class AiBackgroundService : BackgroundService
     private readonly SettingsService _settingsService;
     private readonly WhisperService _whisperService;
     private readonly OllamaService _ollamaService;
-    private readonly ProgressService _progressService;
+    private readonly IHubContext<TodoHub> _hubContext;
+    //private readonly SqliteDbContext _sqlite;
+    
 
-
-    public AiBackgroundService(ILogger<AiBackgroundService> logger, IConfiguration configuration, SettingsService settingsService, WhisperService whisperService, OllamaService ollamaService, ProgressService progressService)
+    public AiBackgroundService(ILogger<AiBackgroundService> logger, IConfiguration configuration, SettingsService settingsService, WhisperService whisperService, OllamaService ollamaService, IHubContext<TodoHub> hubContext/*, SqliteDbContext sqlite*/)
     {
         _logger = logger;
         _configuration = configuration;
         _settingsService = settingsService;
         _whisperService = whisperService;
         _ollamaService = ollamaService;
-        _progressService = progressService;
+        _hubContext = hubContext;
+        //_sqlite = sqlite;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -51,35 +48,37 @@ public class AiBackgroundService : BackgroundService
 
     private async Task AiProcessDatabaseAsync(CancellationToken stoppingToken)
     {
-        string FilePath = Path.Combine(AppContext.BaseDirectory, "todoitems.json");
-        var JsonTodoItems = new SimpleJson<TodoItem>(FilePath);
-        await JsonTodoItems.LoadItemsAsync();
+        //TodoListBase todoList = new();
+        //List<TodoItem> items = await todoList.LoadTodos();
 
-        var items = JsonTodoItems.GetItems();
-        foreach (var item in items)
+        //var todos = _sqlite.TodoItems.ToList();
+        /*foreach (var item in items)
         {
-            
             if(item.IsRunPressed)
             {
                 (bool isConnected, _) = await TodoPage.TestDatabaseConnection(item);
                 if (isConnected)
                 {
-
                     // процесс запущен
                     item.IsRunning = true;
-                    //await JsonTodoItems.UpdateItemAsync(item, x => x.Id == item.Id);
-                    //await JsonTodoItems.SaveItemsAsync();
+                    
+                    //await todoList.SaveTodos(item);
 
+                    item.Title = item.Title + "Qq";
+                    //_sqlite.TodoItems.Update(item);
+        */
+                    // Отправка обновления через хаб
+                    //await _hubContext.Clients.All.SendAsync("UpdateTodos", item, stoppingToken);
                     //_progressService.UpdateProgress(55, 555);
 
                     await Task.Delay(2000);
-                    ConsoleCol.WriteLine(item.Title, ConsoleColor.DarkCyan);
+                    ConsoleCol.WriteLine("item.Title", ConsoleColor.DarkCyan);
 
 
 
-                }
-            }
-        }
+                //}
+            //}
+        //}
 
     }
 

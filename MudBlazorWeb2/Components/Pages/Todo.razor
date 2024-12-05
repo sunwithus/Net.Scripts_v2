@@ -6,15 +6,20 @@
 @using MudBlazorWeb2.Components.Modules.WhOllProcessWithDb.TodoList
 @using MudBlazorWeb2.Components.Modules.WhOllProcessWithDb
 @using MudBlazorWeb2.Components.EntityFrameworkCore
+@using Microsoft.AspNetCore.SignalR.Client
 
 @using Microsoft.EntityFrameworkCore
 @using System.Text.Json
 
+@inject NavigationManager NavigationManager
+@inject IHubConnectionBuilder HubConnectionBuilder
+
 @inject IDialogService DialogService
 @inject ISnackbar SnackbarService
-@inject ProgressService ProgressService
 
 @inject SqliteDbContext Sqlite
+
+@inherits TodoListBase
 
 <PageTitle>🚀 WhisperOllama </PageTitle>
 
@@ -67,8 +72,12 @@
                             <MudNumericField Style="margin-left:auto; width: 55px;" @bind-Value="todo.CycleInterval" Min="1" Step="1" Variant="Variant.Text" />
                         </MudText>
                         <MudText Style="display: flex; justify-content: flex-end;">
-                            <MudIconButton OnClick="@(async () => await SaveTodos(todo))" Icon="@Icons.Material.Outlined.Save" />
-                            <MudIconButton OnClick="@(async () => await DialogDeleteTodoAndCollapse(todo))" Icon="@Icons.Material.Outlined.Delete" />
+                            <MudTooltip Text="Сохранить">
+                                <MudIconButton OnClick="@(async () => await SaveTodos(todo))" Icon="@Icons.Material.Outlined.Save" />
+                            </MudTooltip>
+                            <MudTooltip Text="Удалить">
+                                <MudIconButton OnClick="@(async () => await DialogDeleteTodoAndCollapse(todo))" Icon="@Icons.Material.Outlined.Delete" />
+                            </MudTooltip>
                         </MudText>
                         @if (todo.IsRunPressed)
                         {
@@ -97,94 +106,24 @@
 
 
 @code {
-    MudBlazor.Color colorTag = Color.Info;
-    private List<TodoItem> todos = new();
-    private string? newTodo;
-    private bool IsPanelExpanded = false;
+
+    private HubConnection _hubConnection;
+    private TodoItem _updatedTodo;
 
     protected override async Task OnInitializedAsync()
     {
-        todos = await Sqlite.TodoItems.ToListAsync();
-    }
-    private void UpdateProgress(object sender, ProgressUpdateEventArgs e)
-    {
-        InvokeAsync(() =>
+        _hubConnection = new HubConnectionBuilder().WithUrl(NavigationManager.BaseUri + "todohub").Build();
+        _hubConnection.On<TodoItem>("UpdateTodos", (todo) =>
         {
-            //_processedKeys = e.ProcessedKeys;
-            //_totalKeys = e.TotalKeys;
+            _updatedTodo = todo;
+            StateHasChanged();
         });
+        await _hubConnection.StartAsync();
     }
 
-    ////////////////////////////////////////////////////////////////
-    private async Task StartButtonPressed (TodoItem todo)
+    public void Dispose()
     {
-        todo.IsRunPressed = true;
-        todo.IsRunning = true;
-        todo.IsStopPressed = false;
-        Sqlite.TodoItems.Update(todo);
-        await Sqlite.SaveChangesAsync();
-
-        ConsoleCol.WriteLine("StartButtonPressed", ConsoleColor.Blue);
-    }
-
-    private async Task StopButtonPressed(TodoItem todo)
-    {
-        todo.IsStopPressed = true;
-        todo.IsRunPressed = false;
-        todo.IsRunning = false;
-        Sqlite.TodoItems.Update(todo);
-        await Sqlite.SaveChangesAsync();
-
-        ConsoleCol.WriteLine("StopButtonPressed", ConsoleColor.Blue);
-    }
-
-    private async Task TestConnection(TodoItem todo)
-    {
-        var (result, status) = await TodoPage.TestDatabaseConnection(todo);
-        string relultString = result ? "Соединение установлено!" : "Соединение не установлено!";
-        SnackbarService.Configuration.PositionClass = Defaults.Classes.Position.BottomRight;
-        SnackbarService.Configuration.VisibleStateDuration = 1000;
-        SnackbarService.Configuration.PreventDuplicates = true;
-        SnackbarService.Add(@<span>@relultString<br />@status</span>, key: "mudblazor");
-    }
-
-
-    private async Task DialogDeleteTodoAndCollapse(TodoItem todo)
-    {
-        var options = new DialogOptions { CloseOnEscapeKey = true, BackgroundClass = "bg-custom-class" };
-
-        var dialog = await DialogService.ShowAsync<Dialog>("ConfirmDeletion Dialog", options);
-        var result = await dialog.Result;
-
-        if (!result.Canceled)
-        {
-            IsPanelExpanded = false;
-            Sqlite.TodoItems.Remove(todo);
-            await Sqlite.SaveChangesAsync();
-            todos = await Sqlite.TodoItems.ToListAsync();
-            StateHasChanged();
-        }
-    }
-
-    private async Task SaveTodos(TodoItem todo)
-    {
-        Sqlite.TodoItems.Update(todo);
-        await Sqlite.SaveChangesAsync();
-        StateHasChanged();
-    }
-
-
-    private async Task AddTodo()
-    {
-        if (!string.IsNullOrWhiteSpace(newTodo))
-        {
-            var newItem = new TodoItem { Title = newTodo };
-            await Sqlite.TodoItems.AddAsync(newItem);
-            await Sqlite.SaveChangesAsync();
-            todos = await Sqlite.TodoItems.ToListAsync();
-            newTodo = "";
-            StateHasChanged();
-        }
+        _ = _hubConnection.DisposeAsync();
     }
 
     private async Task LoadSettings()
