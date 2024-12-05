@@ -67,10 +67,10 @@ public class AiBackgroundService : BackgroundService
 
                     // процесс запущен
                     item.IsRunning = true;
-                    await JsonTodoItems.UpdateItemAsync(item, x => x.Id == item.Id);
-                    await JsonTodoItems.SaveItemsAsync();
+                    //await JsonTodoItems.UpdateItemAsync(item, x => x.Id == item.Id);
+                    //await JsonTodoItems.SaveItemsAsync();
 
-                    _progressService.UpdateProgress(55, 555);
+                    //_progressService.UpdateProgress(55, 555);
 
                     await Task.Delay(2000);
                     ConsoleCol.WriteLine(item.Title, ConsoleColor.DarkCyan);

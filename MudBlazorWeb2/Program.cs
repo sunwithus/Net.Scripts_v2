@@ -8,12 +8,15 @@ using MudBlazorWeb2.Components.Modules.WhOllProcessWithDb.Services;
 using MudBlazorWeb2.Components.Modules.WhOllProcessWithDb.TodoList;
 using MudBlazorWeb2.Components.Modules.Replicator.Services;
 using MudBlazorWeb2.Components.Modules._Shared;
+using MudBlazorWeb2.Components.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // settingsApp.json settingsOper.json
 builder.Services.AddSingleton<SettingsService>();
 builder.Services.AddSingleton<UserSettingsService>();
+
+builder.Services.AddDbContext<SqliteDbContext>();
 
 //BackgroundService
 builder.Services.AddHostedService<ReplBackgroundService>();
@@ -58,6 +61,13 @@ var app = builder.Build();
 app.UseRouting();
 app.UseAntiforgery();
 app.MapHub<ReplicatorHub>("/replicatorhub");
+app.MapHub<TodoHub>("/todohub");
+
+app.Map("about", () => "About page");
+app.Map("todolist", () =>
+{
+    return "sdsds";
+});
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

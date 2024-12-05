@@ -14,6 +14,8 @@
 @inject ISnackbar SnackbarService
 @inject ProgressService ProgressService
 
+@inject SqliteDbContext Sqlite
+
 <PageTitle>🚀 WhisperOllama </PageTitle>
 
 <MudContainer>
@@ -38,7 +40,7 @@
                         <MudText Class="d-flex ml-auto" Color="@colorTag" Style="display: flex; justify-content: flex-end;">
                             @if (todo.IsRunning)
                             {
-                                <MudText>@_processedKeys / @_totalKeys ⌛</MudText>
+                                <MudText>@todo.CompletedKeys / @todo.TotalKeys ⌛</MudText>
                             }
                             else
                             {
@@ -65,7 +67,7 @@
                             <MudNumericField Style="margin-left:auto; width: 55px;" @bind-Value="todo.CycleInterval" Min="1" Step="1" Variant="Variant.Text" />
                         </MudText>
                         <MudText Style="display: flex; justify-content: flex-end;">
-                            <MudIconButton OnClick="@(async () => await SaveTodosAndCollapse(todo))" Icon="@Icons.Material.Outlined.Save" />
+                            <MudIconButton OnClick="@(async () => await SaveTodos(todo))" Icon="@Icons.Material.Outlined.Save" />
                             <MudIconButton OnClick="@(async () => await DialogDeleteTodoAndCollapse(todo))" Icon="@Icons.Material.Outlined.Delete" />
                         </MudText>
                         @if (todo.IsRunPressed)
@@ -100,27 +102,16 @@
     private string? newTodo;
     private bool IsPanelExpanded = false;
 
-    private static readonly string FilePath = Path.Combine(AppContext.BaseDirectory, "todoitems.json");
-    private SimpleJson<TodoItem> JsonTodoItems { get; set; }
-
-    private int _processedKeys = 0;
-    private int _totalKeys = 0;
-
     protected override async Task OnInitializedAsync()
     {
-        JsonTodoItems = new SimpleJson<TodoItem>(FilePath);
-        await JsonTodoItems.LoadItemsAsync();
-        todos = JsonTodoItems.GetItems();
-
-        ProgressService.OnProgressUpdated += UpdateProgress;
+        todos = await Sqlite.TodoItems.ToListAsync();
     }
     private void UpdateProgress(object sender, ProgressUpdateEventArgs e)
     {
         InvokeAsync(() =>
         {
-            _processedKeys = e.ProcessedKeys;
-            _totalKeys = e.TotalKeys;
-            StateHasChanged();
+            //_processedKeys = e.ProcessedKeys;
+            //_totalKeys = e.TotalKeys;
         });
     }
 
@@ -130,9 +121,8 @@
         todo.IsRunPressed = true;
         todo.IsRunning = true;
         todo.IsStopPressed = false;
-        await JsonTodoItems.UpdateItemAsync(todo, x => x.Id == todo.Id);
-        todos = JsonTodoItems.GetItems();
-        StateHasChanged();
+        Sqlite.TodoItems.Update(todo);
+        await Sqlite.SaveChangesAsync();
 
         ConsoleCol.WriteLine("StartButtonPressed", ConsoleColor.Blue);
     }
@@ -142,8 +132,8 @@
         todo.IsStopPressed = true;
         todo.IsRunPressed = false;
         todo.IsRunning = false;
-        await JsonTodoItems.UpdateItemAsync(todo, x => x.Id == todo.Id);
-        StateHasChanged();
+        Sqlite.TodoItems.Update(todo);
+        await Sqlite.SaveChangesAsync();
 
         ConsoleCol.WriteLine("StopButtonPressed", ConsoleColor.Blue);
     }
@@ -169,15 +159,17 @@
         if (!result.Canceled)
         {
             IsPanelExpanded = false;
-            await JsonTodoItems.DeleteItemAsync(todo);
-            todos = JsonTodoItems.GetItems();
+            Sqlite.TodoItems.Remove(todo);
+            await Sqlite.SaveChangesAsync();
+            todos = await Sqlite.TodoItems.ToListAsync();
             StateHasChanged();
         }
     }
 
-    private async Task SaveTodosAndCollapse(TodoItem todo)
+    private async Task SaveTodos(TodoItem todo)
     {
-        await JsonTodoItems.UpdateItemAsync(todo, x => x.Id == todo.Id);
+        Sqlite.TodoItems.Update(todo);
+        await Sqlite.SaveChangesAsync();
         StateHasChanged();
     }
 
@@ -187,8 +179,9 @@
         if (!string.IsNullOrWhiteSpace(newTodo))
         {
             var newItem = new TodoItem { Title = newTodo };
-            await JsonTodoItems.AddItemAsync(newItem);
-            todos = JsonTodoItems.GetItems();
+            await Sqlite.TodoItems.AddAsync(newItem);
+            await Sqlite.SaveChangesAsync();
+            todos = await Sqlite.TodoItems.ToListAsync();
             newTodo = "";
             StateHasChanged();
         }
