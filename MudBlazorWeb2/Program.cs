@@ -9,6 +9,8 @@ using MudBlazorWeb2.Components.Modules.WhOllProcessWithDb.TodoList;
 using MudBlazorWeb2.Components.Modules.Replicator.Services;
 using MudBlazorWeb2.Components.Modules._Shared;
 using MudBlazorWeb2.Components.EntityFrameworkCore;
+using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,7 +18,10 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSingleton<SettingsService>();
 builder.Services.AddSingleton<UserSettingsService>();
 
-builder.Services.AddDbContext<SqliteDbContext>();
+builder.Services.AddDbContextFactory<SqliteDbContext>();
+/*builder.Services.AddDbContextFactory<SqliteDbContext>(options =>
+    options.UseSqlite($"Data Source={Path.Combine(AppContext.BaseDirectory, "todos.db")}")
+);*/
 
 //BackgroundService
 builder.Services.AddHostedService<ReplBackgroundService>();
@@ -86,7 +91,3 @@ app.MapRazorComponents<App>()
 
 app.Run("http://0.0.0.0:555");
 //app.Run();
-
-
-
-

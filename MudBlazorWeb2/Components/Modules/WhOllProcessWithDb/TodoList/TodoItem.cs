@@ -4,7 +4,7 @@ namespace MudBlazorWeb2.Components.Modules.WhOllProcessWithDb.TodoList
 {
     public class TodoItem
     {
-        public Guid Id { get; set; } = Guid.NewGuid();
+        public int Id { get; set; }
         public string? Title { get; set; }
         public bool IsDone { get; set; } = false;
         public bool IsRunning { get; set; } = false;
@@ -18,7 +18,6 @@ namespace MudBlazorWeb2.Components.Modules.WhOllProcessWithDb.TodoList
         public DateTime StartDateTime { get; set; } = DateTime.Now.AddMonths(-1);
         public DateTime EndDateTime { get; set; } = DateTime.Now.AddMonths(1).AddYears(1);
         public string? DurationString {get; set; } = "00:00:10";
-
         public string? DbType { get; set; } = "PostgreSql"; //Oracle //InterBase //Sqlite
         public string? User { get; set; } = "SYSDBA";
         public string? Password { get; set; } = "masterkey";
@@ -26,4 +25,5 @@ namespace MudBlazorWeb2.Components.Modules.WhOllProcessWithDb.TodoList
         public string? Scheme { get; set; } = "";
 
     }
+
 }

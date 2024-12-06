@@ -12,12 +12,9 @@
 @using System.Text.Json
 
 @inject NavigationManager NavigationManager
-@inject IHubConnectionBuilder HubConnectionBuilder
 
 @inject IDialogService DialogService
 @inject ISnackbar SnackbarService
-
-@inject SqliteDbContext Sqlite
 
 @inherits TodoListBase
 
@@ -45,7 +42,8 @@
                         <MudText Class="d-flex ml-auto" Color="@colorTag" Style="display: flex; justify-content: flex-end;">
                             @if (todo.IsRunning)
                             {
-                                <MudText>@todo.CompletedKeys / @todo.TotalKeys ⌛</MudText>
+                                <MudText>@todo.CompletedKeys / @todo.TotalKeys ⌛ &emsp;</MudText>
+                                <MudProgressLinear Vertical="true" Color="@colorTag" Size="Size.Medium" Indeterminate="true" Striped="true" Rounded="true" />
                             }
                             else
                             {
@@ -71,13 +69,16 @@
                             <MudCheckBox @bind-Value="todo.IsCyclic" Size="Size.Small" Label="С интервалом повторного запуска (мин.): " Color="@colorTag" />
                             <MudNumericField Style="margin-left:auto; width: 55px;" @bind-Value="todo.CycleInterval" Min="1" Step="1" Variant="Variant.Text" />
                         </MudText>
-                        <MudText Style="display: flex; justify-content: flex-end;">
-                            <MudTooltip Text="Сохранить">
-                                <MudIconButton OnClick="@(async () => await SaveTodos(todo))" Icon="@Icons.Material.Outlined.Save" />
-                            </MudTooltip>
-                            <MudTooltip Text="Удалить">
-                                <MudIconButton OnClick="@(async () => await DialogDeleteTodoAndCollapse(todo))" Icon="@Icons.Material.Outlined.Delete" />
-                            </MudTooltip>
+                        <MudText Style="display: flex; justify-content: space-between;">
+                            <MudText>@todo.ProcessingMessage</MudText>
+                            <MudText Style="display: flex; justify-content: flex-end;">
+                                <MudTooltip Text="Сохранить">
+                                    <MudIconButton OnClick="@(async () => await UpdateTodo(todo))" Icon="@Icons.Material.Outlined.Save" />
+                                </MudTooltip>
+                                <MudTooltip Text="Удалить">
+                                    <MudIconButton OnClick="@(async () => await DialogDeleteTodoAndCollapse(todo))" Icon="@Icons.Material.Outlined.Delete" />
+                                </MudTooltip>
+                            </MudText>
                         </MudText>
                         @if (todo.IsRunPressed)
                         {
@@ -92,11 +93,14 @@
         <MudText Style="display:flex; width: 250px;">
             <MudTextField @bind-Value="newTodo" Label="Имя новой задачи" Variant="Variant.Outlined" Margin="Margin.Dense" />
             <MudTooltip Text="Добавить">
-                <MudIconButton @onclick="AddTodo" Icon="@Icons.Material.Outlined.Add" Style="top: 4px;" />
+                <MudIconButton @onclick="AddNewTodo" Icon="@Icons.Material.Outlined.Add" Style="top: 4px;" />
             </MudTooltip>
         </MudText>
     </MudText>
 </MudContainer>
+
+<br />
+<br />
 
 <style>
     .bg-custom-class {
@@ -106,25 +110,124 @@
 
 
 @code {
+    public MudBlazor.Color colorTag = Color.Info;
+    public List<TodoItem> todos = new();
+    public string? newTodo;
+    public bool IsPanelExpanded = false;
 
     private HubConnection _hubConnection;
-    private TodoItem _updatedTodo;
 
     protected override async Task OnInitializedAsync()
     {
+        todos = await LoadTodos();
+
+        //
         _hubConnection = new HubConnectionBuilder().WithUrl(NavigationManager.BaseUri + "todohub").Build();
         _hubConnection.On<TodoItem>("UpdateTodos", (todo) =>
         {
-            _updatedTodo = todo;
-            StateHasChanged();
+            
+            var existingTodo = todos.FirstOrDefault(t => t.Id == todo.Id);
+            if (existingTodo != null)
+            {
+                existingTodo.Title = todo.Title;
+
+                existingTodo.IsDone = todo.IsDone;
+                existingTodo.IsRunPressed = todo.IsRunPressed;
+                existingTodo.IsRunning = todo.IsRunning;
+                existingTodo.IsStopPressed = todo.IsStopPressed;
+
+                existingTodo.CompletedKeys = todo.CompletedKeys;
+                existingTodo.TotalKeys = todo.TotalKeys;
+                existingTodo.ProcessingMessage = todo.ProcessingMessage;
+
+                existingTodo.StartDateTime = todo.StartDateTime;
+                existingTodo.EndDateTime = todo.EndDateTime;
+                existingTodo.DurationString = todo.DurationString;
+
+                existingTodo.IsCyclic = todo.IsCyclic;
+                existingTodo.CycleInterval = todo.CycleInterval;
+                
+                existingTodo.DbType = todo.DbType;
+                existingTodo.User = todo.User;
+                existingTodo.Password = todo.Password;
+                existingTodo.ServerAddress = todo.ServerAddress;
+                existingTodo.Scheme = todo.Scheme;
+                //Todo подумать как по другому присваивать existingTodo=todo
+                //existingTodo = todo; //ссылочный тип
+            }
+
+            InvokeAsync(StateHasChanged);
         });
         await _hubConnection.StartAsync();
+        
     }
 
     public void Dispose()
     {
         _ = _hubConnection.DisposeAsync();
     }
+
+    protected async Task StartButtonPressed(TodoItem todo)
+    {
+        todo.IsRunPressed = true;
+        todo.IsRunning = true;
+        todo.IsStopPressed = false;
+        await UpdateTodo(todo);
+        StateHasChanged();
+
+        ConsoleCol.WriteLine("StartButtonPressed", ConsoleColor.Blue);
+    }
+
+    protected async Task StopButtonPressed(TodoItem todo)
+    {
+        todo.IsStopPressed = true;
+        todo.IsRunPressed = false;
+        todo.IsRunning = false;
+        await UpdateTodo(todo);
+        StateHasChanged();
+
+        ConsoleCol.WriteLine("StopButtonPressed", ConsoleColor.Blue);
+    }
+
+    protected async Task DialogDeleteTodoAndCollapse(TodoItem todo)
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true, BackgroundClass = "bg-custom-class" };
+        var dialog = await DialogService.ShowAsync<Dialog>("ConfirmDeletion Dialog", options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            IsPanelExpanded = false;
+            await DeleteTodo(todo);
+            todos = await LoadTodos();
+            StateHasChanged();
+        }
+    }
+
+    protected async Task AddNewTodo()
+    {
+        if (!string.IsNullOrWhiteSpace(newTodo))
+        {
+            var newItem = new TodoItem { Title = newTodo };
+            await AddTodo(newItem);
+            todos = await LoadTodos();
+            newTodo = "";
+            StateHasChanged();
+        }
+    }
+
+    protected async Task TestConnection(TodoItem todo)
+    {
+        var (result, status) = await DatabaseConnection.Test(todo);
+        string relultString = result ? "Соединение установлено!" : "Соединение не установлено!";
+        SnackbarService.Configuration.PositionClass = Defaults.Classes.Position.BottomRight;
+        SnackbarService.Configuration.VisibleStateDuration = 1000;
+        SnackbarService.Configuration.PreventDuplicates = true;
+        // 
+        // SnackbarService.Add("<span>" + relultString + "<br />" + status + "</span>", key: "mudblazor");
+        SnackbarService.Add(@<span>@relultString<br />@status</span>, key: "mudblazor");
+    }
+
 
     private async Task LoadSettings()
     {
