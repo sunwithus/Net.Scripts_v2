@@ -17,7 +17,7 @@ namespace MudBlazorWeb2.Components.Modules.Replicator
             public string IMEI { get; set; } = "";
             public string Caller { get; set; } = "";
             public string Talker { get; set; } = "";
-            public int Calltype { get; set; } = 2; // Calltype = 2 - неизвестно, 0 - входящий, 1 - исходящий
+            public short Calltype { get; set; } = 2; // Calltype = 2 - неизвестно, 0 - входящий, 1 - исходящий
         }
 
         public static ParsedIdenties FormFileName(string filePath)
@@ -47,7 +47,7 @@ namespace MudBlazorWeb2.Components.Modules.Replicator
                 {
                     string timestampString = parts[4] + " " + parts[5].Substring(0, 2) + ":" + parts[6].Substring(0, 2) + ":" + parts[7].Substring(0, 2);
                     DateTime timestamp = DateTime.ParseExact(timestampString, DateFormatMp3, null);
-                    int calltype = (parts[3] == "In") ? 0 : (parts[3] == "Out") ? 1 : 2; //тип вызова 0-входящий, 1-исходящий, 2-неизвестный...
+                    short calltype = (short)((parts[3] == "In") ? 0 : (parts[3] == "Out") ? 1 : 2); //тип вызова 0-входящий, 1-исходящий, 2-неизвестный...
                     return new ParsedIdenties
                     {
                         Timestamp = timestamp,

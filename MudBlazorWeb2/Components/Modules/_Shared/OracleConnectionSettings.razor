@@ -132,7 +132,7 @@
                     message += "Соединение с Oracle установлено!\n";
 
                 await context.Database.ExecuteSqlRawAsync($"ALTER SESSION SET CURRENT_SCHEMA = {Scheme}");
-                long? maxKey = await context.SprSpeechTable.MaxAsync(x => x.Id);
+                long? maxKey = await context.SprSpeechTables.MaxAsync(x => x.SInckey);
                 if (maxKey > 0)
                     message += "Схема: " + Scheme + " выбрана! \nМаксимальный идентификатор: " + maxKey + ".";
 

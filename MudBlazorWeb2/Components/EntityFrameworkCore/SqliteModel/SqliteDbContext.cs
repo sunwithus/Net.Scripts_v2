@@ -1,13 +1,12 @@
 ﻿//OracleDbContext.cs
 
 using Microsoft.EntityFrameworkCore;
-using MudBlazorWeb2.Components.Modules.WhOllProcessWithDb.TodoList;
 using MudBlazorWeb2.Components.Pages;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 
-namespace MudBlazorWeb2.Components.EntityFrameworkCore
+namespace MudBlazorWeb2.Components.EntityFrameworkCore.SqliteModel
 {
     // Определение контекста базы данных для работы с Entity Framework Core
     public class SqliteDbContext : DbContext

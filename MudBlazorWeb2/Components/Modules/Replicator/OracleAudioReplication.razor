@@ -8,6 +8,7 @@
 @using System.Diagnostics
 @using System.Text.Json
 
+@using MudBlazorWeb2.Components.EntityFrameworkCore.Sprutora
 @using MudBlazorWeb2.Components.EntityFrameworkCore
 @using MudBlazorWeb2.Components.Methods
 
@@ -125,7 +126,7 @@
         try
         {
             string codec = "PCMA";
-            var _maxKey = context.SprSpeechTable.MaxAsync(x => (long?)x.Id);
+            var _maxKey = context.SprSpeechTables.MaxAsync(x => (long?)x.SInckey);
 
             (int durationOfWav, byte[]? audioDataLeft, byte[]? audioDataRight) = await AudioToDbConverter.FFmpegStream(filePath, conf["PathToFFmpegExeForReplicator"]);
             Parse.ParsedIdenties fileData = Parse.FormFileName(filePath); //если не удалось, возвращает {DateTime.Now, "", "", "", 2}
@@ -165,44 +166,44 @@
         await OnPercentsProgress.InvokeAsync(percent);
     }
 
-    private SPR_SPEECH_TABLE CreateSpeechTableEntity(Parse.ParsedIdenties fileData, int durationOfWav, string codec, long maxKey)
+    private SprSpeechTable CreateSpeechTableEntity(Parse.ParsedIdenties fileData, int durationOfWav, string codec, long maxKey)
     {
-        return new SPR_SPEECH_TABLE
+        return new SprSpeechTable
         {
-                Id = maxKey + 1,
-                Type = 0,
-                Prelooked = 0,
-                Deviceid = "MEDIUM_R",
-                Datetime = fileData.Timestamp,
-                Duration = string.Format("+00 {0:D2}:{1:D2}:{2:D2}.000000", durationOfWav / 3600, (durationOfWav % 3600) / 60, durationOfWav % 60),
-                Sysnumber3 = fileData.IMEI,
-                Sourcename = sourceName,
-                Talker = fileData.Talker,
-                Usernumber = fileData.Caller,
-                Calltype = fileData.Calltype,
-                Eventcode = codec
+                SInckey = maxKey + 1,
+                SType = 0,
+                SPrelooked = 0,
+                SDeviceid = "MEDIUM_R",
+                SDatetime = fileData.Timestamp,
+                SDuration = string.Format("+00 {0:D2}:{1:D2}:{2:D2}.000000", durationOfWav / 3600, (durationOfWav % 3600) / 60, durationOfWav % 60),
+                SSysnumber3 = fileData.IMEI,
+                SSourcename = sourceName,
+                STalker = fileData.Talker,
+                SUsernumber = fileData.Caller,
+                SCalltype = fileData.Calltype,
+                SEventcode = codec
         };
     }
 
-    private SPR_SP_DATA_1_TABLE CreateData1TableEntity(byte[]? audioDataLeft, byte[]? audioDataRight, string codec, long maxKey)
+    private SprSpData1Table CreateData1TableEntity(byte[]? audioDataLeft, byte[]? audioDataRight, string codec, long maxKey)
     {
-        return new SPR_SP_DATA_1_TABLE
+        return new SprSpData1Table
         {
-                Id = maxKey + 1,
-                Order = 1,
-                Recordtype = codec, //"G.728"-лучшее сотношение к/с (отсутствия поддержки в FFmpeg) "PCMA", "G.723.1", "G.726-32", "G.729"
-                Fspeech = audioDataLeft, //тип данных OracleDbType.Blob, в OracleDbContext.cs (также для Rspeech)
-                Rspeech = audioDataRight //modelBuilder.Entity<SPR_SP_DATA_1_TABLE>().ToTable("SPR_SP_DATA_1_TABLE").Property(b => b.Fspeech).HasColumnType("BLOB")
+                SInckey = maxKey + 1,
+                SOrder = 1,
+                SRecordtype = codec, //"G.728"-лучшее сотношение к/с (отсутствия поддержки в FFmpeg) "PCMA", "G.723.1", "G.726-32", "G.729"
+                SFspeech = audioDataLeft, //тип данных OracleDbType.Blob, в OracleDbContext.cs (также для Rspeech)
+                SRspeech = audioDataRight //modelBuilder.Entity<SPR_SP_DATA_1_TABLE>().ToTable("SPR_SP_DATA_1_TABLE").Property(b => b.Fspeech).HasColumnType("BLOB")
         };
     }
 
-    private async Task SaveEntitiesToDatabase(OracleDbContext context, SPR_SPEECH_TABLE speechEntry, SPR_SP_DATA_1_TABLE dataEntry)
+    private async Task SaveEntitiesToDatabase(OracleDbContext context, SprSpeechTable speechEntry, SprSpData1Table dataEntry)
     {
         using var transaction = await context.Database.BeginTransactionAsync();
         try
         {
-            context.SprSpeechTable.Add(speechEntry);
-            context.SprSpData1Table.Add(dataEntry);
+            context.SprSpeechTables.Add(speechEntry);
+            context.SprSpData1Tables.Add(dataEntry);
             await context.SaveChangesAsync();
             await transaction.CommitAsync();
         }

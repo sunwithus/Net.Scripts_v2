@@ -1,16 +1,12 @@
 ﻿//AiBackGroundService.cs
 
-using Microsoft.AspNetCore.Components;
 using MudBlazorWeb2.Components.EntityFrameworkCore;
-using MudBlazorWeb2.Components.Modules.WhOllProcessWithDb.TodoList;
-using MudBlazorWeb2.Components.Pages;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
 using MudBlazorWeb2.Components.Modules._Shared;
 using Microsoft.EntityFrameworkCore;
-using MudBlazorWeb2.Components.Modules.WhOllProcessWithDb.Services;
-using System.Configuration;
 using MudBlazorWeb2.Components.Modules.WhOllProcessWithDb;
+using MudBlazorWeb2.Components.EntityFrameworkCore.SqliteModel;
 
 public class AiBackgroundService : BackgroundService
 {

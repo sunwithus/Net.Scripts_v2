@@ -18,6 +18,7 @@ using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
 using MudBlazorWeb2.Components.Modules._Shared;
+using MudBlazorWeb2.Components.EntityFrameworkCore.Sprutora;
 
 public class ReplBackgroundService : BackgroundService
 {
@@ -124,7 +125,7 @@ public class ReplBackgroundService : BackgroundService
     private async Task ProcessSingleAudio(OracleDbContext context, string filePath, string sourceName)
     {
         string codec = "PCMA";
-        var _maxKey = context.SprSpeechTable.MaxAsync(x => (long?)x.Id);
+        var _maxKey = context.SprSpeechTables.MaxAsync(x => (long?)x.SInckey);
 
         var (durationOfWav, audioDataLeft, audioDataRight) = await AudioToDbConverter.FFmpegStream(filePath, _configuration["PathToFFmpegExeForReplicator"]);
         long maxKey = await _maxKey ?? 0;
@@ -139,44 +140,44 @@ public class ReplBackgroundService : BackgroundService
 
     }
 
-    private SPR_SPEECH_TABLE CreateSpeechTableEntity(Parse.ParsedIdenties fileData, int durationOfWav, string codec, long maxKey, string sourceName)
+    private SprSpeechTable CreateSpeechTableEntity(Parse.ParsedIdenties fileData, int durationOfWav, string codec, long maxKey, string sourceName)
     {
-        return new SPR_SPEECH_TABLE
+        return new SprSpeechTable
         {
-            Id = maxKey + 1,
-            Type = 0,
-            Prelooked = 0,
-            Deviceid = "MEDIUM_R",
-            Datetime = fileData.Timestamp,
-            Duration = string.Format("+00 {0:D2}:{1:D2}:{2:D2}.000000", durationOfWav / 3600, (durationOfWav % 3600) / 60, durationOfWav % 60),
-            Sysnumber3 = fileData.IMEI,
-            Sourcename = sourceName,
-            Talker = fileData.Talker,
-            Usernumber = fileData.Caller,
-            Calltype = fileData.Calltype,
-            Eventcode = codec
+            SInckey = maxKey + 1,
+            SType = 0,
+            SPrelooked = 0,
+            SDeviceid = "MEDIUM_R",
+            SDatetime = fileData.Timestamp,
+            SDuration = string.Format("+00 {0:D2}:{1:D2}:{2:D2}.000000", durationOfWav / 3600, (durationOfWav % 3600) / 60, durationOfWav % 60),
+            SSysnumber3 = fileData.IMEI,
+            SSourcename = sourceName,
+            STalker = fileData.Talker,
+            SUsernumber = fileData.Caller,
+            SCalltype = fileData.Calltype,
+            SEventcode = codec
         };
     }
 
-    private SPR_SP_DATA_1_TABLE CreateData1TableEntity(byte[]? audioDataLeft, byte[]? audioDataRight, string codec, long maxKey)
+    private SprSpData1Table CreateData1TableEntity(byte[]? audioDataLeft, byte[]? audioDataRight, string codec, long maxKey)
     {
-        return new SPR_SP_DATA_1_TABLE
+        return new SprSpData1Table
         {
                 Id = maxKey + 1,
-                Order = 1,
-                Recordtype = codec,
-                Fspeech = audioDataLeft,
-                Rspeech = audioDataRight
+                SOrder = 1,
+                SRecordtype = codec,
+                SFspeech = audioDataLeft,
+                SRspeech = audioDataRight
         };
     }
 
-    private async Task SaveEntitiesToDatabase(OracleDbContext context, SPR_SPEECH_TABLE speechEntry, SPR_SP_DATA_1_TABLE dataEntry)
+    private async Task SaveEntitiesToDatabase(OracleDbContext context, SprSpeechTable speechEntry, SprSpData1Table dataEntry)
     {
         using var transaction = await context.Database.BeginTransactionAsync();
         try
         {
-            context.SprSpeechTable.Add(speechEntry);
-            context.SprSpData1Table.Add(dataEntry);
+            context.SprSpeechTables.Add(speechEntry);
+            context.SprSpData1Tables.Add(dataEntry);
             await context.SaveChangesAsync();
             await transaction.CommitAsync();
         }

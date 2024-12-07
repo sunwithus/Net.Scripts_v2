@@ -13,9 +13,9 @@ namespace MudBlazorWeb2.Components.Modules.MakingWord
                 await context.Database.OpenConnectionAsync();
                 await context.Database.ExecuteSqlRawAsync($"ALTER SESSION SET CURRENT_SCHEMA = {schema}");
 
-                var speechDataList = await context.SprSpeechTable.Where(x => x.Id == id).ToListAsync();
+                var speechDataList = await context.SprSpeechTables.Where(x => x.SInckey == id).ToListAsync();
 
-                if (speechDataList == null || !speechDataList.Any() || speechDataList?.FirstOrDefault()?.Id != id)
+                if (speechDataList == null || !speechDataList.Any() || speechDataList?.FirstOrDefault()?.SInckey != id)
                 {
                     await context.Database.CloseConnectionAsync();
                     return null;
@@ -23,21 +23,21 @@ namespace MudBlazorWeb2.Components.Modules.MakingWord
 
                 var speechData = speechDataList?.Select(speech => new SpeechData
                 {
-                    Id = speech.Id,
-                    Deviceid = speech.Deviceid,
-                    Duration = speech.Duration,
-                    Datetime = speech.Datetime,
-                    Belong = speech.Belong,
-                    Sourcename = speech.Sourcename,
-                    Talker = speech.Talker,
-                    Usernumber = speech.Usernumber,
-                    Calltype = speech.Calltype,
-                    Cid = speech.Cid,
-                    Lac = speech.Lac,
-                    Basestation = speech.Basestation,
-                    Comment = context.SprSpCommentTable.Where(x => x.Id == id).ToListAsync().Result.FirstOrDefault(c => c.Id == speech.Id)?.Comment,
-                    AudioF = context.SprSpData1Table.Where(x => x.Id == id).ToListAsync().Result.FirstOrDefault(c => c.Id == speech.Id)?.Fspeech,
-                    AudioR = context.SprSpData1Table.Where(x => x.Id == id).ToListAsync().Result.FirstOrDefault(c => c.Id == speech.Id)?.Rspeech
+                    Id = speech.SInckey,
+                    Deviceid = speech.SDeviceid,
+                    Duration = speech.SDuration,
+                    Datetime = speech.SDatetime,
+                    Belong = speech.SBelong,
+                    Sourcename = speech.SSourcename,
+                    Talker = speech.STalker,
+                    Usernumber = speech.SUsernumber,
+                    Calltype = speech.SCalltype,
+                    Cid = speech.SCid,
+                    Lac = speech.SLac,
+                    Basestation = speech.SBasestation,
+                    Comment = context.SprSpCommentTables.Where(x => x.SInckey == id).ToListAsync().Result.FirstOrDefault(c => c.SInckey == speech.SInckey)?.SComment,
+                    AudioF = context.SprSpData1Tables.Where(x => x.SInckey == id).ToListAsync().Result.FirstOrDefault(c => c.SInckey == speech.SInckey)?.SFspeech,
+                    AudioR = context.SprSpData1Tables.Where(x => x.SInckey == id).ToListAsync().Result.FirstOrDefault(c => c.SInckey == speech.SInckey)?.SRspeech
                 }).ToList();
 
                 await context.Database.CloseConnectionAsync();

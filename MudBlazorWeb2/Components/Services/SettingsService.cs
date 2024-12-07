@@ -19,6 +19,7 @@ public class Settings
 public class SettingsReplicator
 {
     public OraItems OraItems { get; set; }
+    public PostgreItems PostgreItems { get; set; }
 }
 
 public class SettingsProcessing
@@ -42,6 +43,15 @@ public class OraItems
     public string Password { get; set; }
     public string DataSource { get; set; }
     public string Scheme { get; set; }
+}
+
+public class PostgreItems
+{
+    public string Username { get; set; } = "postgres";
+    public string Password { get; set; } = "postgres";
+    public string Database { get; set; } = "test";
+    public string Host { get; set; } = "localhost";
+    public string Port { get; set; } = "5432";
 }
 
 /// <summary>

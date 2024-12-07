@@ -9,6 +9,7 @@
 @using System.ComponentModel
 
 @using MudBlazorWeb2.Components.EntityFrameworkCore
+@using MudBlazorWeb2.Components.EntityFrameworkCore.Sprutora
 @using MudBlazorWeb2.Components.Modules._Shared
 @using MudBlazorWeb2.Components.Modules.WhOllProcessWithDb
 @using MudBlazorWeb2.Components.Modules.WhOllProcessWithDb.Services
@@ -222,14 +223,14 @@
                 StateService2.ProcessingMessage2 = "Обработка выполняется...";
 
                 // ORACLE => get audio (left, right, recordType)
-                var (audioDataLeft, audioDataRight, recordType) = await EFCoreQuery.GetAudioDataAsync(entity.Id, db);
-                Console.WriteLine($"Audio data for key {entity.Id} loaded successfully. recordType = " + recordType);
+                var (audioDataLeft, audioDataRight, recordType) = await EFCoreQuery.GetAudioDataAsync(entity.SInckey, db);
+                Console.WriteLine($"Audio data for key {entity.SInckey} loaded successfully. recordType = " + recordType);
 
                 // PreText => get PreText for operator or PreTextDefault
-                string preText = await GetPreTextForOperatorAsync2(entity.Sourcename);
+                string preText = await GetPreTextForOperatorAsync2(entity.SSourcename);
 
                 // FFMpeg or Decoder => audio to folder
-                string audioFilePath = Path.Combine(Configuration["AudioPathForProcessing"], $"{entity.Id}.wav");
+                string audioFilePath = Path.Combine(Configuration["AudioPathForProcessing"], $"{entity.SInckey}.wav");
                 bool result = await DbToAudioConverter.FFMpegDecoder(audioDataLeft, audioDataRight, recordType, audioFilePath, Configuration);
                 if (!result) continue;
 
@@ -239,15 +240,15 @@
                 string recognizedText = await _recognizedText; //дожидаемся _recognizedText...
 
                 // Temprorary push string to Notice to aviod repeated process with entity
-                entity.Notice = "TempRecord";
-                db.SprSpeechTable.Update(entity);
+                entity.SNotice = "TempRecord";
+                db.SprSpeechTables.Update(entity);
                 await db.SaveChangesAsync();
 
                 // Delete earlier created file
                 Files.DeleteFilesByPath(audioFilePath);
 
                 // OLLAMA + ORACLE => Run task !!!_WITHOUT await
-                await ProcessOllamaAndUpdateEntityAsync2(entity.Id, recognizedText, languageCode, detectedLanguage, preText, Configuration["OllamaModelName"], schemeName, conStringDBA, Configuration, SettingsService, entity, db);
+                await ProcessOllamaAndUpdateEntityAsync2(entity.SInckey, recognizedText, languageCode, detectedLanguage, preText, Configuration["OllamaModelName"], schemeName, conStringDBA, Configuration, SettingsService, entity, db);
 
                 // lag - задержка => если Ollama отстаёт от Whisper => ожидаем...
                 //lagTime = await ApplyLagTimePause2(lagTime);
@@ -267,7 +268,7 @@
 
     // TODO "обнуление" Notice для какой-н БД
 
-    private async Task ProcessOllamaAndUpdateEntityAsync2(long? entityId, string recognizedText, string languageCode, string detectedLanguage, string preText, string modelName, string schemeName, string conStringDBA, IConfiguration Configuration, SettingsService SettingsService, SPR_SPEECH_TABLE entity, OracleDbContext db)
+    private async Task ProcessOllamaAndUpdateEntityAsync2(long entityId, string recognizedText, string languageCode, string detectedLanguage, string preText, string modelName, string schemeName, string conStringDBA, IConfiguration Configuration, SettingsService SettingsService, SprSpeechTable entity, OracleDbContext db)
     {
         // OLLAMA
         try

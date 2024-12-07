@@ -1,9 +1,10 @@
 ﻿//EFCoreQuery.cs
 
 using Microsoft.EntityFrameworkCore;
+using MudBlazorWeb2.Components.EntityFrameworkCore.Sprutora;
 using MudBlazorWeb2.Components.EntityFrameworkCore;
-using MudBlazorWeb2.Components.Modules.WhOllProcessWithDb.Services;
 using Oracle.ManagedDataAccess.Client;
+//using PostgresModel;
 using Spire.Doc;
 using System.Configuration;
 using System.Text;
@@ -26,7 +27,7 @@ namespace MudBlazorWeb2.Components.Modules.WhOllProcessWithDb
             return (hours * 3600 + minutes * 60 + seconds);
         }
 
-        public static async Task<List<SPR_SPEECH_TABLE>> GetSpeechRecords(DateTime StartDate, DateTime EndDate, string TimeInterval, OracleDbContext db, List<string> _ignoreRecordType)
+        public static async Task<List<SprSpeechTable>> GetSpeechRecords(DateTime StartDate, DateTime EndDate, string TimeInterval, OracleDbContext db, List<string> _ignoreRecordType)
         {
             var parameters = new OracleParameter[]
             {
@@ -43,7 +44,7 @@ namespace MudBlazorWeb2.Components.Modules.WhOllProcessWithDb
                 AND S_EVENTCODE NOT IN ({string.Join(",", _ignoreRecordType.Select(e => $"'{e}'"))})
                 ORDER BY S_DATETIME DESC";
 
-            return await db.SprSpeechTable
+            return await db.SprSpeechTables
                 .FromSqlRaw(sqlQuery, parameters)
                 .ToListAsync();
 
@@ -64,13 +65,13 @@ namespace MudBlazorWeb2.Components.Modules.WhOllProcessWithDb
         public static async Task<(byte[]? audioDataLeft, byte[]? audioDataRight, string? recordType)> GetAudioDataAsync(long? key, OracleDbContext db)
         {
             await Task.Delay(1);
-            var result = db.SprSpData1Table
-                .Where(x => x.Id == key)
+            var result = db.SprSpData1Tables
+                .Where(x => x.SInckey == key)
                 .Select(x => new
             {
-                AudioDataLeft = x.Fspeech,
-                AudioDataRight = x.Rspeech,
-                RecordType = x.Recordtype
+                AudioDataLeft = x.SFspeech,
+                AudioDataRight = x.SRspeech,
+                RecordType = x.SRecordtype
             }).ToList().FirstOrDefault();
 
             if (result == null)
@@ -79,7 +80,7 @@ namespace MudBlazorWeb2.Components.Modules.WhOllProcessWithDb
             return (result.AudioDataLeft, result.AudioDataRight, result.RecordType);
         }
 
-        public static async Task InsertCommentAsync(long? key, string text, string detectedLanguage, string responseOllamaText, string modelName, string schemeName, string conStringDBA)
+        public static async Task InsertCommentAsync(long key, string text, string detectedLanguage, string responseOllamaText, string modelName, string schemeName, string conStringDBA)
         {
             using (var db = new OracleDbContext(new DbContextOptionsBuilder<OracleDbContext>().UseOracle(conStringDBA).Options))
             {
@@ -98,7 +99,7 @@ namespace MudBlazorWeb2.Components.Modules.WhOllProcessWithDb
 
                 string dangerLevelText = int.TryParse(responseOllamaText.Substring(0, 1), out int dangerLevel) ? dangerLevel.ToString() : "unknown";
                 //Selstatus //1 - собеседник, 2 - слово в тексте, 3 - геофильтр, 4 - номер в тексте
-                int selStatus = -1;
+                short selStatus = -1;
                 if (dangerLevel == 1 || dangerLevel == 2 || dangerLevel == 3 || dangerLevel == 4 || dangerLevel == 5)
                 {
                     selStatus = 2;
@@ -109,45 +110,45 @@ namespace MudBlazorWeb2.Components.Modules.WhOllProcessWithDb
                     // Проверка существования и обновление/добавление записи в SPR_SP_COMMENT_TABLE
                     // Использование AsEnumerable() приводит к выполнению запроса и загрузке данных в память, а затем LastOrDefault() выполняется уже в памяти.
                     // AsEnumerable() - обязательно, иначе ошибка Oracle 11.2 (т.к. EFCore использует новый синтаксис SQL)
-                    var comment = db.SprSpCommentTable.Where(c => c.Id == key).AsEnumerable().FirstOrDefault();
+                    var comment = db.SprSpCommentTables.Where(c => c.SInckey == key).AsEnumerable().FirstOrDefault();
                     if (comment != null)
                     {
-                        comment.Comment = commentBytes;
-                        db.SprSpCommentTable.Update(comment);
+                        comment.SComment = commentBytes;
+                        db.SprSpCommentTables.Update(comment);
                     }
                     else
                     {
-                        comment = new SPR_SP_COMMENT_TABLE
+                        comment = new SprSpCommentTable
                         {
-                            Id = key,
-                            Comment = commentBytes
+                            SInckey = key,
+                            SComment = commentBytes
                         };
-                        await db.SprSpCommentTable.AddAsync(comment);
+                        await db.SprSpCommentTables.AddAsync(comment);
                     }
 
                     // Проверка существования и обновление/добавление записи в SPR_SPEECH_TABLE
-                    var speech = db.SprSpeechTable.Where(c => c.Id == key).AsEnumerable().FirstOrDefault();
+                    var speech = db.SprSpeechTables.Where(c => c.SInckey == key).AsEnumerable().FirstOrDefault();
                     if (speech != null)
                     {
-                        speech.Belong = detectedLanguage;
-                        speech.Notice = dangerLevelText;
-                        speech.Postid = modelName;
-                        speech.Deviceid = "MEDIUM_R";
-                        speech.Selstatus = selStatus;
-                        db.SprSpeechTable.Update(speech);
+                        speech.SBelong = detectedLanguage;
+                        speech.SNotice = dangerLevelText;
+                        speech.SPostid = modelName;
+                        speech.SDeviceid = "MEDIUM_R";
+                        speech.SSelstatus = selStatus;
+                        db.SprSpeechTables.Update(speech);
                     }
                     else
                     {
-                        speech = new SPR_SPEECH_TABLE
+                        speech = new SprSpeechTable
                         {
-                            Id = key,
-                            Belong = detectedLanguage,
-                            Notice = dangerLevelText,
-                            Postid = modelName,
-                            Deviceid = "MEDIUM_R",
-                            Selstatus = selStatus
+                            SInckey = key,
+                            SBelong = detectedLanguage,
+                            SNotice = dangerLevelText,
+                            SPostid = modelName,
+                            SDeviceid = "MEDIUM_R",
+                            SSelstatus = selStatus
                         };
-                        await db.SprSpeechTable.AddAsync(speech);
+                        await db.SprSpeechTables.AddAsync(speech);
                     }
 
                     // Сохранение всех изменений
@@ -171,10 +172,10 @@ namespace MudBlazorWeb2.Components.Modules.WhOllProcessWithDb
                 await db.Database.ExecuteSqlRawAsync($"ALTER SESSION SET CURRENT_SCHEMA = {schemeName}");
                 try
                 {
-                    var speech = db.SprSpeechTable.Where(c => c.Id == key).AsEnumerable().FirstOrDefault();
+                    var speech = db.SprSpeechTables.Where(c => c.SInckey == key).AsEnumerable().FirstOrDefault();
                     if (speech != null)
                     {
-                        speech.Notice = value;
+                        speech.SNotice = value;
                     }
                     await db.SaveChangesAsync();
                 }
