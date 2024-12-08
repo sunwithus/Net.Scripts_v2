@@ -24,7 +24,7 @@ namespace MudBlazorWeb2.Components.Modules.WhOllProcessWithDb.TodoList
                     if (await context.Database.CanConnectAsync())
                     {
                         await context.Database.ExecuteSqlRawAsync($"ALTER SESSION SET CURRENT_SCHEMA = {todo.Scheme}");
-                        maxKey = await context.SprSpeechTable.MaxAsync(x => x.Id);
+                        maxKey = await context.SprSpeechTables.MaxAsync(x => x.SInckey);
                         ConsoleCol.WriteLine($"maxKey = {maxKey}", ConsoleColor.Green);
                         await context.Database.CloseConnectionAsync();
                     }

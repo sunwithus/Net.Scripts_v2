@@ -1,39 +1,28 @@
 ﻿//ReplBackGroundService.cs
 
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.IO;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using MudBlazorWeb2.Components.EntityFrameworkCore;
 using MudBlazorWeb2.Components.Modules.Replicator;
-using MudBlazorWeb2.Components.Methods;
 
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
 using MudBlazorWeb2.Components.Modules._Shared;
 using MudBlazorWeb2.Components.EntityFrameworkCore.Sprutora;
+using MudBlazorWeb2.Components.Methods;
 
 public class ReplBackgroundService : BackgroundService
 {
-    private readonly IServiceScopeFactory _scopeFactory;
+    //private readonly IServiceScopeFactory _scopeFactory;
     private readonly IConfiguration _configuration;
-    private readonly SettingsService _settingsService;
     private FileLogger _fileLogger;
 
     private readonly IHubContext<ReplicatorHub> _hubContext;
 
-    public ReplBackgroundService(IServiceScopeFactory scopeFactory, IConfiguration configuration, SettingsService settingsService, IHubContext<ReplicatorHub> hubContext)
+    public ReplBackgroundService(/*IServiceScopeFactory scopeFactory, */IConfiguration configuration, IHubContext<ReplicatorHub> hubContext)
     {
-        _scopeFactory = scopeFactory;
+        //_scopeFactory = scopeFactory;
         _configuration = configuration;
-        _settingsService = settingsService;
         _hubContext = hubContext;
         _fileLogger=new FileLogger(Path.Combine(AppContext.BaseDirectory, "Logs/replicator.log"));
     }
@@ -77,27 +66,31 @@ public class ReplBackgroundService : BackgroundService
 
         foreach (var file in JsonFiles) 
         {
-            var json = await File.ReadAllTextAsync(file);
-            DataForBackgroungService JsonData = JsonSerializer.Deserialize<DataForBackgroungService>(json);
+            var jsonData = new SimpleJson<DataForBackgroungService>(file);
+            await jsonData.LoadItemsAsync();
+            var paramsRepl = jsonData.GetItems().FirstOrDefault();
 
-            await ReplicateAudioFromDirectory(JsonData, cancellationToken);
+            //var json = await File.ReadAllTextAsync(file);
+            //DataForBackgroungService JsonData = JsonSerializer.Deserialize<DataForBackgroungService>(json);
+
+            await ReplicateAudioFromDirectory(paramsRepl, cancellationToken);
             await Task.Delay(500);
 
-            Files.DeleteDirectory(JsonData.PathToSaveTempAudio);
+            Files.DeleteDirectory(paramsRepl.PathToSaveTempAudio);
             Files.DeleteFilesByPath(file);
         }
     }
 
-    private async Task ReplicateAudioFromDirectory(DataForBackgroungService JsonData, CancellationToken cancellationToken)
+    private async Task ReplicateAudioFromDirectory(DataForBackgroungService paramsRepl, CancellationToken cancellationToken)
     {
-        var optionsBuilder = OracleDbContext.ConfigureOptionsBuilder(JsonData.DbConnectionSettings);
+        var optionsBuilder = OracleDbContext.ConfigureOptionsBuilder(paramsRepl.DbConnectionSettings);
         using var context = new OracleDbContext(optionsBuilder.Options);
 
-        string scheme = JsonData.DbScheme;
+        string scheme = paramsRepl.DbScheme;
         await context.Database.OpenConnectionAsync();
         await context.Database.ExecuteSqlRawAsync($"ALTER SESSION SET CURRENT_SCHEMA = {scheme}");
         
-        var filesAudio = Directory.EnumerateFiles(JsonData.PathToSaveTempAudio);
+        var filesAudio = Directory.EnumerateFiles(paramsRepl.PathToSaveTempAudio);
         if (!filesAudio.Any())
         {
             Console.WriteLine("Нет аудио файлов для репликации.");
@@ -108,7 +101,7 @@ public class ReplBackgroundService : BackgroundService
         {
             try
             {
-                await ProcessSingleAudio(context, filePath, JsonData.SourceName);
+                await ProcessSingleAudio(context, filePath, paramsRepl.SourceName);
                 Console.WriteLine($"Файл обработан: {filePath}");
                 //File.Delete(filePath);
             }
@@ -119,7 +112,7 @@ public class ReplBackgroundService : BackgroundService
                 throw;
             }
         }
-        _fileLogger.Log($"Выполнено. Источник: {JsonData.SourceName}, схема БД: {JsonData.DbScheme} Записано {filesAudio.Count()} файлов.");
+        _fileLogger.Log($"Выполнено. Источник: {paramsRepl.SourceName}, схема БД: {paramsRepl.DbScheme} Записано {filesAudio.Count()} файлов.");
     }
 
     private async Task ProcessSingleAudio(OracleDbContext context, string filePath, string sourceName)

@@ -11,18 +11,18 @@
 @using MudBlazorWeb2.Components.EntityFrameworkCore.Sprutora
 @using MudBlazorWeb2.Components.EntityFrameworkCore
 @using MudBlazorWeb2.Components.Methods
+@using MudBlazorWeb2.Components.Modules._Shared
 
-@inject IConfiguration conf 
-@inject SettingsService SettingsService
+@inject IConfiguration conf
 
 <MudSimpleTable Hover="true" Dense="true" FixedHeader="true" Style="height:200px;">
-        <colgroup>
-            <col span="1" style="width: 60%;">
-            <col span="1" style="width: 40%;">
-        </colgroup>
-        <thead>
-            <tr>
-                <th>
+    <colgroup>
+        <col span="1" style="width: 60%;">
+        <col span="1" style="width: 40%;">
+    </colgroup>
+    <thead>
+        <tr>
+            <th>
                 <MudText Style="display: flex; justify-content: space-between; align-items: center;">
                     <MudButton OnClick="@(async () => await StartReplication())" ButtonType="ButtonType.Submit" Variant="Variant.Outlined" Color="@colorButton">Пуск!</MudButton>
                     @if (progressCircular)
@@ -35,17 +35,17 @@
                         <MudText>&nbsp;</MudText>
                     }
                 </MudText>
-                </th>
-                <th>@progress</th>
-            </tr>
-        </thead>
-        @if (!string.IsNullOrEmpty(message))
-        {
-            <tbody>
-                @((MarkupString)message)
-            </tbody>
-        }
-    </MudSimpleTable>
+            </th>
+            <th>@progress</th>
+        </tr>
+    </thead>
+    @if (!string.IsNullOrEmpty(message))
+    {
+        <tbody>
+            @((MarkupString)message)
+        </tbody>
+    }
+</MudSimpleTable>
 
 @code {
     [Parameter]
@@ -72,9 +72,16 @@
         await NotifyParent(false, 0); // передача родительскому эл-ту о начале
         StateHasChanged();
 
-        var settingsDB = SettingsService.GetSettings().SettingsReplicator.OraItems;
-        string OracleDbConnectionString = $"User Id={settingsDB.User};Password={settingsDB.Password};Data Source={settingsDB.DataSource};";
-        Scheme = settingsDB.Scheme;
+        string filePath = Path.Combine(AppContext.BaseDirectory, "settingsApp.json");
+        var doSettings = new SimpleJson<SettingsDb>(filePath);
+        await doSettings.LoadItemsAsync();
+
+        var settingsDb = doSettings.GetItems().FirstOrDefault(x => x.AimType == "Replicator");
+
+        //var settingsDB = SettingsService.GetSettings().SettingsReplicator;
+        //string OracleDbConnectionString = $"User Id={settingsDB.User};Password={settingsDB.Password};Data Source={settingsDB.ServerAddress};";
+        string OracleDbConnectionString = $"User Id={settingsDb.User};Password={settingsDb.Password};Data Source={settingsDb.ServerAddress};";
+        Scheme = settingsDb.Scheme;//Scheme = settingsDB.Scheme;
 
         message = "";
         progress = "";

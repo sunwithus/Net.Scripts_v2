@@ -12,7 +12,6 @@ using MudBlazorWeb2.Components.EntityFrameworkCore;
 var builder = WebApplication.CreateBuilder(args);
 
 // settingsApp.json settingsOper.json
-builder.Services.AddSingleton<SettingsService>();
 builder.Services.AddSingleton<UserSettingsService>();
 
 builder.Services.AddDbContextFactory<SqliteDbContext>();

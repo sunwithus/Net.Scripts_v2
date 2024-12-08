@@ -115,7 +115,7 @@ public partial class PostgresDbContext : DbContext
         return optionsBuilder;
     }
     //protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-    //    => optionsBuilder.UseNpgsql("Host=localhost;Database=test;Username=postgres;Password=postgres");
+    //    => optionsBuilder.UseNpgsql("Host=localhost;Database=test;Username=postgres;Password=postgres;");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

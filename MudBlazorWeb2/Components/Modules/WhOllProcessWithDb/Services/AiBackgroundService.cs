@@ -12,7 +12,6 @@ public class AiBackgroundService : BackgroundService
 {
     private readonly ILogger<AiBackgroundService> _logger;
     private readonly IConfiguration _configuration;
-    private readonly SettingsService _settingsService;
     private readonly WhisperService _whisper;
     private readonly OllamaService _ollama;
     private readonly IDbContextFactory<SqliteDbContext> _sqliteDbContext; 
@@ -20,11 +19,10 @@ public class AiBackgroundService : BackgroundService
 
 
 
-    public AiBackgroundService(ILogger<AiBackgroundService> logger, IConfiguration configuration, SettingsService settingsService, WhisperService whisperService, OllamaService ollamaService, IDbContextFactory<SqliteDbContext> sqliteDbContext, IHubContext<TodoHub> hubContext)
+    public AiBackgroundService(ILogger<AiBackgroundService> logger, IConfiguration configuration, WhisperService whisperService, OllamaService ollamaService, IDbContextFactory<SqliteDbContext> sqliteDbContext, IHubContext<TodoHub> hubContext)
     {
         _logger = logger;
         _configuration = configuration;
-        _settingsService = settingsService;
         _whisper = whisperService;
         _ollama = ollamaService;
         _sqliteDbContext = sqliteDbContext;

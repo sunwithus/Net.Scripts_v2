@@ -2,8 +2,6 @@
 
 @rendermode InteractiveServer
 
-@inject SettingsService SettingsService
-
 <MudText Typo="Typo.body2" >
     запрос по-умолчанию
     <MudIconButton style="width: 48px; height: 48px" Icon="@Icons.Material.Filled.SettingsEthernet" Color="@colorButton" OnClick="@(()=>ToggleOverlay(true))" />
@@ -32,12 +30,12 @@
     protected override void OnInitialized()
     {
         //preTextValue = SettingsService.GetSetting("PreText");
-        preTextValue = SettingsService.GetSettings().PreTextDefault;
+        preTextValue = "SettingsService.GetSettings().PreTextDefault";
     }
     
     private async Task ApplyButtonClick()
     {
-        await SettingsService.UpdateSettingAsync("PreText", preTextValue);
+        //await SettingsService.UpdateSettingAsync("PreText", preTextValue);
         ToggleOverlay(false);
         await OnApplyButtonClick.InvokeAsync();
     }

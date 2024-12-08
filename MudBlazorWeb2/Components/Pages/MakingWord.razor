@@ -8,7 +8,6 @@
 @using Oracle.ManagedDataAccess.Client
 
 @inject IJSRuntime JsRuntime
-@inject SettingsService SettingsService
 
 <PageTitle>🖍 Create Word</PageTitle>
 
@@ -17,7 +16,7 @@
     <MudDivider />
     <br />
 
-    <OracleConnectionSettings colorButton="@colorTag" OnSettingsChanged="OnSettingsChanged" settingsDB="@settingsDB" oraItemsDB="@settingsDB.SettingsMakingWord.OraItems" propertyName="SettingsMakingWord" />
+    <OracleConnectionSettings colorButton="@colorTag" OnSettingsChanged="OnSettingsChanged" SettingsDb="@SettingsDb" />
 
     <MudText Style="display: flex; justify-content=start;">
         <MudText Style="display: flex; align-items: center;">
@@ -100,7 +99,7 @@
     bool IsSkeleton = false;
 
     MudBlazor.Color colorTag = Color.Success;
-    private Settings settingsDB = null;
+    SettingsDb SettingsDb = null;
 
     private string conStringDBA = "";
     private string Scheme = "";
@@ -120,9 +119,15 @@
 
     private async Task LoadSettingsFromFile()
     {
-        settingsDB = SettingsService.GetSettings();
-        Scheme = settingsDB.SettingsMakingWord.OraItems.Scheme;
-        conStringDBA = $"User Id={settingsDB.SettingsMakingWord.OraItems.User};Password={settingsDB.SettingsMakingWord.OraItems.Password};Data Source={settingsDB.SettingsMakingWord.OraItems.DataSource};";
+        string filePath = Path.Combine(AppContext.BaseDirectory, "settingsApp.json");
+        var doSettings = new SimpleJson<SettingsDb>(filePath);
+        await doSettings.LoadItemsAsync();
+
+        var settingsDb = doSettings.GetItems().FirstOrDefault(x => x.AimType == "MakingWord");
+        
+        //settingsDB = SettingsService.GetSettings();
+        Scheme = settingsDb.Scheme;
+        conStringDBA = $"User Id={settingsDb.User};Password={settingsDb.Password};Data Source={settingsDb.ServerAddress};";
         await Task.Delay(1);
         StateHasChanged();
     }

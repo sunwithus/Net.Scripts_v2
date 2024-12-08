@@ -4,8 +4,8 @@
 @using System.Text.Json.Serialization;
 
 @using MudBlazorWeb2.Components.Modules.Replicator
+@using MudBlazorWeb2.Components.Modules._Shared
 
-@inject SettingsService SettingsService
 @inject IConfiguration Configuration 
 
 Выберите необходимые аудиофайлы:
@@ -30,15 +30,15 @@ else if (isVisibleFilesList)
             </tr>
         </thead>
         <tbody>
-        @foreach (var file in loadedFiles)
-        {
-            <tr>
-                <td>@file.Name</td>
-                <td>@file.LastModified.ToString()</td>
-                <td>@file.Size</td>
-                <td>@file.ContentType</td>
-            </tr>
-        } 
+            @foreach (var file in loadedFiles)
+            {
+                <tr>
+                    <td>@file.Name</td>
+                    <td>@file.LastModified.ToString()</td>
+                    <td>@file.Size</td>
+                    <td>@file.ContentType</td>
+                </tr>
+            } 
         </tbody>
     </MudSimpleTable>
 }
@@ -47,7 +47,7 @@ else if (isVisibleFilesList)
     [Parameter]
     public string sourceName { get; set; } = "";
     [Parameter]
-    public OraItems oraItems { get; set; }
+    public SettingsDb settingsDb { get; set; }
     [Parameter]
     public bool onlyAudioType { get; set; } = true;
     [Parameter]
@@ -131,8 +131,18 @@ else if (isVisibleFilesList)
         DataForBackgroungService DataForBack = new();
         DataForBack.PathToSaveTempAudio = pathToSaveTempAudio + "//";
         DataForBack.SourceName = sourceName;
-        DataForBack.DbScheme = oraItems.Scheme;
-        DataForBack.DbConnectionSettings = $"User Id={oraItems.User};Password={oraItems.Password};Data Source={oraItems.DataSource};";
+        DataForBack.DbType = settingsDb.DbType;
+        DataForBack.DbScheme = settingsDb.Scheme;
+        if (settingsDb.DbType == "Oracle")
+        {
+            DataForBack.DbConnectionSettings = $"User Id={settingsDb.User};Password={settingsDb.Password};Data Source={settingsDb.ServerAddress}/sprutora;";
+        }
+        else if (settingsDb.DbType == "Postgres")
+        {
+            DataForBack.DbConnectionSettings = $"Host={settingsDb.ServerAddress};Database={settingsDb.Scheme};Username={settingsDb.User};Password={settingsDb.Password};";
+
+        }
+            
 
         string pathToJson = pathToSaveTempAudio + ".json";
     

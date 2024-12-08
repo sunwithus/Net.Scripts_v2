@@ -1,6 +1,6 @@
 ﻿@*ReplicatorOra.razor*@
 
-@page "/oracle-replicator"
+@page "/audio-replicator"
 @rendermode InteractiveServer
 
 @using Microsoft.EntityFrameworkCore
@@ -8,26 +8,27 @@
 @using System.ComponentModel
 @using Microsoft.AspNetCore.SignalR.Client
 
-
 @using MudBlazorWeb2.Components.EntityFrameworkCore
 @using MudBlazorWeb2.Components.Modules.Replicator.Services
 @using MudBlazorWeb2.Components.Modules.Replicator
 @using MudBlazorWeb2.Components.Modules._Shared
 
-@inject SettingsService SettingsService
 @inject NavigationManager Navigation
 @inject IDialogService DialogService
-
 @inject ISnackbar SnackbarService
 
-<PageTitle>🛢 Replicator Ora</PageTitle>
+<PageTitle>🛢 Replicator Ora/Pg</PageTitle>
 
 <MudContainer>
-    <MudText Typo="Typo.h5">Аудио в Oracle 🎧 => 📦</MudText>
+    <MudText Typo="Typo.h5">Репликация аудио в Oracle / Postgres 🎧 => 📦</MudText>
     <MudDivider />
     <br />
 
-    <OracleConnectionSettings colorButton="@colorButton" OnSettingsChanged="OnSettingsChanged" settingsDB="@settingsDB" oraItemsDB="@settingsDB.SettingsReplicator.OraItems" propertyName="SettingsReplicator" />
+    @if (settingsDb != null)
+    {
+        <OracleConnectionSettings colorButton="@colorButton" OnSettingsChanged="OnSettingsChanged" settingsDb="@settingsDb" />
+    }
+
 
     <MudText Style="display:flex; justify-content: space-between;">
         <MudText Style="width: 325px;">
@@ -39,7 +40,7 @@
 
     @if(!string.IsNullOrEmpty(operatorName))
     {
-        <LoadManyFilesFromFolder sourceName="@operatorName" oraItems="@settingsDB.SettingsReplicator.OraItems" onlyAudioType="@true" colorButton="@colorButton" OnFinishLoading="HandleFilesLoaded" />
+        <LoadManyFilesFromFolder sourceName="@operatorName" settingsDb="@settingsDb" onlyAudioType="@true" colorButton="@colorButton" OnFinishLoading="HandleFilesLoaded" />
     }
     else
     {
@@ -51,7 +52,7 @@
         <br />
         <MudText Style="opacity: 0.5;" Typo="Typo.body2" Color="@colorButton">Файлы сохранены на сервере, после преобразования аудиоданные будут записаны в БД.</MudText>
     }
-    
+
     @if (!string.IsNullOrEmpty(statusText))
     {
         <br />
@@ -73,12 +74,13 @@
     private string pathToSaveTempAudio = "";
     private string operatorName = "";
     private bool isFilesLoaded = false;
-    private Settings settingsDB = null;
+    private SettingsDb settingsDb = null;
 
 
     protected override async Task OnInitializedAsync()
     {
-        settingsDB = SettingsService.GetSettings();
+        await LoadSettings(); // загрузка settingsDB (настройки БД, PreText, repl/makeWord)
+
         _logger = new FileLogger(Path.Combine(AppContext.BaseDirectory, "Logs/replicator.log"));
 
         await base.OnInitializedAsync();
@@ -104,8 +106,6 @@
                 Console.WriteLine("Failed to start SignalR connection: " + ex.Message);
             }
         }
-
-
     }
 
     private async Task StateHasChangedAsync()
@@ -117,13 +117,14 @@
     {
         _hubConnection.DisposeAsync().GetAwaiter().GetResult();
     }
-    
+
 
     private async Task OnSettingsChanged()
     {
         await Task.Delay(1);
         Console.WriteLine("Настройки подключения к БД для репликатора изменились");
-        settingsDB = SettingsService.GetSettings();
+        await LoadSettings();
+        //settingsDB = SettingsService.GetSettings();
     }
 
     private void HandleOperatorSelected(string value)
@@ -137,6 +138,17 @@
     {
         isFilesLoaded = value;
         Console.WriteLine($"HandleFilesLoaded: Файлы загружены: {value}");
+    }
+
+    private async Task LoadSettings()
+    {
+        string filePath = Path.Combine(AppContext.BaseDirectory, "settingsDb.json");
+        var doSettings = new SimpleJson<SettingsDb>(filePath);
+        await doSettings.LoadItemsAsync();
+
+        settingsDb = doSettings.GetItems().FirstOrDefault(x => x.AimType == "Replicator");
+        Console.WriteLine(settingsDb.ToString());
+        Console.WriteLine(settingsDb.User);
     }
 
 }

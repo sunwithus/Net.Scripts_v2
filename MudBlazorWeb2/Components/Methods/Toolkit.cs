@@ -152,14 +152,20 @@ namespace MudBlazorWeb2.Components.Methods
                 }
                 else
                 {
-                    items = JsonSerializer.Deserialize<List<T>>(json) ?? new List<T>();
+                    var options = new JsonSerializerOptions
+                    {
+                        ReadCommentHandling = JsonCommentHandling.Skip
+                    };
+                    items = JsonSerializer.Deserialize<List<T>>(json, options) ?? new List<T>();
                 }
             }
+            /*
             else
             {
                 items = new List<T>();
                 await SaveItemsAsync(); // Создать новый файл
             }
+            */
         }
 
         public async Task SaveItemsAsync()
