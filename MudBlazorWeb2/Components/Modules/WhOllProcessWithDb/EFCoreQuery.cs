@@ -80,7 +80,7 @@ namespace MudBlazorWeb2.Components.Modules.WhOllProcessWithDb
             return (result.AudioDataLeft, result.AudioDataRight, result.RecordType);
         }
 
-        public static async Task InsertCommentAsync(long key, string text, string detectedLanguage, string responseOllamaText, string modelName, string schemeName, string conStringDBA)
+        public static async Task InsertCommentAsync(long? key, string text, string detectedLanguage, string responseOllamaText, string modelName, string schemeName, string conStringDBA)
         {
             using (var db = new OracleDbContext(new DbContextOptionsBuilder<OracleDbContext>().UseOracle(conStringDBA).Options))
             {

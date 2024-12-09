@@ -264,7 +264,7 @@
 
     // TODO "обнуление" Notice для какой-н БД
 
-    private async void ProcessOllamaAndUpdateEntityAsync(long entityId, string recognizedText, string languageCode, string detectedLanguage, string preText, string modelName, string schemeName, string conStringDBA, IConfiguration Configuration, SprSpeechTable entity, OracleDbContext db)
+    private async void ProcessOllamaAndUpdateEntityAsync(long? entityId, string recognizedText, string languageCode, string detectedLanguage, string preText, string modelName, string schemeName, string conStringDBA, IConfiguration Configuration, SprSpeechTable entity, OracleDbContext db)
     {
         // OLLAMA
         try

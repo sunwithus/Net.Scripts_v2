@@ -106,6 +106,7 @@ namespace MudBlazorWeb2.Components.Methods
         {
             _filePath = filePath;
             Files.CreateDirectory(Path.GetDirectoryName(_filePath));
+            if(!File.Exists(_filePath))File.Create(_filePath);
         }
 
         public void Log(string message)

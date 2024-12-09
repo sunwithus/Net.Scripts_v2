@@ -24,11 +24,10 @@
     <MudDivider />
     <br />
 
-    @if (settingsDb != null)
+    @if (SettingsDbList != null)
     {
-        <OracleConnectionSettings colorButton="@colorButton" OnSettingsChanged="OnSettingsChanged" settingsDb="@settingsDb" />
+        <OracleConnectionSettings colorButton="@colorButton" OnSettingsChanged="OnSettingsChanged" SettingsDbList="@SettingsDbList" FileSettingsDb="@FileSettingsDb" />
     }
-
 
     <MudText Style="display:flex; justify-content: space-between;">
         <MudText Style="width: 325px;">
@@ -40,7 +39,7 @@
 
     @if(!string.IsNullOrEmpty(operatorName))
     {
-        <LoadManyFilesFromFolder sourceName="@operatorName" settingsDb="@settingsDb" onlyAudioType="@true" colorButton="@colorButton" OnFinishLoading="HandleFilesLoaded" />
+        <LoadManyFilesFromFolder sourceName="@operatorName" SettingsDbList="@SettingsDbList" onlyAudioType="@true" colorButton="@colorButton" OnFinishLoading="HandleFilesLoaded" />
     }
     else
     {
@@ -74,16 +73,18 @@
     private string pathToSaveTempAudio = "";
     private string operatorName = "";
     private bool isFilesLoaded = false;
-    private SettingsDb settingsDb = null;
+    private List<SettingsDb> SettingsDbList = null;
+    private string FileSettingsDb = Path.Combine(AppContext.BaseDirectory, "settingsReplicator.json");
 
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadSettings(); // загрузка settingsDB (настройки БД, PreText, repl/makeWord)
+        SettingsDbList = await LoadSettings();
+        StateHasChanged();
 
         _logger = new FileLogger(Path.Combine(AppContext.BaseDirectory, "Logs/replicator.log"));
 
-        await base.OnInitializedAsync();
+        //await base.OnInitializedAsync();
 
         var baseUrl = Navigation.BaseUri;
         _hubConnection = new HubConnectionBuilder().WithUrl(baseUrl + "replicatorhub").Build();
@@ -91,7 +92,7 @@
         _hubConnection.On<string>("ReceiveMessage", async (message) =>
         {
             statusText += message + "<br />";
-            await StateHasChangedAsync();
+            await InvokeAsync(StateHasChanged);
         });
 
         if (_hubConnection?.State == HubConnectionState.Disconnected)
@@ -108,11 +109,6 @@
         }
     }
 
-    private async Task StateHasChangedAsync()
-    {
-        await InvokeAsync(StateHasChanged);
-    }
-
     public void Dispose()
     {
         _hubConnection.DisposeAsync().GetAwaiter().GetResult();
@@ -121,10 +117,8 @@
 
     private async Task OnSettingsChanged()
     {
-        await Task.Delay(1);
+        SettingsDbList = await LoadSettings();
         Console.WriteLine("Настройки подключения к БД для репликатора изменились");
-        await LoadSettings();
-        //settingsDB = SettingsService.GetSettings();
     }
 
     private void HandleOperatorSelected(string value)
@@ -140,15 +134,11 @@
         Console.WriteLine($"HandleFilesLoaded: Файлы загружены: {value}");
     }
 
-    private async Task LoadSettings()
+    private async Task<List<SettingsDb>> LoadSettings()
     {
-        string filePath = Path.Combine(AppContext.BaseDirectory, "settingsDb.json");
-        var doSettings = new SimpleJson<SettingsDb>(filePath);
-        await doSettings.LoadItemsAsync();
-
-        settingsDb = doSettings.GetItems().FirstOrDefault(x => x.AimType == "Replicator");
-        Console.WriteLine(settingsDb.ToString());
-        Console.WriteLine(settingsDb.User);
+        string json = await File.ReadAllTextAsync(FileSettingsDb);
+        var SettingsDbList = JsonSerializer.Deserialize<List<SettingsDb>>(json);
+        return SettingsDbList;
     }
 
 }

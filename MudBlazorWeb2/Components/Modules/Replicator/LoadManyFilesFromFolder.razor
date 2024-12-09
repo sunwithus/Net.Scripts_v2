@@ -47,7 +47,7 @@ else if (isVisibleFilesList)
     [Parameter]
     public string sourceName { get; set; } = "";
     [Parameter]
-    public SettingsDb settingsDb { get; set; }
+    public List<SettingsDb> SettingsDbList { get; set; }
     [Parameter]
     public bool onlyAudioType { get; set; } = true;
     [Parameter]
@@ -61,6 +61,7 @@ else if (isVisibleFilesList)
     private bool isLoading;
     private bool isVisibleFilesList = false;
     private decimal progressPercent;
+    private SettingsDb SettingsDb = null;
 
     private int filesPerBatch = 10; // Количество файлов на одну партию
 
@@ -128,21 +129,21 @@ else if (isVisibleFilesList)
 
     public async Task CreateJsonForBackgroungService (string pathToSaveTempAudio) 
     {
+        SettingsDb = SettingsDbList.FirstOrDefault(x => x.Selected == true);
         DataForBackgroungService DataForBack = new();
         DataForBack.PathToSaveTempAudio = pathToSaveTempAudio + "//";
         DataForBack.SourceName = sourceName;
-        DataForBack.DbType = settingsDb.DbType;
-        DataForBack.DbScheme = settingsDb.Scheme;
-        if (settingsDb.DbType == "Oracle")
+        DataForBack.DbType = SettingsDb.DbType;
+        DataForBack.Scheme = SettingsDb.Scheme;
+        if (SettingsDb.DbType == "Oracle")
         {
-            DataForBack.DbConnectionSettings = $"User Id={settingsDb.User};Password={settingsDb.Password};Data Source={settingsDb.ServerAddress}/sprutora;";
+            DataForBack.DbConnectionSettings = $"User Id={SettingsDb.User};Password={SettingsDb.Password};Data Source={SettingsDb.ServerAddress}/sprutora;";
         }
-        else if (settingsDb.DbType == "Postgres")
+        else if (SettingsDb.DbType == "Postgres")
         {
-            DataForBack.DbConnectionSettings = $"Host={settingsDb.ServerAddress};Database={settingsDb.Scheme};Username={settingsDb.User};Password={settingsDb.Password};";
+            DataForBack.DbConnectionSettings = $"Host={SettingsDb.ServerAddress};Database={SettingsDb.Scheme};Username={SettingsDb.User};Password={SettingsDb.Password};";
 
         }
-            
 
         string pathToJson = pathToSaveTempAudio + ".json";
     

@@ -26,7 +26,7 @@ builder.Services.AddHostedService<AiBackgroundService>();
 builder.Services.AddSingleton<StateService>();
 builder.Services.AddSingleton<StateService2>();
 //builder.Services.AddSingleton<ProgressService>();
-//builder.Services.AddSingleton<ReplSingletonService>(); //for old vervion
+builder.Services.AddSingleton<IDbContextFactory, DbContextFactory>();
 
 // SignalR
 builder.Services.AddSignalR(options =>

@@ -34,7 +34,7 @@
         </MudText>
     </MudText>
 
-    
+
 
     @if (speechData != null && speechData.Count > 0 && speechData.FirstOrDefault().Id == Id)
     {
@@ -52,7 +52,7 @@
             <RowTemplate >
                 <MudTd >@context.Id</MudTd>
                 <MudTd>@context.Datetime</MudTd>
-                <MudTd>@context.Duration.TrimStart('+').Trim('0').TrimEnd('.')</MudTd>
+                <MudTd>@context.Duration.ToString().TrimStart('+').Trim('0').TrimEnd('.')</MudTd>
                 <MudTd>@context.Talker</MudTd>
                 <MudTd>@context.Usernumber</MudTd>
                 <MudTd>
@@ -74,7 +74,7 @@
                 <MudTd>@context.Deviceid</MudTd>
             </RowTemplate>
         </MudTable>
-        
+
         try
         {
             string decodedComment = Encoding.GetEncoding("windows-1251").GetString(speechData.FirstOrDefault().Comment);
@@ -123,10 +123,11 @@
         var doSettings = new SimpleJson<SettingsDb>(filePath);
         await doSettings.LoadItemsAsync();
 
-        var settingsDb = doSettings.GetItems().FirstOrDefault(x => x.AimType == "MakingWord");
-        
+        var settingsDb = doSettings.GetItems().FirstOrDefault();
+
         //settingsDB = SettingsService.GetSettings();
-        Scheme = settingsDb.Scheme;
+        //Scheme = settingsDb.Scheme;
+        Scheme = "test";
         conStringDBA = $"User Id={settingsDb.User};Password={settingsDb.Password};Data Source={settingsDb.ServerAddress};";
         await Task.Delay(1);
         StateHasChanged();
@@ -150,7 +151,7 @@
             speechData = await DbQuery.GetSpeechDataByIdAsync(Id, Scheme, conStringDBA);
             ///////////////
             var ind = speechData.FirstOrDefault();
-            string? durationString = ind.Duration;
+            string? durationString = ind.Duration.ToString();
             if (durationString.StartsWith("+00"))
             {
                 durationString = durationString.Substring(3); // Удалить "+00" с начала

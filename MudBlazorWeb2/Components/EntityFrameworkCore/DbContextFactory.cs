@@ -5,26 +5,39 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace MudBlazorWeb2.Components.EntityFrameworkCore
 {
-    // Класс фабрики для создания экземпляров DbContext, используя dependency injection.
-    public class DbContextFactory<TContext> : IDbContextFactory<TContext> where TContext : DbContext
+    public interface IDbContextFactory
     {
-        // Приватное поле для хранения провайдера услуг.
-        private readonly IServiceProvider _provider;
-
-        // Конструктор, принимающий провайдер услуг.
-        public DbContextFactory(IServiceProvider provider)
-        {
-            // Инициализация провайдера услуг.
-            _provider = provider;
-        }
-
-        // Метод для создания экземпляра DbContext.
-        public TContext CreateDbContext()
-        {
-            // Создание экземпляра TContext с помощью ActivatorUtilities.CreateInstance, используя провайдер услуг.
-            // Это позволяет создавать экземпляры DbContext на demande, избегая проблем с параллельными операциями и конкуренцией.
-            return ActivatorUtilities.CreateInstance<TContext>(_provider);
-        }
-
+        BaseDbContext CreateDbContext(string dbType, string connectionString, string scheme = null);
     }
+    public class DbContextFactory : IDbContextFactory
+    {
+        public BaseDbContext CreateDbContext(string dbType, string connectionString, string scheme = null)
+        {
+            if (dbType == "Oracle")
+            {
+                var optionsBuilder = new DbContextOptionsBuilder<OracleDbContext>();
+                optionsBuilder.UseOracle(connectionString);
+                var oracleContext = new OracleDbContext(optionsBuilder.Options);
+                if (!string.IsNullOrEmpty(scheme))
+                {
+                    oracleContext.Database.OpenConnectionAsync().Wait();
+                    oracleContext.Database.ExecuteSqlRawAsync($"ALTER SESSION SET CURRENT_SCHEMA = {scheme}").Wait();
+                }
+
+                return oracleContext;
+            }
+            else if (dbType == "Postgres")
+            {
+                var optionsBuilder = new DbContextOptionsBuilder<PostgresDbContext>();
+                optionsBuilder.UseNpgsql(connectionString);
+
+                return new PostgresDbContext(optionsBuilder.Options);
+            }
+            else
+            {
+                throw new NotSupportedException("Unsupported database type");
+            }
+        }
+    }
+
 }

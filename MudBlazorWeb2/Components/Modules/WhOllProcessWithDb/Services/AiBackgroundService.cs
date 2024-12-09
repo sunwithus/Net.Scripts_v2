@@ -36,6 +36,8 @@ public class AiBackgroundService : BackgroundService
             try
             {
                 await AiProcessDatabaseAsync(stoppingToken);
+                
+                Console.WriteLine("AiBackgroundService...");
             }
             catch (Exception ex)
             {

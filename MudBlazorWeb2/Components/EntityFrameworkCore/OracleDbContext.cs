@@ -1,22 +1,28 @@
-﻿//InterbaseDbContext.cs
+﻿//OracleDbContext.cs
 
 using Microsoft.EntityFrameworkCore;
+using MudBlazorWeb2.Components.EntityFrameworkCore;
 using MudBlazorWeb2.Components.EntityFrameworkCore.Sprutora;
 
 namespace MudBlazorWeb2.Components.EntityFrameworkCore
 {
     // Определение контекста базы данных для работы с Entity Framework Core
-    public class OracleDbContext : DbContext
+    public class OracleDbContext : BaseDbContext
     {
         public OracleDbContext(DbContextOptions<OracleDbContext> options) : base(options)
         {
         }
 
         // Определение DbSet - коллекций таблиц базы данных
-        public virtual DbSet<SprSpeechTable> SprSpeechTables { get; set; }
-        public virtual DbSet<SprSpData1Table> SprSpData1Tables { get; set; }
-        public virtual DbSet<SprSpCommentTable> SprSpCommentTables { get; set; }
-
+        /*
+        public override DbSet<SPR_SPEECH_TABLE> SprSpeechTables { get; set; }
+        public override DbSet<SPR_SP_DATA_1_TABLE> SprSpData1Tables { get; set; }
+        public override DbSet<SPR_SP_COMMENT_TABLE> SprSpCommentTables { get; set; }
+        */
+        public override DbSet<SprSpeechTable> SprSpeechTables { get; set; }
+        public override DbSet<SprSpData1Table> SprSpData1Tables { get; set; }
+        public override DbSet<SprSpCommentTable> SprSpCommentTables { get; set; }
+        
         public static DbContextOptionsBuilder<OracleDbContext> ConfigureOptionsBuilder(string connectionString)
         {
             var optionsBuilder = new DbContextOptionsBuilder<OracleDbContext>();

@@ -5,7 +5,8 @@ namespace MudBlazorWeb2.Components.Modules.MakingWord
     {
         public long? Id { get; set; }
         public string? Deviceid { get; set; }
-        public string? Duration { get; set; }
+        public TimeSpan? Duration { get; set; }
+        //public string? Duration { get; set; }
         public DateTime? Datetime { get; set; }
         public string? Belong { get; set; }
         public string? Sourcename { get; set; }

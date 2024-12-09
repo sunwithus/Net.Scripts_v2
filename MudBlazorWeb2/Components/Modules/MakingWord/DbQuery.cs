@@ -23,9 +23,10 @@ namespace MudBlazorWeb2.Components.Modules.MakingWord
 
                 var speechData = speechDataList?.Select(speech => new SpeechData
                 {
+                    
                     Id = speech.SInckey,
                     Deviceid = speech.SDeviceid,
-                    Duration = speech.SDuration,
+                    //Duration = speech.SDuration.ToString(),
                     Datetime = speech.SDatetime,
                     Belong = speech.SBelong,
                     Sourcename = speech.SSourcename,
