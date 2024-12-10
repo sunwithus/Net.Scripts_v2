@@ -26,12 +26,12 @@
 
     @if (SettingsDbList != null)
     {
-        <OracleConnectionSettings colorButton="@colorButton" OnSettingsChanged="OnSettingsChanged" SettingsDbList="@SettingsDbList" FileSettingsDb="@FileSettingsDb" />
+        <ConnectionSettings colorButton="@colorButton" OnSettingsChanged="OnSettingsChanged" SettingsDbList="@SettingsDbList" FileSettingsDb="@FileSettingsDb" />
     }
 
     <MudText Style="display:flex; justify-content: space-between;">
         <MudText Style="width: 325px;">
-            <OracleChooseOperator colorButton="@colorButton" OnOperatorSelected="HandleOperatorSelected" />
+            <ChooseOperator colorButton="@colorButton" OnOperatorSelected="HandleOperatorSelected" />
         </MudText>
         <LogContent />
     </MudText>
@@ -91,7 +91,7 @@
 
         _hubConnection.On<string>("ReceiveMessage", async (message) =>
         {
-            statusText += message + "<br />";
+            statusText = message + "<br />" + statusText;
             await InvokeAsync(StateHasChanged);
         });
 

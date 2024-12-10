@@ -12,13 +12,6 @@ namespace MudBlazorWeb2.Components.EntityFrameworkCore
         public OracleDbContext(DbContextOptions<OracleDbContext> options) : base(options)
         {
         }
-
-        // Определение DbSet - коллекций таблиц базы данных
-        /*
-        public override DbSet<SPR_SPEECH_TABLE> SprSpeechTables { get; set; }
-        public override DbSet<SPR_SP_DATA_1_TABLE> SprSpData1Tables { get; set; }
-        public override DbSet<SPR_SP_COMMENT_TABLE> SprSpCommentTables { get; set; }
-        */
         public override DbSet<SprSpeechTable> SprSpeechTables { get; set; }
         public override DbSet<SprSpData1Table> SprSpData1Tables { get; set; }
         public override DbSet<SprSpCommentTable> SprSpCommentTables { get; set; }
@@ -32,7 +25,7 @@ namespace MudBlazorWeb2.Components.EntityFrameworkCore
                 providerOptions.UseRelationalNulls(true);
                 providerOptions.MinBatchSize(2);
             })
-            .EnableDetailedErrors(false)
+            .EnableDetailedErrors(true)
             .EnableSensitiveDataLogging(false)
             .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
             return optionsBuilder;
@@ -57,6 +50,9 @@ namespace MudBlazorWeb2.Components.EntityFrameworkCore
             // Сопоставляем сущность SPR_SP_COMMENT_TABLE с таблицей "SPR_SP_COMMENT_TABLE"
             modelBuilder.Entity<SprSpCommentTable>().ToTable("SPR_SP_COMMENT_TABLE");
             //.Property(b=>b.SComment).HasColumnType("BLOB");
+
+            modelBuilder.Entity<SprSpeechTable>().Ignore(s => s.SprSpData1Tables);
+            modelBuilder.Entity<SprSpData1Table>().Ignore(s => s.SInckeyNavigation);
 
             // Вызов базовой реализации метода
             base.OnModelCreating(modelBuilder);

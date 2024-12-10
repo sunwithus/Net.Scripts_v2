@@ -16,7 +16,7 @@
     <MudDivider />
     <br />
 
-    <OracleConnectionSettings colorButton="@colorTag" OnSettingsChanged="OnSettingsChanged" SettingsDb="@SettingsDb" />
+    <ConnectionSettings colorButton="@colorTag" OnSettingsChanged="OnSettingsChanged" SettingsDbList="@SettingsDbList" FileSettingsDb="@FileSettingsDb" />
 
     <MudText Style="display: flex; justify-content=start;">
         <MudText Style="display: flex; align-items: center;">
@@ -99,10 +99,11 @@
     bool IsSkeleton = false;
 
     MudBlazor.Color colorTag = Color.Success;
-    SettingsDb SettingsDb = null;
+    List<SettingsDb> SettingsDbList = null;
 
     private string conStringDBA = "";
     private string Scheme = "";
+    private string FileSettingsDb = "";
     private string message = ""; // Сообщение об ошибке
     private List<SpeechData> speechData = null;
 
@@ -128,7 +129,7 @@
         //settingsDB = SettingsService.GetSettings();
         //Scheme = settingsDb.Scheme;
         Scheme = "test";
-        conStringDBA = $"User Id={settingsDb.User};Password={settingsDb.Password};Data Source={settingsDb.ServerAddress};";
+        conStringDBA = "";//$"User Id={settingsDb.User};Password={settingsDb.Password};Data Source={settingsDb.ServerAddress};";
         await Task.Delay(1);
         StateHasChanged();
     }

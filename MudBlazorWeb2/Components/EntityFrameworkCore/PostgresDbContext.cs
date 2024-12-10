@@ -16,15 +16,9 @@ public partial class PostgresDbContext : BaseDbContext
         : base(options)
     {
     }
-    /*
-    public override DbSet<SPR_SPEECH_TABLE> SprSpeechTables { get; set; }
-    public override DbSet<SPR_SP_DATA_1_TABLE> SprSpData1Tables { get; set; }
-    public override DbSet<SPR_SP_COMMENT_TABLE> SprSpCommentTables { get; set; }
-    */
     public override DbSet<SprSpeechTable> SprSpeechTables { get; set; }
     public override DbSet<SprSpData1Table> SprSpData1Tables { get; set; }
     public override DbSet<SprSpCommentTable> SprSpCommentTables { get; set; }
-
 
     public static DbContextOptionsBuilder<PostgresDbContext> ConfigureOptionsBuilder(string connectionString)
     {
@@ -82,12 +76,12 @@ public partial class PostgresDbContext : BaseDbContext
                 .HasMaxLength(30)
                 .HasColumnName("s_recordtype");
             entity.Property(e => e.SRspeech).HasColumnName("s_rspeech");
-            /**/
+            
             entity.HasOne(d => d.SInckeyNavigation).WithMany(p => p.SprSpData1Tables)
                 .HasForeignKey(d => d.SInckey)
                 .OnDelete(DeleteBehavior.ClientSetNull) // or other appropriate delete behavior
                 .HasConstraintName("spdt1_inckey");
-
+            
         });
 
 

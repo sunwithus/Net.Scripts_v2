@@ -1,4 +1,4 @@
-﻿@*//OracleConnectionSettings.razor*@
+﻿@*//ConnectionSettings.razor*@
 
 @using Microsoft.EntityFrameworkCore
 @using System.Text.Json
@@ -23,8 +23,6 @@
     <MudText>
         <MudButton Style="top:-5px;" Variant="Variant.Outlined" Color="@colorButton" OnClick="@(e => ToggleOverlay(true))">Настройки БД</MudButton>
         <MudOverlay Visible="isVisible" DarkBackground="true" Absolute="false">
-
-
 
             <EditForm Model="@SettingsDb" style="width:500px">
 
@@ -152,6 +150,8 @@
     {
         await OnSettingsChanged.InvokeAsync(); //оповещение родительского элемента, снова загрузит настройки
         await ToggleOverlay(false);
+        SettingsDb = SettingsDbList.FirstOrDefault(x => x.Selected == true);
+        SelectedDb = SettingsDb.DbType;
     }
 
     public async Task ToggleOverlay(bool value)
@@ -171,6 +171,7 @@
             if (SettingsDb.DbType == "Oracle")
             {
                 conStringDBA = $"User Id={SettingsDb.User};Password={SettingsDb.Password};Data Source={SettingsDb.ServerAddress}/sprutora;";
+
             }
             else if (SettingsDb.DbType == "Postgres")
             {
@@ -178,7 +179,8 @@
             }
             if (conStringDBA != "")
             {
-                _context = DbContextFactory.CreateDbContext(SettingsDb.DbType, conStringDBA, SettingsDb.Scheme);
+                _context = await DbContextFactory.CreateDbContext(SettingsDb.DbType, conStringDBA, SettingsDb.Scheme);
+                if (SettingsDb.DbType == "Oracle") await _context.Database.ExecuteSqlRawAsync($"ALTER SESSION SET CURRENT_SCHEMA = {SettingsDb.Scheme}");
                 long? maxKey = await _context.SprSpeechTables.MaxAsync(x => x.SInckey) ?? 0;
                 message += $"Соединение с {SettingsDb.DbType} установлено!\n";
                 message += "Схема: " + SettingsDb.Scheme + " выбрана! \nМаксимальный идентификатор: " + maxKey + ".";
@@ -206,17 +208,4 @@
             StateHasChanged();
         }
     }
-    /*var optionsBuilder = PostgresDbContext.ConfigureOptionsBuilder(conStringDBA);
-    using (var context = new PostgresDbContext(optionsBuilder.Options))
-    {
-    await context.Database.OpenConnectionAsync();
-    if (await context.Database.CanConnectAsync())
-        message += $"Соединение с {SettingsDb.DbType} установлено!\n";
-
-    long? maxKey = await context.SprSpeechTables.MaxAsync(x => x.SInckey);
-        if (maxKey > 0)
-        message += "Схема: " + SettingsDb.Scheme + " выбрана! \nМаксимальный идентификатор: " + maxKey + ".";
-
-    await context.Database.CloseConnectionAsync();
-    }*/
 }

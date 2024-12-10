@@ -57,15 +57,6 @@ public class ReplBackgroundService : BackgroundService
             return;
         }
 
-        //Test ///////////////////////////////////////////
-        /*
-        string conStringDBA = $"Host=localhost;Database=test;Username=postgres;Password=postgres;";
-        using var context = _dbContextFactory.CreateDbContext("Postgres", conStringDBA, "test");
-        var maxKey = context.SprSpData1Tables.Max(x => x.SInckey);
-        Console.WriteLine("maxKey: " + maxKey);
-        */
-        ///////////////////////////////////////////
-
         var JsonFiles = Directory.EnumerateFiles(pathToAudio, "*.json");
         if (!JsonFiles.Any())
         {
@@ -75,10 +66,6 @@ public class ReplBackgroundService : BackgroundService
 
         foreach (var file in JsonFiles) 
         {
-            //var jsonData = new SimpleJson<DataForBackgroungService>(file);
-            //await jsonData.LoadItemsAsync();
-            //var paramsRepl = jsonData.GetItems().FirstOrDefault();
-
             var json = await File.ReadAllTextAsync(file);
             DataForBackgroungService JsonData = JsonSerializer.Deserialize<DataForBackgroungService>(json);
             var paramsRepl = JsonData;
@@ -93,24 +80,7 @@ public class ReplBackgroundService : BackgroundService
 
     private async Task ReplicateAudioFromDirectory(DataForBackgroungService paramsRepl, CancellationToken cancellationToken)
     {
-        /*if (conStringDBA != "")
-        {
-            _context = DbContextFactory.CreateDbContext(SettingsDb.DbType, conStringDBA, SettingsDb.Scheme);
-            message += $"Соединение с {SettingsDb.DbType} установлено!\n";
-            long? maxKey = await _context.SprSpeechTables.MaxAsync(x => x.SInckey);
-            if (maxKey > 0)
-                message += "Схема: " + SettingsDb.Scheme + " выбрана! \nМаксимальный идентификатор: " + maxKey + ".";
-            await _context.Database.CloseConnectionAsync();
-        }*/
-
-        //paramsRepl.DbType
-        var optionsBuilder = OracleDbContext.ConfigureOptionsBuilder(paramsRepl.DbConnectionSettings);
-        using var context = _dbContextFactory.CreateDbContext(paramsRepl.DbType, paramsRepl.DbConnectionSettings, paramsRepl.Scheme);
-        //using var context = new OracleDbContext(optionsBuilder.Options);
-
-        //string scheme = paramsRepl.DbScheme;
-        //await context.Database.OpenConnectionAsync();
-        //await context.Database.ExecuteSqlRawAsync($"ALTER SESSION SET CURRENT_SCHEMA = {scheme}");
+        using var context = await _dbContextFactory.CreateDbContext(paramsRepl.DbType, paramsRepl.DbConnectionSettings, paramsRepl.Scheme);
         
         var filesAudio = Directory.EnumerateFiles(paramsRepl.PathToSaveTempAudio);
         if (!filesAudio.Any())
@@ -118,23 +88,24 @@ public class ReplBackgroundService : BackgroundService
             Console.WriteLine("Нет аудио файлов для репликации.");
             return;
         }
-
+        int count = 0;
         foreach (var filePath in filesAudio)
         {
             try
             {
                 await ProcessSingleAudio(context, filePath, paramsRepl.SourceName);
                 Console.WriteLine($"Файл обработан: {filePath}");
+                count++;
                 //File.Delete(filePath);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Ошибка при обработке файла {filePath}: {ex.Message}");
                 await _hubContext.Clients.All.SendAsync("ReceiveMessage", $"❌ Ошибка при обработке файла {filePath}: {ex.Message}", cancellationToken);
-                throw;
+                //throw;
             }
         }
-        _fileLogger.Log($"Выполнено. Источник: {paramsRepl.SourceName}, схема БД: {paramsRepl.Scheme} Записано {filesAudio.Count()} файлов.");
+        _fileLogger.Log($"Выполнено {count}/{filesAudio.Count()}. Источник: {paramsRepl.SourceName}, БД: {paramsRepl.DbType}/{paramsRepl.Scheme}.");
     }
 
     private async Task ProcessSingleAudio(BaseDbContext context, string filePath, string sourceName)
@@ -157,7 +128,7 @@ public class ReplBackgroundService : BackgroundService
 
     private SprSpeechTable CreateSpeechTableEntity(Parse.ParsedIdenties fileData, int durationOfWav, string codec, long maxKey, string sourceName)
     {
-        string durationString = string.Format("+00 {0:D2}:{1:D2}:{2:D2}.000000", durationOfWav / 3600, (durationOfWav % 3600) / 60, durationOfWav % 60);
+        //string durationString = string.Format("+00 {0:D2}:{1:D2}:{2:D2}.000000", durationOfWav / 3600, (durationOfWav % 3600) / 60, durationOfWav % 60);
         TimeSpan durationTimeSpan = TimeSpan.FromSeconds(durationOfWav);
 
         return new SprSpeechTable

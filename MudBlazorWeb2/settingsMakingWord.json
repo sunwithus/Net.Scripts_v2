@@ -1,14 +1,15 @@
 [
   {
-    "AimType": "Replicator",
-    "DbType": "Postgres",
-    "User": "postgres",
-    "Password": "postgres",
+    "Selected ": true,
+    "DbType": "Oracle",
+    "User": "sysdba",
+    "Password": "masterkey",
     "ServerAddress": "localhost",
     "Scheme": ""
   },
+
   {
-    "AimType": "MakingWord",
+    "Selected ": false,
     "DbType": "Postgres",
     "User": "sysdba",
     "Password": "masterkey",
