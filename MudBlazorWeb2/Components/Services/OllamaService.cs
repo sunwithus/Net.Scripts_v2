@@ -46,7 +46,7 @@ public class OllamaService
     public async Task<(string, int)> OllamaTranslate(string recognizedText, string modelName, string languageCode, string detectedLanguage, IConfiguration Configuration)
     {
         //Todo
-        string preTextToTranslate = "SettingsService.GetSettings().PreTextTranslate";
+        string preTextToTranslate = "Переведи на русский язык: ";
         (string translatedText, int durationOllama) = await SendTextForAnalysisAsync(preTextToTranslate, recognizedText, modelName, Configuration);
         Console.WriteLine();
         ConsoleCol.WriteLine("OllamaTranslate => Длительность выполнения: " + durationOllama + " sec.", ConsoleColor.Blue);

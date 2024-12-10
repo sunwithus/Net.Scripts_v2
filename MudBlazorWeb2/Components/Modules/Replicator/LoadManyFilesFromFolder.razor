@@ -135,15 +135,7 @@ else if (isVisibleFilesList)
         DataForBack.SourceName = sourceName;
         DataForBack.DbType = SettingsDb.DbType;
         DataForBack.Scheme = SettingsDb.Scheme;
-        if (SettingsDb.DbType == "Oracle")
-        {
-            DataForBack.DbConnectionSettings = $"User Id={SettingsDb.User};Password={SettingsDb.Password};Data Source={SettingsDb.ServerAddress}/sprutora;";
-        }
-        else if (SettingsDb.DbType == "Postgres")
-        {
-            DataForBack.DbConnectionSettings = $"Host={SettingsDb.ServerAddress};Database={SettingsDb.Scheme};Username={SettingsDb.User};Password={SettingsDb.Password};";
-
-        }
+        DataForBack.DbConnectionSettings = SelectDb.ConStringDBA(SettingsDb);
 
         string pathToJson = pathToSaveTempAudio + ".json";
     

@@ -143,7 +143,7 @@
         currentConnection = $"{SettingsDb.DbType} => {SettingsDb.ServerAddress} / {SettingsDb.Scheme}";
         await OnSettingsChanged.InvokeAsync(); //оповещение родительского элемента о сохранении настроек
         await ToggleOverlay(false);
-        
+
     }
 
     private async void CancelButtonClick()
@@ -164,23 +164,12 @@
 
     private async Task CheckDatabaseConnection()
     {
-        string conStringDBA = "";
-
         try
         {
-            if (SettingsDb.DbType == "Oracle")
-            {
-                conStringDBA = $"User Id={SettingsDb.User};Password={SettingsDb.Password};Data Source={SettingsDb.ServerAddress}/sprutora;";
-
-            }
-            else if (SettingsDb.DbType == "Postgres")
-            {
-                conStringDBA = $"Host={SettingsDb.ServerAddress};Database={SettingsDb.Scheme};Username={SettingsDb.User};Password={SettingsDb.Password};";
-            }
+            string conStringDBA = SelectDb.ConStringDBA(SettingsDb);
             if (conStringDBA != "")
             {
                 _context = await DbContextFactory.CreateDbContext(SettingsDb.DbType, conStringDBA, SettingsDb.Scheme);
-                if (SettingsDb.DbType == "Oracle") await _context.Database.ExecuteSqlRawAsync($"ALTER SESSION SET CURRENT_SCHEMA = {SettingsDb.Scheme}");
                 long? maxKey = await _context.SprSpeechTables.MaxAsync(x => x.SInckey) ?? 0;
                 message += $"Соединение с {SettingsDb.DbType} установлено!\n";
                 message += "Схема: " + SettingsDb.Scheme + " выбрана! \nМаксимальный идентификатор: " + maxKey + ".";

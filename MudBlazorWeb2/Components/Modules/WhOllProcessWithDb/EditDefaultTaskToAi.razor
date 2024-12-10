@@ -26,23 +26,24 @@
 
     private string preTextValue = string.Empty; // есть ли в тексте явная информация о нарушениях законодательства Российской Федерации, например, взятках, кражах, незаконной миграции, обороте наркотиков, экономических преступлениях? Обязательно дай ответ только одним символом - цифрой 2 или 1 или 0, без слова Ответ (т.е. цифрой 2 - если очень серьёзное нарушение, 1 - если есть нарушение и цифрой 0 - если нарушений нет. Если не уверен - отвечай цифрой 0. Не отвечай цифрой 2 и 1, если текст непонятен, абсурден или бесструктурен). После кратко опиши о чём этот текст, ответ должен быть только на русском языке. Вот текст:
     private bool isVisible = false;
+    private string FilePretext = Path.Combine(AppContext.BaseDirectory, "pretextDefault.ini");
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        //preTextValue = SettingsService.GetSetting("PreText");
-        preTextValue = "SettingsService.GetSettings().PreTextDefault";
+        preTextValue = await IniFile.ReadFile(FilePretext);
     }
-    
+
     private async Task ApplyButtonClick()
     {
-        //await SettingsService.UpdateSettingAsync("PreText", preTextValue);
+        await IniFile.WriteFile(FilePretext, preTextValue);
         ToggleOverlay(false);
         await OnApplyButtonClick.InvokeAsync();
     }
 
-    private void CancelButtonClick()
+    private async void CancelButtonClick()
     {
         ToggleOverlay(false);
+        preTextValue = await IniFile.ReadFile(FilePretext);
     }
 
     public void ToggleOverlay(bool value)

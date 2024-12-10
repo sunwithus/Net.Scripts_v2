@@ -27,7 +27,7 @@ namespace MudBlazorWeb2.Components.Modules.WhOllProcessWithDb
             return (hours * 3600 + minutes * 60 + seconds);
         }
 
-        public static async Task<List<SprSpeechTable>> GetSpeechRecords(DateTime StartDate, DateTime EndDate, string TimeInterval, OracleDbContext db, List<string> _ignoreRecordType)
+        public static async Task<List<SprSpeechTable>> GetSpeechRecords(DateTime StartDate, DateTime EndDate, string TimeInterval, BaseDbContext db, List<string> _ignoreRecordType)
         {
             var parameters = new OracleParameter[]
             {
@@ -62,7 +62,7 @@ namespace MudBlazorWeb2.Components.Modules.WhOllProcessWithDb
             */
         }
 
-        public static async Task<(byte[]? audioDataLeft, byte[]? audioDataRight, string? recordType)> GetAudioDataAsync(long? key, OracleDbContext db)
+        public static async Task<(byte[]? audioDataLeft, byte[]? audioDataRight, string? recordType)> GetAudioDataAsync(long? key, BaseDbContext db)
         {
             await Task.Delay(1);
             var result = db.SprSpData1Tables
@@ -80,13 +80,8 @@ namespace MudBlazorWeb2.Components.Modules.WhOllProcessWithDb
             return (result.AudioDataLeft, result.AudioDataRight, result.RecordType);
         }
 
-        public static async Task InsertCommentAsync(long? key, string text, string detectedLanguage, string responseOllamaText, string modelName, string schemeName, string conStringDBA)
+        public static async Task InsertCommentAsync(long? key, string text, string detectedLanguage, string responseOllamaText, string modelName, BaseDbContext db)
         {
-            using (var db = new OracleDbContext(new DbContextOptionsBuilder<OracleDbContext>().UseOracle(conStringDBA).Options))
-            {
-                await db.Database.OpenConnectionAsync();
-                await db.Database.ExecuteSqlRawAsync($"ALTER SESSION SET CURRENT_SCHEMA = {schemeName}");
-                // ORACLE => update entity
                 // Register the encoding provider
                 Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
                 var sb = new StringBuilder();
@@ -159,32 +154,26 @@ namespace MudBlazorWeb2.Components.Modules.WhOllProcessWithDb
                     throw;
                 }
 
-                await db.Database.CloseConnectionAsync();
-            }
+                //await db.Database.CloseConnectionAsync();
             
         }
 
-        public static async Task UpdateNoticeValueAsync(long? key, string schemeName, string conStringDBA, string? value = null)
+        public static async Task UpdateNoticeValueAsync(long? key, BaseDbContext db, string? value = null)
         {
-            using (var db = new OracleDbContext(new DbContextOptionsBuilder<OracleDbContext>().UseOracle(conStringDBA).Options))
+            try
             {
-                await db.Database.OpenConnectionAsync();
-                await db.Database.ExecuteSqlRawAsync($"ALTER SESSION SET CURRENT_SCHEMA = {schemeName}");
-                try
+                var speech = db.SprSpeechTables.Where(c => c.SInckey == key).AsEnumerable().FirstOrDefault();
+                if (speech != null)
                 {
-                    var speech = db.SprSpeechTables.Where(c => c.SInckey == key).AsEnumerable().FirstOrDefault();
-                    if (speech != null)
-                    {
-                        speech.SNotice = value;
-                    }
-                    await db.SaveChangesAsync();
+                    speech.SNotice = value;
                 }
-                catch (Exception ex)
-                {
-                    ConsoleCol.WriteLine("Ошибка в InsertNullToNoticeAsync => " + ex.Message, ConsoleColor.Red);
-                }
-                await db.Database.CloseConnectionAsync();
+                await db.SaveChangesAsync();
             }
+            catch (Exception ex)
+            {
+                ConsoleCol.WriteLine("Ошибка в InsertNullToNoticeAsync => " + ex.Message, ConsoleColor.Red);
+            }
+            //await db.Database.CloseConnectionAsync();
         }
 
     }

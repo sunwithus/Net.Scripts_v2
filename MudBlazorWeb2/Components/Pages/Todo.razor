@@ -16,13 +16,14 @@
 
 @inject IDialogService DialogService
 @inject ISnackbar SnackbarService
+@inject IDbContextFactory DbContextFactory
 
 @inherits TodoListBase
 
 <PageTitle>🚀 WhisperOllama </PageTitle>
 
 <MudContainer>
-    <MudText Typo="Typo.h5" Style="display:flex; justify-content:space-between;">Обработка аудиоданных Oracle => 💬 + 🚀 <MudText Style="height:30px;"><EditDefaultTaskToAi colorButton="@colorTag" OnApplyButtonClick="LoadSettings" /></MudText></MudText>
+    <MudText Typo="Typo.h5" Style="display:flex; justify-content:space-between;">Обработка базы аудиоданных => 💬 + 🚀 <MudText Style="height:30px;"><EditDefaultTaskToAi colorButton="@colorTag" OnApplyButtonClick="LoadSettings" /></MudText></MudText>
     <MudDivider />
     <br />
 
@@ -57,10 +58,11 @@
                     <MudPaper Style="position: relative;">
                         <MudTextField T="string" @bind-Value="todo.Title" Variant="Variant.Text" Margin="Margin.Dense" />
                         <MudText Style="display: flex;">
-                            <MudTextField @bind-Value="todo.User" Label="User" Variant="Variant.Outlined" Margin="Margin.Dense" /><MudText>&nbsp;</MudText>
-                            <MudTextField @bind-Value="todo.Password" Label="Password" Variant="Variant.Outlined" Margin="Margin.Dense" /><MudText>&nbsp;</MudText>
+                            <MudTextField @bind-Value="todo.DbType" Label="DbType" Variant="Variant.Outlined" Margin="Margin.Dense" /><MudText>&nbsp;</MudText>
                             <MudTextField @bind-Value="todo.ServerAddress" Label="ServerAddress" Variant="Variant.Outlined" Margin="Margin.Dense" /><MudText>&nbsp;</MudText>
                             <MudTextField @bind-Value="todo.Scheme" Label="Scheme" Variant="Variant.Outlined" Margin="Margin.Dense" /><MudText>&nbsp;</MudText>
+                            <MudTextField @bind-Value="todo.User" Label="User" Variant="Variant.Outlined" Margin="Margin.Dense" /><MudText>&nbsp;</MudText>
+                            <MudTextField @bind-Value="todo.Password" Label="Password" Variant="Variant.Outlined" Margin="Margin.Dense" /><MudText>&nbsp;</MudText>
                             <MudButton Size="Size.Small" Color="@colorTag" OnClick="@(async () => await TestConnection(todo))">Тест</MudButton>
                         </MudText>
                         <MudTextField T="DateTime" Format="s" Label="От даты:" InputType="InputType.DateTimeLocal" @bind-Value="@todo.StartDateTime" />
@@ -105,7 +107,7 @@
 
 <style>
     .bg-custom-class {
-        backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
     }
 </style>
 
@@ -126,7 +128,7 @@
         _hubConnection = new HubConnectionBuilder().WithUrl(NavigationManager.BaseUri + "todohub").Build();
         _hubConnection.On<TodoItem>("UpdateTodos", (todo) =>
         {
-            
+
             var existingTodo = todos.FirstOrDefault(t => t.Id == todo.Id);
             if (existingTodo != null)
             {
@@ -147,7 +149,7 @@
 
                 existingTodo.IsCyclic = todo.IsCyclic;
                 existingTodo.CycleInterval = todo.CycleInterval;
-                
+
                 existingTodo.DbType = todo.DbType;
                 existingTodo.User = todo.User;
                 existingTodo.Password = todo.Password;
@@ -160,7 +162,7 @@
             InvokeAsync(StateHasChanged);
         });
         await _hubConnection.StartAsync();
-        
+
     }
 
     public void Dispose()
@@ -219,16 +221,38 @@
 
     protected async Task TestConnection(TodoItem todo)
     {
-        var (result, status) = await DatabaseConnection.Test(todo);
-        string relultString = result ? "Соединение установлено!" : "Соединение не установлено!";
-        SnackbarService.Configuration.PositionClass = Defaults.Classes.Position.BottomRight;
-        SnackbarService.Configuration.VisibleStateDuration = 1000;
-        SnackbarService.Configuration.PreventDuplicates = true;
-        // 
-        // SnackbarService.Add("<span>" + relultString + "<br />" + status + "</span>", key: "mudblazor");
-        SnackbarService.Add(@<span>@relultString<br />@status</span>, key: "mudblazor");
-    }
+        string conStringDBA = SelectDb.ConStringDBA(todo);
+        string relultString = "";
+        string status = "";
+        if (!string.IsNullOrEmpty(conStringDBA))
+        {
+            try
+            {
+                using var context = await DbContextFactory.CreateDbContext(todo.DbType, conStringDBA, todo.Scheme);
+                (bool result, status) = await DatabaseConnection.Test(context);
+                relultString = result ? "Соединение установлено!" : "Соединение не установлено!";
+            }
+            catch (NotSupportedException ex) 
+            {
+                relultString =  "Тип БД не поддерживается.";
+                status = ex.Message;
+            }
+            catch (Exception ex)
+            {
+                relultString = "Неизвестная ошибка.";
+                status = ex.Message;
+            }
 
+            SnackbarService.Configuration.PositionClass = Defaults.Classes.Position.BottomRight;
+            SnackbarService.Configuration.VisibleStateDuration = 1000;
+            SnackbarService.Configuration.PreventDuplicates = true;
+            SnackbarService.Add(@<span>@relultString<br />@status</span>, key: "mudblazor");
+        }
+        else
+        {
+            ConsoleCol.WriteLine("TestConnection => conStringDBA: " + conStringDBA, ConsoleColor.Red);
+        }
+    }
 
     private async Task LoadSettings()
     {

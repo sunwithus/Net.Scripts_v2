@@ -58,7 +58,7 @@ namespace MudBlazorWeb2.Components.EntityFrameworkCore.Sprutora
         public string? SBelong { get; set; }
 
         [Column("S_SOURCENAME")] //Имя источника - оператор
-        public string? SSourcename { get; set; }
+        public string? SSourcename { get; set; } = "";
 
         [Column("S_NOTICE")] //примечение
         public string? SNotice { get; set; }

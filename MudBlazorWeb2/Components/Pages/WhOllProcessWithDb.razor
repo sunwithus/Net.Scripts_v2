@@ -14,13 +14,14 @@
 @using MudBlazorWeb2.Components.Modules._Shared
 @using MudBlazorWeb2.Components.Modules.WhOllProcessWithDb
 @using MudBlazorWeb2.Components.Modules.WhOllProcessWithDb.Services
-@using MudBlazorWeb2.Components.Modules.SettingsOper.Services
+@using MudBlazorWeb2.Components.Modules.UserSettings
 
 @inject StateService StateService
 
 @inject UserSettingsService UserSettingsService
 @inject IConfiguration Configuration
 
+@inject IDbContextFactory DbContext
 @inject WhisperService whisper
 @inject OllamaService ai
 
@@ -28,15 +29,21 @@
 <PageTitle>🚀 WhisperOllama </PageTitle>
 
 <MudContainer>
-    <MudText Typo="Typo.h5" Style="display:flex; justify-content:space-between;">Обработка аудиоданных Oracle => 💬 + 🚀 <MudText Style="height:30px;"><EditDefaultTaskToAi colorButton="@colorTag" OnApplyButtonClick="LoadSettings" /></MudText></MudText>
+    <MudText Typo="Typo.h5" Style="display:flex; justify-content:space-between;">Обработка аудиоданных Oracle => 💬 + 🚀 
+        <MudText Style="height:30px;">
+            <EditDefaultTaskToAi colorButton="@colorTag" OnApplyButtonClick="PretextDefaultChanged" />
+        </MudText>
+    </MudText>
     <MudDivider />
     <br />
 
     <MudText Style="position:relative;">
 
         <MudOverlay Visible="@StateService.IsPlayingNow" LightBackground="true" Absolute="true" />
-        <OracleConnectionSettings colorButton="@colorTag" OnSettingsChanged="OnSettingsChanged" settingsDB="@SettingsDb" />
-
+        @if (SettingsDbList != null)
+        {
+            <ConnectionSettings colorButton="@colorTag" OnSettingsChanged="OnSettingsChanged" SettingsDbList="@SettingsDbList" FileSettingsDb="@FileSettingsDb" />
+        }
         <MudText Style="display: flex; justify-content:space-between; align-items:start; padding-bottom: 7px;">
             <MudText>
                 @* // Период, Длительность *@
@@ -105,23 +112,23 @@
 @code {
 
     MudBlazor.Color colorTag = Color.Info;
-    private SettingsDb SettingsDb = null;
 
     int lagTime = 0; // время запаздывания Ollama от Whisper
     int ProcessedAi = 0; // количество выполненных Ollama
 
+    private List<SettingsDb> SettingsDbList = null;
+    private SettingsDb SettingsDb = null;
+    private string FileSettingsDb = Path.Combine(AppContext.BaseDirectory, "settingsProcessingDb.json");
+    private string FilePretextDefault = Path.Combine(AppContext.BaseDirectory, "pretextDefault.ini");
+
     protected override async Task OnInitializedAsync()
     {
+        SettingsDbList = await SimpleJson<SettingsDb>.LoadItemsAsync(FileSettingsDb);
+        SettingsDb = SettingsDbList.FirstOrDefault(x => x.Selected == true);
+        
         StateService.PropertyChanged += StateService_PropertyChanged;
         if (!Directory.Exists(Configuration["AudioPathForProcessing"])) Directory.CreateDirectory(Configuration["AudioPathForProcessing"]);
 
-        await LoadSettings();
-    }
-
-    private async Task LoadSettings()
-    {
-        //settingsDB = SettingsService.GetSettings();
-        await Task.Delay(1);
     }
 
     public void StateService_PropertyChanged(object sender, PropertyChangedEventArgs e) => InvokeAsync(StateHasChanged);
@@ -140,12 +147,13 @@
         {
             do
             {
-                //SettingsDb = SettingsService.GetSettings();
+
+
                 string conStringDBA = $"User Id={SettingsDb.User};Password={SettingsDb.Password};Data Source={SettingsDb.ServerAddress};";
                 string schemeName = SettingsDb.Scheme;
 
                 StateService.ChangeState(true, false, "Обработка запускается...", 0, 0); // IsPlayingNow, IsStoped...
-                await RunAiForDbAudioAsync(StateService, schemeName, Configuration["OllamaModelName"], UpdateProgressWhOll, conStringDBA);
+                await RunAiForDbAudioAsync(StateService, Configuration["OllamaModelName"], UpdateProgressWhOll);
                 await Task.Delay(3000);
                 StateService.ChangeState(true, true, $"Обработка завершена. Обработано: {StateService.ProcessedKeys} / {StateService.TotalKeys}"); // IsPlayingNow, IsStoped...
 
@@ -186,13 +194,12 @@
         await InvokeAsync(() => StateHasChanged());
     }
 
-    private async Task RunAiForDbAudioAsync(StateService StateService, string schemeName, string modelName, Action<int, int> updateProgress, string conStringDBA)
+    private async Task RunAiForDbAudioAsync(StateService StateService, string modelName, Action<int, int> updateProgress)
     {
-        using (var db = new OracleDbContext(new DbContextOptionsBuilder<OracleDbContext>().UseOracle(conStringDBA).Options))
+        string conStringDBA = SelectDb.ConStringDBA(SettingsDb);
+        using (var db = await DbContext.CreateDbContext(SettingsDb.DbType, conStringDBA, SettingsDb.Scheme))
         {
-            await db.Database.OpenConnectionAsync();
-            await db.Database.ExecuteSqlRawAsync($"ALTER SESSION SET CURRENT_SCHEMA = {schemeName}");
-            ConsoleCol.WriteLine($"RunAiForDbAudioAsync => Выбранная схема: {schemeName}", ConsoleColor.DarkCyan);
+            ConsoleCol.WriteLine($"RunAiForDbAudioAsync => Выбранная схема: {SettingsDb.Scheme}", ConsoleColor.DarkCyan);
 
             var ignoreRecordTypes = Configuration.GetSection("AudioConverter:IgnoreRecordTypes").Get<List<string>>();
             // Получить список аудио по фильтру пользователя в StateService(даты, интервал) и кодекам ignoreRecordTypes
@@ -243,7 +250,7 @@
                 Files.DeleteFilesByPath(audioFilePath);
 
                 // OLLAMA + ORACLE => Run task !!!_WITHOUT await
-                ProcessOllamaAndUpdateEntityAsync(entity.SInckey, recognizedText, languageCode, detectedLanguage, preText, Configuration["OllamaModelName"], schemeName, conStringDBA, Configuration, entity, db);
+                ProcessOllamaAndUpdateEntityAsync(entity.SInckey, recognizedText, languageCode, detectedLanguage, preText, Configuration["OllamaModelName"], Configuration, entity, db);
 
                 // lag - задержка => если Ollama отстаёт от Whisper => ожидаем...
                 lagTime = await ApplyLagTimePause(lagTime);
@@ -258,13 +265,15 @@
 
                 updateProgress(++processedKeys, totalKeys);
             }
-            await db.Database.CloseConnectionAsync();
+
         }
+        //await db.Database.CloseConnectionAsync();
+
     }
 
     // TODO "обнуление" Notice для какой-н БД
 
-    private async void ProcessOllamaAndUpdateEntityAsync(long? entityId, string recognizedText, string languageCode, string detectedLanguage, string preText, string modelName, string schemeName, string conStringDBA, IConfiguration Configuration, SprSpeechTable entity, OracleDbContext db)
+    private async void ProcessOllamaAndUpdateEntityAsync(long? entityId, string recognizedText, string languageCode, string detectedLanguage, string preText, string modelName, IConfiguration Configuration, SprSpeechTable entity, BaseDbContext db)
     {
         // OLLAMA
         try
@@ -276,13 +285,13 @@
             {
                 (recognizedText, lagTime) = await ai.OllamaTranslate(recognizedText, modelName, languageCode, detectedLanguage, Configuration);
             }
-            await EFCoreQuery.InsertCommentAsync(entityId, recognizedText, detectedLanguage, responseOllamaText, modelName, schemeName, conStringDBA);
+            await EFCoreQuery.InsertCommentAsync(entityId, recognizedText, detectedLanguage, responseOllamaText, modelName, db);
             ProcessedAi++;
         }
         catch (Exception ex)
         {
             // EFCoreQuery - "обнуление" Notice при ошибке
-            await EFCoreQuery.UpdateNoticeValueAsync(entityId, schemeName, conStringDBA, null);
+            await EFCoreQuery.UpdateNoticeValueAsync(entityId, db, null);
             Console.WriteLine("Ошибка при обработке Ollama и обновлении сущности EFCore: " + ex.Message);
 
             // TODO if (MistakesCount > 10)
@@ -293,7 +302,6 @@
 
     private async Task<string> GetPreTextForOperatorAsync(string operatorName)
     {
-        await Task.Delay(1);
         ConsoleCol.WriteLine("operatorName: " + operatorName, ConsoleColor.DarkYellow);
         string preText = "";
 
@@ -302,14 +310,14 @@
             preText = await UserSettingsService.ReadItemValueByKey(operatorName);
             if (string.IsNullOrEmpty(preText))
             {
-                preText = "SettingsService.GetSettings().PreTextDefault";
+                preText = await IniFile.ReadFile(FilePretextDefault);
             }
 
         }
         catch (Exception ex)
         {
             ConsoleCol.WriteLine("Error getting Operator: " + ex, ConsoleColor.Red);
-            preText = "SettingsService.GetSettings().PreTextDefault";
+            preText = await IniFile.ReadFile(FilePretextDefault);
         }
         finally
         {
@@ -333,9 +341,14 @@
 
     private async Task OnSettingsChanged()
     {
-        await LoadSettings();
-        await Task.Delay(1);
+        SettingsDbList = await SimpleJson<SettingsDb>.LoadItemsAsync(FileSettingsDb);
+        SettingsDb = SettingsDbList.FirstOrDefault(x => x.Selected == true);
         Console.WriteLine("Настройки подключения к БД для Процесса обработки изменились");
+    }
+
+    private void PretextDefaultChanged ()
+    {
+        Console.WriteLine("PretextDefault изменился");
     }
 
 }

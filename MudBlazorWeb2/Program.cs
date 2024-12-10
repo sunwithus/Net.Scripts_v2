@@ -3,11 +3,11 @@ global using MudBlazorWeb2.Components.Methods;
 
 using MudBlazor.Services;
 using MudBlazorWeb2.Components;
-using MudBlazorWeb2.Components.Modules.SettingsOper.Services;
 using MudBlazorWeb2.Components.Modules.WhOllProcessWithDb.Services;
 using MudBlazorWeb2.Components.EntityFrameworkCore.SqliteModel;
 using MudBlazorWeb2.Components.Modules._Shared;
 using MudBlazorWeb2.Components.EntityFrameworkCore;
+using MudBlazorWeb2.Components.Modules.UserSettings;
 
 var builder = WebApplication.CreateBuilder(args);
 

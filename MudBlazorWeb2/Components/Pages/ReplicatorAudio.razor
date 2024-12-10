@@ -9,7 +9,6 @@
 @using Microsoft.AspNetCore.SignalR.Client
 
 @using MudBlazorWeb2.Components.EntityFrameworkCore
-@using MudBlazorWeb2.Components.Modules.Replicator.Services
 @using MudBlazorWeb2.Components.Modules.Replicator
 @using MudBlazorWeb2.Components.Modules._Shared
 
@@ -67,22 +66,24 @@
 @code {
     private HubConnection _hubConnection;
     private string statusText = string.Empty;
-    FileLogger _logger = null;
+    //FileLogger _logger = null;
 
     MudBlazor.Color colorButton = Color.Surface;
     private string pathToSaveTempAudio = "";
     private string operatorName = "";
     private bool isFilesLoaded = false;
+
     private List<SettingsDb> SettingsDbList = null;
     private string FileSettingsDb = Path.Combine(AppContext.BaseDirectory, "settingsReplicator.json");
 
 
     protected override async Task OnInitializedAsync()
     {
-        SettingsDbList = await LoadSettings();
+        //SettingsDbList = await LoadItemsListFromJson();
+        SettingsDbList = await SimpleJson<SettingsDb>.LoadItemsAsync(FileSettingsDb);
         StateHasChanged();
 
-        _logger = new FileLogger(Path.Combine(AppContext.BaseDirectory, "Logs/replicator.log"));
+        //_logger = new FileLogger(Path.Combine(AppContext.BaseDirectory, "Logs/replicator.log"));
 
         //await base.OnInitializedAsync();
 
@@ -117,7 +118,7 @@
 
     private async Task OnSettingsChanged()
     {
-        SettingsDbList = await LoadSettings();
+        SettingsDbList = await SimpleJson<SettingsDb>.LoadItemsAsync(FileSettingsDb);
         Console.WriteLine("Настройки подключения к БД для репликатора изменились");
     }
 
@@ -134,11 +135,11 @@
         Console.WriteLine($"HandleFilesLoaded: Файлы загружены: {value}");
     }
 
-    private async Task<List<SettingsDb>> LoadSettings()
+    /*private async Task<List<SettingsDb>> LoadItemsListFromJson()
     {
         string json = await File.ReadAllTextAsync(FileSettingsDb);
         var SettingsDbList = JsonSerializer.Deserialize<List<SettingsDb>>(json);
         return SettingsDbList;
-    }
+    }*/
 
 }

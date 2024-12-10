@@ -3,11 +3,14 @@
 
 @using MudBlazorWeb2.Components.Modules._Shared
 @using MudBlazorWeb2.Components.Modules.MakingWord
+@using MudBlazorWeb2.Components.EntityFrameworkCore
 
 @using System.Text
 @using Oracle.ManagedDataAccess.Client
+@using Npgsql
 
 @inject IJSRuntime JsRuntime
+@inject IDbContextFactory DbContextFactory
 
 <PageTitle>🖍 Create Word</PageTitle>
 
@@ -16,7 +19,10 @@
     <MudDivider />
     <br />
 
-    <ConnectionSettings colorButton="@colorTag" OnSettingsChanged="OnSettingsChanged" SettingsDbList="@SettingsDbList" FileSettingsDb="@FileSettingsDb" />
+    @if (SettingsDbList != null)
+    {
+        <ConnectionSettings colorButton="@colorTag" OnSettingsChanged="OnSettingsChanged" SettingsDbList="@SettingsDbList" FileSettingsDb="@FileSettingsDb" />
+    }
 
     <MudText Style="display: flex; justify-content=start;">
         <MudText Style="display: flex; align-items: center;">
@@ -52,7 +58,7 @@
             <RowTemplate >
                 <MudTd >@context.Id</MudTd>
                 <MudTd>@context.Datetime</MudTd>
-                <MudTd>@context.Duration.ToString().TrimStart('+').Trim('0').TrimEnd('.')</MudTd>
+                <MudTd>@context.Duration.ToString()</MudTd>
                 <MudTd>@context.Talker</MudTd>
                 <MudTd>@context.Usernumber</MudTd>
                 <MudTd>
@@ -77,7 +83,9 @@
 
         try
         {
-            string decodedComment = Encoding.GetEncoding("windows-1251").GetString(speechData.FirstOrDefault().Comment);
+            byte[]? commentByte = speechData?.FirstOrDefault()?.Comment;
+
+            string decodedComment = commentByte != null ? Encoding.GetEncoding("windows-1251").GetString(commentByte) : "Комментарий отсутствует.";
             <br />
             <pre style="white-space: pre-wrap">@decodedComment.TrimStart('0', '1', '2', '3', '4', '5', '.').Trim().Replace("\n\n", "\n")</pre>
         }
@@ -99,94 +107,79 @@
     bool IsSkeleton = false;
 
     MudBlazor.Color colorTag = Color.Success;
-    List<SettingsDb> SettingsDbList = null;
 
-    private string conStringDBA = "";
-    private string Scheme = "";
-    private string FileSettingsDb = "";
     private string message = ""; // Сообщение об ошибке
     private List<SpeechData> speechData = null;
 
     long? Id = 0;
     List<string> ColumnHeaders = new() { "Ключ", "Дата/время", "Длительность", "Собеседник", "Пользовательский номер", "Тип вызова", "CID", "LAC", "Базовая станция", "Принадлежность (язык оригинала)", "Имя источника (оператор)", "Устройство" };
 
+    private List<SettingsDb> SettingsDbList = null;
+    private SettingsDb SettingsDb = null;
+    private string FileSettingsDb = Path.Combine(AppContext.BaseDirectory, "settingsMakingWord.json");
+
+
     protected override async Task OnInitializedAsync()
     {
         // dotnet add package System.Text.Encoding.CodePages // Регистрация провайдера кодировок
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-        speechData = new List<SpeechData>();
-        await LoadSettingsFromFile();
-    }
-
-    private async Task LoadSettingsFromFile()
-    {
-        string filePath = Path.Combine(AppContext.BaseDirectory, "settingsApp.json");
-        var doSettings = new SimpleJson<SettingsDb>(filePath);
-        await doSettings.LoadItemsAsync();
-
-        var settingsDb = doSettings.GetItems().FirstOrDefault();
-
-        //settingsDB = SettingsService.GetSettings();
-        //Scheme = settingsDb.Scheme;
-        Scheme = "test";
-        conStringDBA = "";//$"User Id={settingsDb.User};Password={settingsDb.Password};Data Source={settingsDb.ServerAddress};";
-        await Task.Delay(1);
+        speechData = new();
+        SettingsDbList = await SimpleJson<SettingsDb>.LoadItemsAsync(FileSettingsDb);
+        SettingsDb = SettingsDbList.FirstOrDefault(x => x.Selected == true);
         StateHasChanged();
     }
 
     private async Task OnSettingsChanged()
     {
-        await LoadSettingsFromFile();
+        SettingsDbList = await SimpleJson<SettingsDb>.LoadItemsAsync(FileSettingsDb);
+        SettingsDb = SettingsDbList.FirstOrDefault(x => x.Selected == true);
         Console.WriteLine("Настройки подключения к БД для создания Word изменились");
     }
 
     private async Task QueryRecordById()
     {
         IsSkeleton = true;
-        speechData = null;
-        await LoadSettingsFromFile();
-        ConsoleCol.WriteLine("conStringDBA: " + conStringDBA + "\nScheme: " + Scheme, ConsoleColor.Blue);
 
         try 
         {
-            speechData = await DbQuery.GetSpeechDataByIdAsync(Id, Scheme, conStringDBA);
-            ///////////////
-            var ind = speechData.FirstOrDefault();
-            string? durationString = ind.Duration.ToString();
-            if (durationString.StartsWith("+00"))
-            {
-                durationString = durationString.Substring(3); // Удалить "+00" с начала
-            }
-            if (durationString.EndsWith(".000000"))
-            {
-                durationString = durationString.Substring(0, durationString.Length - 7); // Удалить ".000000" с конца
-            }
-            fileNameForSaveAudioViaPlayer = $"" + ind.Datetime.ToString() + "_" + durationString + "_" + ind.Sourcename + "_" + ind.Usernumber + "_" + ind.Talker + "_" + ind.Lac + "_" + ind.Cid + "_" + ind.Basestation + ".wav";
-            ///////////////////
+            string conStringDBA = SelectDb.ConStringDBA(SettingsDb);
+            using var context = await DbContextFactory.CreateDbContext(SettingsDb.DbType, conStringDBA, SettingsDb.Scheme);
+            
+            speechData = await DbQuery.GetSpeechDataByIdAsync(Id, context);
+
             if (speechData != null)
             {
+                var ItemByKey = speechData.FirstOrDefault();
+                string durationString = ItemByKey.Duration.ToString();
+
+                fileNameForSaveAudioViaPlayer = $"" + ItemByKey.Datetime.ToString() + "_" + durationString + "_" + ItemByKey.Sourcename + "_" + ItemByKey.Usernumber + "_" + ItemByKey.Talker + "_" + ItemByKey.Lac + "_" + ItemByKey.Cid + "_" + ItemByKey.Basestation + ".wav";
                 Console.WriteLine("Id = " + Id);
                 message = "";
             }
             else
             {
-                message = $"Ключ записи №{Id} не существует ";
+                message = $"\nКлюч записи №{Id} не существует ";
                 Console.WriteLine($"Ключ записи не существует Id: {Id}");
             }
-            IsSkeleton = false;
         }
         catch (OracleException ex)
         {
             message = $"Ошибка Oracle: {ex.Message}, проверьте имя Схемы";
             Console.WriteLine($"Ошибка Oracle: {ex.Message}");
         }
+        catch (NpgsqlException ex)
+        {
+            message = $"Ошибка Postgres: {ex.Message}, проверьте имя Схемы";
+            Console.WriteLine($"Ошибка Postgres: {ex.Message}");
+        }
         catch (Exception ex)
         {
-            message = $"Ошибка: {ex.Message}";
-            Console.WriteLine($"Ошибка: {ex.Message}");
+            message = $"Общая ошибка: {ex.Message}" + $"Ключ записи №{Id} не существует ";
+            Console.WriteLine($"Общая ошибка: {ex.Message}");
         }
         finally
         {
+            IsSkeleton = false;
             StateHasChanged();
         }
     }

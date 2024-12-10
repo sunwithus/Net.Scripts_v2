@@ -6,29 +6,22 @@ using Microsoft.AspNetCore.Components;
 using MudBlazor;
 using System;
 using MudBlazorWeb2.Components.EntityFrameworkCore.SqliteModel;
+using MudBlazorWeb2.Components.Pages;
 
 namespace MudBlazorWeb2.Components.Modules.WhOllProcessWithDb.TodoList
 {
     public class DatabaseConnection
-    { 
-        public static async Task<(bool, string)> Test(TodoItem todo)
+    {
+        public static async Task<(bool, string)> Test(BaseDbContext context)
         {
             try
             {
                 long? maxKey = null;
-                string conStringDBA = $"User Id={todo.User};Password={todo.Password};Data Source={todo.ServerAddress};";
-                var optionsBuilder = OracleDbContext.ConfigureOptionsBuilder(conStringDBA);
-                using (var context = new OracleDbContext(optionsBuilder.Options))
-                {
-                    await context.Database.OpenConnectionAsync();
-                    if (await context.Database.CanConnectAsync())
-                    {
-                        await context.Database.ExecuteSqlRawAsync($"ALTER SESSION SET CURRENT_SCHEMA = {todo.Scheme}");
-                        maxKey = await context.SprSpeechTables.MaxAsync(x => x.SInckey);
-                        ConsoleCol.WriteLine($"maxKey = {maxKey}", ConsoleColor.Green);
-                        await context.Database.CloseConnectionAsync();
-                    }
-                }
+                await context.Database.OpenConnectionAsync();
+                maxKey = await context.SprSpeechTables.MaxAsync(x => x.SInckey);
+                ConsoleCol.WriteLine($"maxKey = {maxKey}", ConsoleColor.Green);
+                await context.Database.CloseConnectionAsync();
+
                 return (true, $"maxKey = {maxKey}");
             }
             catch (Exception ex)

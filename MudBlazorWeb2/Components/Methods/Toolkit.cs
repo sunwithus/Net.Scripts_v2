@@ -1,4 +1,6 @@
-﻿using MudBlazorWeb2.Components.Modules.WhOllProcessWithDb.TodoList;
+﻿using MudBlazorWeb2.Components.EntityFrameworkCore.SqliteModel;
+using MudBlazorWeb2.Components.Modules._Shared;
+using MudBlazorWeb2.Components.Modules.WhOllProcessWithDb.TodoList;
 using MudBlazorWeb2.Components.Pages;
 using System.Diagnostics;
 using System.Drawing.Imaging;
@@ -57,6 +59,21 @@ namespace MudBlazorWeb2.Components.Methods
             {
                 dir.Delete(true);
             }
+        }
+    }
+
+    public class IniFile
+    {
+        public static async Task<string> ReadFile(string path)
+        {
+            using StreamReader reader = new StreamReader(path);
+            return await reader.ReadToEndAsync();
+        }
+        public static async Task WriteFile(string path, string value)
+        {
+            // полная перезапись файла (false)
+            using StreamWriter writer = new StreamWriter(path, false);
+            await writer.WriteLineAsync(value);
         }
     }
     public class Cmd
@@ -125,31 +142,17 @@ namespace MudBlazorWeb2.Components.Methods
             File.WriteAllLines(_filePath, newLines);
         }
     }
-    /// <summary>
-    /// Usage
-    /// string FilePath = Path.Combine(AppContext.BaseDirectory, "todoitems.json");
-    /// var JsonTodoItems = new SimpleJson<TodoItem>(FilePath);
-    /// await JsonTodoItems.LoadItemsAsync();
-    /// </summary>
-    public class SimpleJson<T> where T : class, new()
+
+    public static class SimpleJson<T> where T : class
     {
-        private readonly string filePath;
-        private List<T> items = new();
-
-        public SimpleJson(string filePath)
-        {
-            this.filePath = filePath;
-        }
-
-        public async Task LoadItemsAsync()
+        public static async Task<List<T>> LoadItemsAsync(string filePath)
         {
             if (File.Exists(filePath))
             {
                 var json = await File.ReadAllTextAsync(filePath);
                 if (string.IsNullOrWhiteSpace(json))
                 {
-                    items = new List<T>();
-                    await SaveItemsAsync(); // Сохранить начальную структуру
+                    return new List<T>();
                 }
                 else
                 {
@@ -157,57 +160,74 @@ namespace MudBlazorWeb2.Components.Methods
                     {
                         ReadCommentHandling = JsonCommentHandling.Skip
                     };
-                    items = JsonSerializer.Deserialize<List<T>>(json, options) ?? new List<T>();
+                    return JsonSerializer.Deserialize<List<T>>(json, options) ?? new List<T>();
                 }
             }
-            /*
             else
             {
-                items = new List<T>();
-                await SaveItemsAsync(); // Создать новый файл
+                return new List<T>();
             }
-            */
         }
-
-        public async Task SaveItemsAsync()
+        public static async Task SaveItemsAsync(string filePath, List<T> items)
         {
             var json = JsonSerializer.Serialize(items);
             await File.WriteAllTextAsync(filePath, json);
         }
-
-        public async Task AddItemAsync(T newItem)
+        public static async Task AddItemAsync(string filePath, List<T> items, T newItem)
         {
             if (newItem != null)
             {
                 items.Add(newItem);
-                await SaveItemsAsync();
+                await SaveItemsAsync(filePath, items);
             }
         }
-
-        public async Task DeleteItemAsync(T item)
+        public static async Task DeleteItemAsync(string filePath, List<T> items, T item)
         {
             if (items.Contains(item))
             {
                 items.Remove(item);
-                await SaveItemsAsync();
+                await SaveItemsAsync(filePath, items);
             }
         }
-
-        public List<T> GetItems()
-        {
-            return new List<T>(items);
-        }
-
-        public async Task UpdateItemAsync(T item, Func<T, bool> predicate)
+        public static async Task UpdateItemAsync(string filePath, List<T> items, T item, Func<T, bool> predicate)
         {
             var existingItem = items.FirstOrDefault(predicate);
             if (existingItem != null)
             {
                 var index = items.IndexOf(existingItem);
                 items[index] = item;
-                await SaveItemsAsync();
+                await SaveItemsAsync(filePath, items);
             }
         }
+    }
 
+    public class SelectDb
+    {
+        public static string ConStringDBA(SettingsDb SettingsDb)
+        {
+            string conStringDBA = "";
+            if (SettingsDb.DbType == "Oracle")
+            {
+                conStringDBA = $"User Id={SettingsDb.User};Password={SettingsDb.Password};Data Source={SettingsDb.ServerAddress}/sprutora;";
+            }
+            else if (SettingsDb.DbType == "Postgres")
+            {
+                conStringDBA = $"Host={SettingsDb.ServerAddress};Database={SettingsDb.Scheme};Username={SettingsDb.User};Password={SettingsDb.Password};";
+            }
+            return conStringDBA;
+        }
+        public static string ConStringDBA(TodoItem SettingsDb)
+        {
+            string conStringDBA = "";
+            if (SettingsDb.DbType == "Oracle")
+            {
+                conStringDBA = $"User Id={SettingsDb.User};Password={SettingsDb.Password};Data Source={SettingsDb.ServerAddress}/sprutora;";
+            }
+            else if (SettingsDb.DbType == "Postgres")
+            {
+                conStringDBA = $"Host={SettingsDb.ServerAddress};Database={SettingsDb.Scheme};Username={SettingsDb.User};Password={SettingsDb.Password};";
+            }
+            return conStringDBA;
+        }
     }
 }

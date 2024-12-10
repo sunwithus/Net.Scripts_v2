@@ -25,7 +25,7 @@ namespace MudBlazorWeb2.Components.EntityFrameworkCore
                 providerOptions.UseRelationalNulls(true);
                 providerOptions.MinBatchSize(2);
             })
-            .EnableDetailedErrors(true)
+            .EnableDetailedErrors(false)
             .EnableSensitiveDataLogging(false)
             .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
             return optionsBuilder;
