@@ -50,15 +50,27 @@
             }
         </MudGrid>
     </MudCard>
+
+    <!-- _message -->
+    @if (!string.IsNullOrEmpty(_message))
+    {
+        <MudText Typo = "Typo.body2" >@_message</MudText>
+    }
 </MudContainer>
 
 @code {
+    [Inject]
+    public IConfiguration conf { get; set; }
+    [Inject]
+    public OllamaService ollama { get; set; }
+
     private Data.Answer Answer = new ();
 
     private Data.Question Question = new();
 
     private string ask = string.Empty;
     private string prompt = string.Empty;
+    private string _message = string.Empty;
     private bool loading = false;
 
     protected override void OnInitialized()
@@ -70,22 +82,40 @@
     {
         if (!string.IsNullOrWhiteSpace(message))
         {
+            _message = string.Empty;
             Answer.done = false;
             loading = true;
             prompt = message;
+
             Question.prompt = message;
-
-            var replyServerOllama = await Http.PostAsJsonAsync<Data.Question>("http://192.168.2.253:11434/api/generate", Question);
-
-            if (replyServerOllama.IsSuccessStatusCode)
+            Question.model = conf["OllamaModelName"];
+            Question.stream = false;
+            StateHasChanged();
+            try
             {
-                Answer = await replyServerOllama.Content.ReadFromJsonAsync<Data.Answer>();
-                loading = false;
+                var replyServerOllama = await Http.PostAsJsonAsync<Data.Question>($"{conf["OllamaIP"]}/api/generate", Question);
+                if (replyServerOllama.IsSuccessStatusCode)
+                {
+                    Answer = await replyServerOllama.Content.ReadFromJsonAsync<Data.Answer>();
+                }
+                else
+                {
+                    // Handle non-successful status code
+                    _message = $"ERROR status code: {replyServerOllama.StatusCode}";
+                }
             }
-
-            ask = string.Empty;
+            catch (Exception e)
+            {
+                // Handle any exceptions
+                _message = $"ERROR general: {e.Message}";
+            }
+            finally
+            {
+                loading = false;
+                ask = string.Empty;
+                StateHasChanged();
+            }
         }
     }
-
 
 }

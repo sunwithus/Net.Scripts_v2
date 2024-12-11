@@ -44,14 +44,24 @@
             </MudCardContent>
         }
     </MudCard>
+
+    <!-- messageErr -->
+    @if (!string.IsNullOrEmpty(messageErr))
+    {
+        <MudText Typo="Typo.body2">@messageErr</MudText>
+    }
 </MudContainer>
 
 @code {
+    [Inject]
+    public IConfiguration conf { get; set; }
+
     private Data.Answer Answer = new();
     private Data.Question Question = new();
     private string ask = string.Empty;
     private string prompt = string.Empty;
     private bool loading = false;
+    private string messageErr = string.Empty;
 
     protected override void OnInitialized()
     {
@@ -62,21 +72,43 @@
     {
         if (!string.IsNullOrWhiteSpace(message))
         {
-            string preText = "Сделай перевод текста на русский язык, ответом должен должен быть только перевод, без дополнительных фраз. Вот текст: ";
+            //string preText = "Сделай перевод текста на русский язык, ответом должен должен быть только перевод, без дополнительных фраз. Вот текст: ";
+            messageErr = string.Empty;
             Answer.done = false;
             loading = true;
             prompt = message;
-            Question.prompt = preText + message;
 
-            var replyServerOllama = await Http.PostAsJsonAsync<Data.Question>("http://192.168.2.253:11434/api/generate", Question);
+            Question.prompt = conf["PretextTranslate"] + message;
+            Question.model = conf["OllamaModelName"];
+            Question.stream = false;
 
-            if (replyServerOllama.IsSuccessStatusCode)
+            try
             {
-                Answer = await replyServerOllama.Content.ReadFromJsonAsync<Data.Answer>();
-                loading = false;
-            }
+                var replyServerOllama = await Http.PostAsJsonAsync<Data.Question>($"{conf["OllamaIP"]}/api/generate", Question);
 
+                if (replyServerOllama.IsSuccessStatusCode)
+                {
+                    Answer = await replyServerOllama.Content.ReadFromJsonAsync<Data.Answer>();
+                }
+                else
+                {
+                    // Handle non-successful status code
+                    messageErr = $"ERROR status code: {replyServerOllama.StatusCode}";
+                }
+            }
+            catch(Exception ex) 
+            {
+                // Handle any exceptions
+                messageErr = $"ERROR general: {ex.Message}";
+            }
+            finally
+            {
+                loading = false;
+
+            }
             ask = string.Empty;
+
+            
         }
     }
 }

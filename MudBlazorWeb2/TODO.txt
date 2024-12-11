@@ -1,6 +1,5 @@
 ﻿Replicator => Codec G.728 decoder вместо SignalR => Singleton
 
-WhOllProcessWithDb => AudioConverter + SignalR
 Запуск по расписанию
 При WhOllProcessWithDb отложенная выборка при пуске (без await) и вывод инф о старте
 Очередь и приоритет перевода
@@ -9,7 +8,7 @@ https://mudblazor.com/components/datepicker#range-picker-usage
 https://mudblazor.com/components/timepicker#read-only
 
 //TODO
-Postgres, InterBase
+InterBase
 "обнуление" Notice для какой-н БД //Кнопка - очистить примечание, где... комментарии пусто
 mini PostWorks
 Home Carousel https://mudblazor.com/components/carousel#example

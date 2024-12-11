@@ -53,6 +53,7 @@ namespace MudBlazorWeb2.Components.EntityFrameworkCore
 
             modelBuilder.Entity<SprSpeechTable>().Ignore(s => s.SprSpData1Tables);
             modelBuilder.Entity<SprSpData1Table>().Ignore(s => s.SInckeyNavigation);
+            modelBuilder.Entity<SprSpCommentTable>().Ignore(s => s.SInckeyNavigation);
 
             // Вызов базовой реализации метода
             base.OnModelCreating(modelBuilder);

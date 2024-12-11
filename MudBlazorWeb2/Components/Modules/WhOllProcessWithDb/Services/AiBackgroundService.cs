@@ -43,7 +43,7 @@ public class AiBackgroundService : BackgroundService
             {
                 _logger.LogError(ex, "Error processing database");
             }
-            await Task.Delay(5000, stoppingToken); // delay
+            await Task.Delay(25000, stoppingToken); // delay
         }
     }
 
@@ -69,7 +69,6 @@ public class AiBackgroundService : BackgroundService
                     using (var db = new OracleDbContext(new DbContextOptionsBuilder<OracleDbContext>().UseOracle(conStringDBA).Options))
                     {
                         await db.Database.OpenConnectionAsync();
-                        //await db.Database.ExecuteSqlRawAsync($"ALTER SESSION SET CURRENT_SCHEMA = {item.Scheme}", stoppingToken);
                         await db.Database.ExecuteSqlAsync($"ALTER SESSION SET CURRENT_SCHEMA = {item.Scheme}", stoppingToken);
                         ConsoleCol.WriteLine($"AiProcessDatabaseAsync => Выбранная схема: {item.Scheme}", ConsoleColor.DarkCyan);
 

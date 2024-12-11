@@ -43,9 +43,9 @@ public partial class PostgresDbContext : BaseDbContext
 
         modelBuilder.Entity<SprSpCommentTable>(entity =>
         {
-            entity
-                .HasNoKey()
-                .ToTable("spr_sp_comment_table", "sprut");
+            entity.HasKey(e => e.SInckey); // Define SInckey as the primary key
+            //entity.HasNoKey();
+            entity.ToTable("spr_sp_comment_table", "sprut");
             
             entity.HasIndex(e => e.SInckey, "foreign16");
 
@@ -53,6 +53,11 @@ public partial class PostgresDbContext : BaseDbContext
 
             entity.Property(e => e.SComment).HasColumnName("s_comment");
             entity.Property(e => e.SInckey).HasColumnName("s_inckey");
+            ////////////////////////////////////////////////////////////////
+            entity.HasOne(d => d.SInckeyNavigation).WithOne()
+                  .HasForeignKey<SprSpCommentTable>(d => d.SInckey)
+                  .OnDelete(DeleteBehavior.ClientSetNull) // or other appropriate delete behavior
+                  .HasConstraintName("spcm_inckey");
             /**/
         });
 
@@ -76,12 +81,12 @@ public partial class PostgresDbContext : BaseDbContext
                 .HasMaxLength(30)
                 .HasColumnName("s_recordtype");
             entity.Property(e => e.SRspeech).HasColumnName("s_rspeech");
-            
-            entity.HasOne(d => d.SInckeyNavigation).WithMany(p => p.SprSpData1Tables)
-                .HasForeignKey(d => d.SInckey)
-                .OnDelete(DeleteBehavior.ClientSetNull) // or other appropriate delete behavior
-                .HasConstraintName("spdt1_inckey");
-            
+            ///////////////////////////////////////////////////////////////////////////
+            entity.HasOne(d => d.SInckeyNavigation)
+                  .WithMany(p => p.SprSpData1Tables)
+                  .HasForeignKey(d => d.SInckey)
+                  .OnDelete(DeleteBehavior.ClientSetNull) // or other appropriate delete behavior
+                  .HasConstraintName("spdt1_inckey");
         });
 
 

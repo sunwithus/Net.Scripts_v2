@@ -24,7 +24,6 @@ builder.Services.AddHostedService<ReplBackgroundService>();
 builder.Services.AddHostedService<AiBackgroundService>();
 
 builder.Services.AddSingleton<StateService>();
-builder.Services.AddSingleton<StateService2>();
 //builder.Services.AddSingleton<ProgressService>();
 builder.Services.AddSingleton<IDbContextFactory, DbContextFactory>();
 

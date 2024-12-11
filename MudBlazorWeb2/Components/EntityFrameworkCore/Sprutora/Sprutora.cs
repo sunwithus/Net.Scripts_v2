@@ -131,6 +131,7 @@ namespace MudBlazorWeb2.Components.EntityFrameworkCore.Sprutora
 
         [Column("S_COMMENT")]
         public byte[]? SComment { get; set; }
+        public virtual SprSpeechTable SInckeyNavigation { get; set; } = null!;
 
     }
     /*

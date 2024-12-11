@@ -29,7 +29,7 @@
 <PageTitle>🚀 WhisperOllama </PageTitle>
 
 <MudContainer>
-    <MudText Typo="Typo.h5" Style="display:flex; justify-content:space-between;">Обработка аудиоданных Oracle => 💬 + 🚀 
+    <MudText Typo="Typo.h5" Style="display:flex; justify-content:space-between;">Обработка аудиоданных => 💬 + 🚀 
         <MudText Style="height:30px;">
             <EditDefaultTaskToAi colorButton="@colorTag" OnApplyButtonClick="PretextDefaultChanged" />
         </MudText>
@@ -125,7 +125,7 @@
     {
         SettingsDbList = await SimpleJson<SettingsDb>.LoadItemsAsync(FileSettingsDb);
         SettingsDb = SettingsDbList.FirstOrDefault(x => x.Selected == true);
-        
+
         StateService.PropertyChanged += StateService_PropertyChanged;
         if (!Directory.Exists(Configuration["AudioPathForProcessing"])) Directory.CreateDirectory(Configuration["AudioPathForProcessing"]);
 
@@ -147,11 +147,6 @@
         {
             do
             {
-
-
-                string conStringDBA = $"User Id={SettingsDb.User};Password={SettingsDb.Password};Data Source={SettingsDb.ServerAddress};";
-                string schemeName = SettingsDb.Scheme;
-
                 StateService.ChangeState(true, false, "Обработка запускается...", 0, 0); // IsPlayingNow, IsStoped...
                 await RunAiForDbAudioAsync(StateService, Configuration["OllamaModelName"], UpdateProgressWhOll);
                 await Task.Delay(3000);
@@ -196,96 +191,99 @@
 
     private async Task RunAiForDbAudioAsync(StateService StateService, string modelName, Action<int, int> updateProgress)
     {
+        ConsoleCol.WriteLine($"RunAiForDbAudioAsync => Выбранная схема: {SettingsDb.Scheme}", ConsoleColor.DarkCyan);
         string conStringDBA = SelectDb.ConStringDBA(SettingsDb);
-        using (var db = await DbContext.CreateDbContext(SettingsDb.DbType, conStringDBA, SettingsDb.Scheme))
+        var ignoreRecordTypes = Configuration.GetSection("AudioConverter:IgnoreRecordTypes").Get<List<string>>();
+        int processedKeys = 0;
+        ProcessedAi = 0;
+
+
+        // Получить список аудио по фильтру пользователя в StateService(даты, интервал) и кодекам ignoreRecordTypes
+        using BaseDbContext db = await DbContext.CreateDbContext(SettingsDb.DbType, conStringDBA, SettingsDb.Scheme);
+        var audioList = await EFCoreQuery.GetSpeechRecords(StateService.StartDate, StateService.EndDate, StateService.TimeInterval, db, ignoreRecordTypes);
+        int totalKeys = audioList.Count;
+        ConsoleCol.WriteLine($"totalKeys is {totalKeys}", ConsoleColor.DarkCyan);
+
+        foreach (var entity in audioList)
         {
-            ConsoleCol.WriteLine($"RunAiForDbAudioAsync => Выбранная схема: {SettingsDb.Scheme}", ConsoleColor.DarkCyan);
-
-            var ignoreRecordTypes = Configuration.GetSection("AudioConverter:IgnoreRecordTypes").Get<List<string>>();
-            // Получить список аудио по фильтру пользователя в StateService(даты, интервал) и кодекам ignoreRecordTypes
-            var audioList = await EFCoreQuery.GetSpeechRecords(StateService.StartDate, StateService.EndDate, StateService.TimeInterval, db, ignoreRecordTypes);
-
-            int processedKeys = 0;
-            ProcessedAi = 0;
-
-            int totalKeys = audioList.Count;
-
-            foreach (var entity in audioList)
+            // Остановить процесс, если нажата кнопка
+            if (StateService.IsStopPressed)
             {
-                // Остановить процесс, если нажата кнопка
-                if (StateService.IsStopPressed)
-                {
-                    StateService.ChangeState(false, true, $"Обработка завершена. Обработано: {StateService.ProcessedKeys} / {StateService.TotalKeys}", StateService.ProcessedKeys, StateService.TotalKeys); // IsPlayingNow, IsStoped...
-                    break;
-                }
-
-                // Update Progress
-                updateProgress(processedKeys, totalKeys);
-                StateService.IsStoped = false;
-                StateService.ProcessingMessage = "Обработка выполняется...";
-
-                // ORACLE => get audio (left, right, recordType)
-                var (audioDataLeft, audioDataRight, recordType) = await EFCoreQuery.GetAudioDataAsync(entity.SInckey, db);
-                Console.WriteLine($"Audio data for key {entity.SInckey} loaded successfully. recordType = " + recordType);
-
-                // PreText => get PreText for operator or PreTextDefault
-                string preText = await GetPreTextForOperatorAsync(entity.SSourcename);
-
-                // FFMpeg or Decoder => audio to folder
-                string audioFilePath = Path.Combine(Configuration["AudioPathForProcessing"], $"{entity.SInckey}.wav");
-                bool result = await DbToAudioConverter.FFMpegDecoder(audioDataLeft, audioDataRight, recordType, audioFilePath, Configuration);
-                if (!result) continue;
-
-                // WHISPER
-                Task<string> _recognizedText = whisper.RecognizeSpeechAsync(audioFilePath, Configuration); //асинхронно, не ждём
-                (string languageCode, string detectedLanguage) = await whisper.DetectLanguageAsync(audioFilePath, Configuration);
-                string recognizedText = await _recognizedText; //дожидаемся _recognizedText...
-
-                // Temprorary push string to Notice to aviod repeated process with entity
-                entity.SNotice = "TempRecord";
-                db.SprSpeechTables.Update(entity);
-                await db.SaveChangesAsync();
-
-                // Delete earlier created file
-                Files.DeleteFilesByPath(audioFilePath);
-
-                // OLLAMA + ORACLE => Run task !!!_WITHOUT await
-                ProcessOllamaAndUpdateEntityAsync(entity.SInckey, recognizedText, languageCode, detectedLanguage, preText, Configuration["OllamaModelName"], Configuration, entity, db);
-
-                // lag - задержка => если Ollama отстаёт от Whisper => ожидаем...
-                lagTime = await ApplyLagTimePause(lagTime);
-
-                // TODO
-                // разрешить "вырываться вперёд не более чем на N раз" и ProcessedAi вывести в Прогресс + Singleton
-                if (processedKeys - 10 > ProcessedAi)
-                {
-                    await Task.Delay(20000);
-                    ConsoleCol.WriteLine("ProcessedAi / ProcessedKeys =>" + ProcessedAi + "/" + processedKeys, ConsoleColor.Yellow);
-                }
-
-                updateProgress(++processedKeys, totalKeys);
+                StateService.ChangeState(false, true, $"Обработка завершена. Обработано: {StateService.ProcessedKeys} / {StateService.TotalKeys}", StateService.ProcessedKeys, StateService.TotalKeys); // IsPlayingNow, IsStoped...
+                break;
             }
 
+            // Update Progress
+            updateProgress(processedKeys, totalKeys);
+            StateService.IsStoped = false;
+            StateService.ProcessingMessage = "Обработка выполняется...";
+
+            // Db => get audio (left, right, recordType)
+            var (audioDataLeft, audioDataRight, recordType) = await EFCoreQuery.GetAudioDataAsync(entity.SInckey, db);
+            Console.WriteLine($"Audio data for key {entity.SInckey} loaded successfully. recordType = " + recordType);
+
+            // PreText => get PreText for operator or PreTextDefault
+            string preText = await GetPreTextForOperatorAsync(entity.SSourcename);
+
+            // FFMpeg or Decoder => audio to folder
+            string audioFilePath = Path.Combine(Configuration["AudioPathForProcessing"], $"{entity.SInckey}.wav");
+            bool result = await DbToAudioConverter.FFMpegDecoder(audioDataLeft, audioDataRight, recordType, audioFilePath, Configuration);
+            if (!result) continue;
+
+            // WHISPER
+            Task<string> _recognizedText = whisper.RecognizeSpeechAsync(audioFilePath, Configuration); //асинхронно, не ждём
+            (string languageCode, string detectedLanguage) = await whisper.DetectLanguageAsync(audioFilePath, Configuration);
+            string recognizedText = await _recognizedText; //дожидаемся _recognizedText...
+
+            // Temprorary push string to Notice to aviod repeated process with entity
+            entity.SNotice = "TempRecord";
+            db.SprSpeechTables.Update(entity);
+            await db.SaveChangesAsync();
+            
+
+            // Delete earlier created file
+            Files.DeleteFilesByPath(audioFilePath);
+
+            // OLLAMA + ORACLE => Run task !!!_WITHOUT await
+            using var db2 = await DbContext.CreateDbContext(SettingsDb.DbType, conStringDBA, SettingsDb.Scheme);
+            await ProcessOllamaAndUpdateEntityAsync(entity.SInckey, recognizedText, languageCode, detectedLanguage, preText, Configuration["OllamaModelName"], Configuration, entity, db2);
+
+            // lag - задержка => если Ollama отстаёт от Whisper => ожидаем...
+            lagTime = await ApplyLagTimePause(lagTime);
+
+            // TODO
+            // разрешить "вырываться вперёд не более чем на N раз" и ProcessedAi вывести в Прогресс + Singleton
+            if (processedKeys - 2 > ProcessedAi)
+            {
+                await Task.Delay(20000);
+                ConsoleCol.WriteLine("ProcessedAi / ProcessedKeys =>" + ProcessedAi + "/" + processedKeys, ConsoleColor.Yellow);
+            }
+
+            updateProgress(++processedKeys, totalKeys);
         }
+
+
         //await db.Database.CloseConnectionAsync();
 
     }
 
     // TODO "обнуление" Notice для какой-н БД
 
-    private async void ProcessOllamaAndUpdateEntityAsync(long? entityId, string recognizedText, string languageCode, string detectedLanguage, string preText, string modelName, IConfiguration Configuration, SprSpeechTable entity, BaseDbContext db)
+    private async Task ProcessOllamaAndUpdateEntityAsync(long? entityId, string recognizedText, string languageCode, string detectedLanguage, string preText, string modelName, IConfiguration Configuration, SprSpeechTable entity, BaseDbContext db)
     {
         // OLLAMA
+        //using BaseDbContext db = await DbContext.CreateDbContext(SettingsDb.DbType, conStringDBA, SettingsDb.Scheme);
+
         try
         {
             //if(recognizedText.StartsWith("Error")) return;
 
-            (string responseOllamaText, lagTime) = await ai.OllamaResponse(preText, recognizedText, modelName, Configuration);
+            (string responseOllamaText, lagTime) = await ai.OllamaResponse(preText, recognizedText, Configuration);
             if (languageCode != "ru" && languageCode != "uk" && !string.IsNullOrEmpty(languageCode))
             {
-                (recognizedText, lagTime) = await ai.OllamaTranslate(recognizedText, modelName, languageCode, detectedLanguage, Configuration);
+                (recognizedText, lagTime) = await ai.OllamaTranslate(recognizedText, languageCode, detectedLanguage, Configuration);
             }
-            await EFCoreQuery.InsertCommentAsync(entityId, recognizedText, detectedLanguage, responseOllamaText, modelName, db);
+            await EFCoreQuery.InsertCommentAsync(entityId, recognizedText, detectedLanguage, responseOllamaText, Configuration["OllamaModelName"], db);
             ProcessedAi++;
         }
         catch (Exception ex)

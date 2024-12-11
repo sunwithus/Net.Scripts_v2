@@ -24,12 +24,12 @@ public class OllamaService
         public long total_duration { get; set; }
     }
 
-    public async Task<(string, int)> OllamaResponse(string preText, string recognizedText, string modelName, IConfiguration Configuration)
+    public async Task<(string, int)> OllamaResponse(string preText, string recognizedText, IConfiguration Configuration)
     {
         if (string.IsNullOrEmpty(recognizedText)) return ("Аудио не транскрибировано", -1);
         try
         {
-            (string text, int durationOllama) = await SendTextForAnalysisAsync(preText, recognizedText, modelName, Configuration);
+            (string text, int durationOllama) = await SendTextForAnalysisAsync(preText, recognizedText, Configuration);
             ConsoleCol.WriteLine("\nOllamaResponse => Длительность выполнения: " + durationOllama + " sec.", ConsoleColor.DarkBlue);
 
             text = await SideEffect.DeleteUnnecessary(text);
@@ -43,11 +43,11 @@ public class OllamaService
         }
     }
 
-    public async Task<(string, int)> OllamaTranslate(string recognizedText, string modelName, string languageCode, string detectedLanguage, IConfiguration Configuration)
+    public async Task<(string, int)> OllamaTranslate(string recognizedText, string languageCode, string detectedLanguage, IConfiguration Configuration)
     {
         //Todo
         string preTextToTranslate = "Переведи на русский язык: ";
-        (string translatedText, int durationOllama) = await SendTextForAnalysisAsync(preTextToTranslate, recognizedText, modelName, Configuration);
+        (string translatedText, int durationOllama) = await SendTextForAnalysisAsync(preTextToTranslate, recognizedText, Configuration);
         Console.WriteLine();
         ConsoleCol.WriteLine("OllamaTranslate => Длительность выполнения: " + durationOllama + " sec.", ConsoleColor.Blue);
         translatedText = await SideEffect.DeleteUnnecessary(translatedText);
@@ -56,7 +56,7 @@ public class OllamaService
         return (translatedText, durationOllama);
     }
 
-    public async Task<(string, int)> SendTextForAnalysisAsync(string preText, string recognizedText, string modelName, IConfiguration configuration)
+    public async Task<(string, int)> SendTextForAnalysisAsync(string preText, string recognizedText, IConfiguration configuration)
     {
         var ollamaOptions = new
         {
@@ -69,7 +69,6 @@ public class OllamaService
             presence_penalty = configuration.GetSection("OllamaModelOptions").GetValue<double>("presence_penalty"),
             frequency_penalty = configuration.GetSection("OllamaModelOptions").GetValue<double>("frequency_penalty"),
         };
-        string ollamaIP = configuration["OllamaIP"];
 
         // Check for negative values
         if (ollamaOptions.num_predict < 0 || ollamaOptions.num_ctx < 0 || ollamaOptions.top_k < 0)
@@ -78,7 +77,7 @@ public class OllamaService
         }
 
         var content = new StringContent(JsonSerializer.Serialize(new { 
-            model = modelName, 
+            model = configuration["OllamaModelName"], 
             prompt = $"{preText} => {recognizedText}. Ответ должен быть только на русском языке.",
             stream = false,
             options = new
@@ -94,7 +93,7 @@ public class OllamaService
             }
 
     }), Encoding.UTF8, "application/json");
-        var response = await _httpClient.PostAsync($"{ollamaIP}/api/generate", content);
+        var response = await _httpClient.PostAsync($"{configuration["OllamaIP"]}/api/generate", content);
         response.EnsureSuccessStatusCode();
 
         var responseBody = await response.Content.ReadAsStringAsync();

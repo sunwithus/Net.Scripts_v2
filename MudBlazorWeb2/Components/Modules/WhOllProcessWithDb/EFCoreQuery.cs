@@ -26,40 +26,25 @@ namespace MudBlazorWeb2.Components.Modules.WhOllProcessWithDb
             int seconds = int.Parse(parts[2]);
             return (hours * 3600 + minutes * 60 + seconds);
         }
-
-        public static async Task<List<SprSpeechTable>> GetSpeechRecords(DateTime StartDate, DateTime EndDate, string TimeInterval, BaseDbContext db, List<string> _ignoreRecordType)
+        //Todo if needed
+        public static int ConvertTimeIntervalStringToSeconds(string TimeInterval)
         {
-            var parameters = new OracleParameter[]
-            {
-                new OracleParameter("startDate", StartDate),
-                new OracleParameter("endDate", EndDate)
-            };
+            return 10;
+        }
 
-            var sqlQuery = $@"
-                SELECT * FROM SPR_SPEECH_TABLE
-                WHERE S_DATETIME BETWEEN :startDate AND :endDate
-                AND S_TYPE = 0
-                AND (S_NOTICE IS NULL OR S_NOTICE = '')
-                AND S_DURATION > INTERVAL '{EFCoreQuery.ConvertDurationStringToSeconds(TimeInterval)}' SECOND
-                AND S_EVENTCODE NOT IN ({string.Join(",", _ignoreRecordType.Select(e => $"'{e}'"))})
-                ORDER BY S_DATETIME DESC";
-
+        public static async Task<List<SprSpeechTable>> GetSpeechRecords(DateTime StartDateTime, DateTime EndDateTime, string TimeInterval, BaseDbContext db, List<string> _ignoreRecordType)
+        {
+            //Todo TimeInterval TimeSpan.FromSeconds(TimeInterval) //string, int ???
             return await db.SprSpeechTables
-                .FromSqlRaw(sqlQuery, parameters)
-                .ToListAsync();
-
-            /*
-            return db.SprSpeechTable
-               //.Where (x => x.Duration > 10) // так не работает выборка по длительности // Duration is string // c Oracle.ManagedDataAccess.Core работало так $"AND S_DURATION > INTERVAL '10' SECOND " 
-               .Where(x => x.Datetime >= startDate && x.Datetime <= endDate
-               && x.Type == 0 // Тип записи (-1 – неизвестно,0 – сеанс связи, 1 – сообщение, 2 – биллинг,3 – служебное сообщение, 4 – регистрация автотранспорта
-               && (x.Notice == null || x.Notice == "")
-               && !_ignoreRecordType.Contains(x.Eventcode))
-               .OrderByDescending(x => x.Datetime)
-               .AsEnumerable() // Evaluate the query so far on the database
-               .Where(x => EFCoreQuery.ConvertDurationStringToSeconds(x.Duration) > EFCoreQuery.ConvertDurationStringToSeconds(TimeInterval))
-               .ToList();
-            */
+               .Where (x => x.SDuration > TimeSpan.FromSeconds(10)) 
+               .Where(x => x.SDatetime >= StartDateTime && x.SDatetime <= EndDateTime
+               && x.SType == 0 // Тип записи (-1 – неизвестно,0 – сеанс связи, 1 – сообщение, 2 – биллинг,3 – служебное сообщение, 4 – регистрация автотранспорта
+               && (x.SNotice == null || x.SNotice == "")
+               && !_ignoreRecordType.Contains(x.SEventcode))
+               .OrderByDescending(x => x.SDatetime)
+               //.AsEnumerable() // Evaluate the query so far on the database
+               //.Where(x => EFCoreQuery.ConvertDurationStringToSeconds(x.SDuration) > EFCoreQuery.ConvertDurationStringToSeconds(TimeInterval))
+               .ToListAsync();
         }
 
         public static async Task<(byte[]? audioDataLeft, byte[]? audioDataRight, string? recordType)> GetAudioDataAsync(long? key, BaseDbContext db)
@@ -154,7 +139,7 @@ namespace MudBlazorWeb2.Components.Modules.WhOllProcessWithDb
                     throw;
                 }
 
-                //await db.Database.CloseConnectionAsync();
+                await db.Database.CloseConnectionAsync();
             
         }
 
@@ -173,7 +158,6 @@ namespace MudBlazorWeb2.Components.Modules.WhOllProcessWithDb
             {
                 ConsoleCol.WriteLine("Ошибка в InsertNullToNoticeAsync => " + ex.Message, ConsoleColor.Red);
             }
-            //await db.Database.CloseConnectionAsync();
         }
 
     }
