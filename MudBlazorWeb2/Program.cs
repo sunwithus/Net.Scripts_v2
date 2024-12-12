@@ -3,16 +3,12 @@ global using MudBlazorWeb2.Components.Methods;
 
 using MudBlazor.Services;
 using MudBlazorWeb2.Components;
-using MudBlazorWeb2.Components.Modules.WhOllProcessWithDb.Services;
+using MudBlazorWeb2.Components.Modules.AiEstimateDb.Services;
 using MudBlazorWeb2.Components.EntityFrameworkCore.SqliteModel;
 using MudBlazorWeb2.Components.Modules._Shared;
 using MudBlazorWeb2.Components.EntityFrameworkCore;
-using MudBlazorWeb2.Components.Modules.UserSettings;
 
 var builder = WebApplication.CreateBuilder(args);
-
-// settingsApp.json settingsOper.json
-builder.Services.AddSingleton<UserSettingsService>();
 
 builder.Services.AddDbContextFactory<SqliteDbContext>();
 /*builder.Services.AddDbContextFactory<SqliteDbContext>(options =>
@@ -24,7 +20,6 @@ builder.Services.AddHostedService<ReplBackgroundService>();
 builder.Services.AddHostedService<AiBackgroundService>();
 
 builder.Services.AddSingleton<StateService>();
-//builder.Services.AddSingleton<ProgressService>();
 builder.Services.AddSingleton<IDbContextFactory, DbContextFactory>();
 
 // SignalR

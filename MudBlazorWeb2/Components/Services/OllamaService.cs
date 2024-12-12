@@ -1,13 +1,6 @@
-﻿using Microsoft.AspNetCore.Authentication;
-using System.Net.Http;
-using System.Net.NetworkInformation;
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
-using MudBlazorWeb2.Components.Methods;
-using Microsoft.Extensions.Configuration;
-using MudBlazorWeb2.Components.Modules.WhOllProcessWithDb;
-using System.Configuration;
+using MudBlazorWeb2.Components.Modules.AiEstimateDb;
 
 public class OllamaService
 {
@@ -30,7 +23,7 @@ public class OllamaService
         try
         {
             (string text, int durationOllama) = await SendTextForAnalysisAsync(preText, recognizedText, Configuration);
-            ConsoleCol.WriteLine("\nOllamaResponse => Длительность выполнения: " + durationOllama + " sec.", ConsoleColor.DarkBlue);
+            ConsoleCol.WriteLine($"\n{DateTime.Now} OllamaResponse => Длительность выполнения: " + durationOllama + " sec.", ConsoleColor.DarkBlue);
 
             text = await SideEffect.DeleteUnnecessary(text);
             return (text, durationOllama);
@@ -49,7 +42,7 @@ public class OllamaService
         string preTextToTranslate = "Переведи на русский язык: ";
         (string translatedText, int durationOllama) = await SendTextForAnalysisAsync(preTextToTranslate, recognizedText, Configuration);
         Console.WriteLine();
-        ConsoleCol.WriteLine("OllamaTranslate => Длительность выполнения: " + durationOllama + " sec.", ConsoleColor.Blue);
+        ConsoleCol.WriteLine("{DateTime.Now} OllamaTranslate => Длительность выполнения: " + durationOllama + " sec.", ConsoleColor.Blue);
         translatedText = await SideEffect.DeleteUnnecessary(translatedText);
         translatedText = $"Перевод с {detectedLanguage.ToUpper()} языка: \n" + translatedText;
 

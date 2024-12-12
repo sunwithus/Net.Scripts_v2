@@ -77,7 +77,7 @@
     private bool IsProgressVisible = false;
     string message = "";
     string currentConnection = "";
-    private string SelectedDb { get; set; }
+    private string? SelectedDb { get; set; }
     private SettingsDb SettingsDb = null;
 
     private BaseDbContext _context = null;
@@ -92,7 +92,6 @@
         isVisible = false;
         IsProgressVisible = false;
         SettingsDb = SettingsDbList.FirstOrDefault(x => x.Selected == true);
-        SelectedDb = SettingsDb.DbType;
         if (SettingsDb != null)
         {
             currentConnection = $"{SettingsDb.DbType} => {SettingsDb.ServerAddress} / {SettingsDb.Scheme}";
@@ -101,6 +100,8 @@
         {
             SettingsDb = new SettingsDb();
         }
+        SelectedDb = SettingsDb.DbType;
+
         await Task.Delay(1);
     }
 

@@ -13,7 +13,6 @@ using MudBlazorWeb2.Components.Methods;
 
 public class ReplBackgroundService : BackgroundService
 {
-    //private readonly IServiceScopeFactory _scopeFactory;
     private readonly IConfiguration _configuration;
     private FileLogger _fileLogger;
     private readonly IHubContext<ReplicatorHub> _hubContext;
@@ -56,7 +55,7 @@ public class ReplBackgroundService : BackgroundService
             var JsonFiles = Directory.EnumerateFiles(pathToAudio, "*.json");
             if (!JsonFiles.Any())
             {
-                Console.WriteLine("Нет json файлов для обработки.");
+                //Console.WriteLine("BackGroung Repl => Нет json файлов для обработки.");
                 return;
             }
 
@@ -74,7 +73,7 @@ public class ReplBackgroundService : BackgroundService
         }
         else
         {
-            Console.WriteLine("Директория для обработки аудиофайлов отсутствует.");
+            Console.WriteLine("BackGroung Repl => Директория для обработки аудиофайлов отсутствует.");
             return;
         }
     }
@@ -86,7 +85,7 @@ public class ReplBackgroundService : BackgroundService
         var filesAudio = Directory.EnumerateFiles(paramsRepl.PathToSaveTempAudio);
         if (!filesAudio.Any())
         {
-            Console.WriteLine("Нет аудио файлов для репликации.");
+            Console.WriteLine("BackGroung Repl => Нет аудио файлов для репликации.");
             return;
         }
         int count = 0;
@@ -95,13 +94,13 @@ public class ReplBackgroundService : BackgroundService
             try
             {
                 await ProcessSingleAudio(context, filePath, paramsRepl.SourceName);
-                Console.WriteLine($"Файл обработан: {filePath}");
+                Console.WriteLine($"BackGroung Repl => Файл обработан: {filePath}");
                 count++;
                 //File.Delete(filePath);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Ошибка при обработке файла {filePath}: {ex.Message}");
+                Console.WriteLine($"BackGroung Repl => Ошибка при обработке файла {filePath}: {ex.Message}");
                 await _hubContext.Clients.All.SendAsync("ReceiveMessage", $"❌ Ошибка при обработке файла {filePath}: {ex.Message}", cancellationToken);
                 //throw;
             }
@@ -173,7 +172,7 @@ public class ReplBackgroundService : BackgroundService
         }
         catch(Exception ex)
         {
-            Console.WriteLine("Error SaveEntitiesToDatabase => " + ex);
+            Console.WriteLine("BackGroung Repl => Error SaveEntitiesToDatabase => " + ex);
             await transaction.RollbackAsync();
             throw;
         }

@@ -1,6 +1,6 @@
 [
   {
-    "Selected": true,
+    "Selected": false,
     "DbType": "Oracle",
     "User": "sysdba",
     "Password": "masterkey",
@@ -8,7 +8,7 @@
     "Scheme": "test"
   },
   {
-    "Selected": false,
+    "Selected": true,
     "DbType": "Postgres",
     "User": "postgres",
     "Password": "postgres",

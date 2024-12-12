@@ -2,7 +2,6 @@
 
 @using System.Text.RegularExpressions
 @using MudBlazorWeb2.Components.Modules.UserSettings
-@inject UserSettingsService UserSettingsService
 
 @rendermode InteractiveServer
 
@@ -34,7 +33,7 @@
     protected override async Task OnInitializedAsync()
     {
         await Task.Delay(0);
-        var settings = await UserSettingsService.ReadAllItemsFromFile();
+        var settings = await SourceName.ReadAllItemsFromFile();
         operators = settings.OrderBy(x => x.Key).Select(x => x.Key).ToList();
     }
 

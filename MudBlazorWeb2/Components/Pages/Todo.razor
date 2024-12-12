@@ -3,9 +3,8 @@
 @page "/todo"
 @rendermode InteractiveServer
 
-@using MudBlazorWeb2.Components.Modules.WhOllProcessWithDb.TodoList
+@using MudBlazorWeb2.Components.Modules.AiEstimateDb
 @using MudBlazorWeb2.Components.EntityFrameworkCore.SqliteModel
-@using MudBlazorWeb2.Components.Modules.WhOllProcessWithDb
 @using MudBlazorWeb2.Components.EntityFrameworkCore
 @using Microsoft.AspNetCore.SignalR.Client
 
@@ -17,8 +16,7 @@
 @inject IDialogService DialogService
 @inject ISnackbar SnackbarService
 @inject IDbContextFactory DbContextFactory
-
-@inherits TodoListBase
+@inject SqliteDbContext SqliteDbContext
 
 <PageTitle>🚀 WhisperOllama </PageTitle>
 
@@ -44,12 +42,8 @@
                         <MudText Class="d-flex ml-auto" Color="@colorTag" Style="display: flex; justify-content: flex-end;">
                             @if (todo.IsRunning)
                             {
-                                <MudText>@todo.CompletedKeys / @todo.TotalKeys ⌛ &emsp;</MudText>
-                                <MudProgressLinear Vertical="true" Color="@colorTag" Size="Size.Medium" Indeterminate="true" Striped="true" Rounded="true" />
-                            }
-                            else
-                            {
-                                <MudText>💤</MudText>
+                                <MudText Typo="Typo.body2">@todo.ProcessingMessage &emsp;</MudText>
+                                @*<MudProgressLinear Vertical="true" Color="@colorTag" Size="Size.Medium" Indeterminate="true" Striped="true" Rounded="true" />*@
                             }
                         </MudText>
                     </MudText>
@@ -67,22 +61,24 @@
                         </MudText>
                         <MudTextField T="DateTime" Format="s" Label="От даты:" InputType="InputType.DateTimeLocal" @bind-Value="@todo.StartDateTime" />
                         <MudTextField T="DateTime" Format="yyyy-MM-ddTHH:mm:ss" Label="По дату:" InputType="InputType.DateTimeLocal" @bind-Value="@todo.EndDateTime" />
-                        <MudTextField T="string" Label="Длительность от:" @bind-Value="todo.DurationString" />
-                        <MudText Style="display:flex; justify-content: space-between;">
-                            <MudCheckBox @bind-Value="todo.IsCyclic" Size="Size.Small" Label="С интервалом повторного запуска (мин.): " Color="@colorTag" />
-                            <MudNumericField Style="margin-left:auto; width: 55px;" @bind-Value="todo.CycleInterval" Min="1" Step="1" Variant="Variant.Text" />
+                        <MudText Style="display: flex;">
+                            <MudNumericField T="int" Label="Длительность (сек.) от:" @bind-Value="todo.MoreThenDuration" Min="0" />&emsp;&nbsp;
+                            <MudNumericField Label="Подсветка (0 - не подсвечивать) от:" Variant="Variant.Text" Min="0" Max="10" @bind-Value="todo.BackLight" />
                         </MudText>
                         <MudText Style="display: flex; justify-content: space-between;">
-                            <MudText>@todo.ProcessingMessage</MudText>
-                            <MudText Style="display: flex; justify-content: flex-end;">
+                            
+                            <MudCheckBox @bind-Value="todo.IsCyclic" Size="Size.Small" Label="С интервалом повторного запуска." Color="@colorTag" />
+                            <MudText>
                                 <MudTooltip Text="Сохранить">
-                                    <MudIconButton OnClick="@(async () => await UpdateTodo(todo))" Icon="@Icons.Material.Outlined.Save" />
+                                    <MudIconButton OnClick="@(async () => await SqliteDbContext.UpdateTodo(todo))" Icon="@Icons.Material.Outlined.Save" />
                                 </MudTooltip>
                                 <MudTooltip Text="Удалить">
                                     <MudIconButton OnClick="@(async () => await DialogDeleteTodoAndCollapse(todo))" Icon="@Icons.Material.Outlined.Delete" />
                                 </MudTooltip>
                             </MudText>
                         </MudText>
+                        
+
                         @if (todo.IsRunPressed)
                         {
                             <MudOverlay LockScroll="false"  LightBackground="true" Visible="true" Absolute="true" />
@@ -113,6 +109,7 @@
 
 
 @code {
+
     public MudBlazor.Color colorTag = Color.Info;
     public List<TodoItem> todos = new();
     public string? newTodo;
@@ -122,7 +119,8 @@
 
     protected override async Task OnInitializedAsync()
     {
-        todos = await LoadTodos();
+        //todos = await LoadTodos();
+        todos = await SqliteDbContext.LoadTodos();
 
         //
         _hubConnection = new HubConnectionBuilder().WithUrl(NavigationManager.BaseUri + "todohub").Build();
@@ -145,10 +143,10 @@
 
                 existingTodo.StartDateTime = todo.StartDateTime;
                 existingTodo.EndDateTime = todo.EndDateTime;
-                existingTodo.DurationString = todo.DurationString;
+                existingTodo.MoreThenDuration = todo.MoreThenDuration;
 
                 existingTodo.IsCyclic = todo.IsCyclic;
-                existingTodo.CycleInterval = todo.CycleInterval;
+                existingTodo.BackLight = todo.BackLight;
 
                 existingTodo.DbType = todo.DbType;
                 existingTodo.User = todo.User;
@@ -173,9 +171,10 @@
     protected async Task StartButtonPressed(TodoItem todo)
     {
         todo.IsRunPressed = true;
-        todo.IsRunning = true;
         todo.IsStopPressed = false;
-        await UpdateTodo(todo);
+        //todo.IsRunning = true;
+        todo.ProcessingMessage = "Обработка запускается...";
+        await SqliteDbContext.UpdateTodo(todo);
         StateHasChanged();
 
         ConsoleCol.WriteLine("StartButtonPressed", ConsoleColor.Blue);
@@ -185,8 +184,10 @@
     {
         todo.IsStopPressed = true;
         todo.IsRunPressed = false;
-        todo.IsRunning = false;
-        await UpdateTodo(todo);
+        //todo.IsRunning = false;
+        todo.ProcessingMessage = "Обработка останавливается...";
+        if (todo.IsRunning == false) todo.ProcessingMessage = "Обработка остановлена.";
+        await SqliteDbContext.UpdateTodo(todo);
         StateHasChanged();
 
         ConsoleCol.WriteLine("StopButtonPressed", ConsoleColor.Blue);
@@ -201,8 +202,8 @@
         if (!result.Canceled)
         {
             IsPanelExpanded = false;
-            await DeleteTodo(todo);
-            todos = await LoadTodos();
+            await SqliteDbContext.DeleteTodo(todo);
+            todos = await SqliteDbContext.LoadTodos();
             StateHasChanged();
         }
     }
@@ -212,8 +213,8 @@
         if (!string.IsNullOrWhiteSpace(newTodo))
         {
             var newItem = new TodoItem { Title = newTodo };
-            await AddTodo(newItem);
-            todos = await LoadTodos();
+            await SqliteDbContext.AddTodo(newItem);
+            todos = await SqliteDbContext.LoadTodos();
             newTodo = "";
             StateHasChanged();
         }
@@ -258,4 +259,6 @@
     {
         await Task.Delay(1);
     }
+
+
 }

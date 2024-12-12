@@ -79,7 +79,6 @@
 
     protected override async Task OnInitializedAsync()
     {
-        //SettingsDbList = await LoadItemsListFromJson();
         SettingsDbList = await SimpleJson<SettingsDb>.LoadItemsAsync(FileSettingsDb);
         StateHasChanged();
 

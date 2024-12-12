@@ -1,15 +1,8 @@
-﻿Replicator => Codec G.728 decoder вместо SignalR => Singleton
-
+﻿//TODO
+Подсветка, встречаются слова
 Запуск по расписанию
-При WhOllProcessWithDb отложенная выборка при пуске (без await) и вывод инф о старте
-Очередь и приоритет перевода
-выбор даты, выбор времени
-https://mudblazor.com/components/datepicker#range-picker-usage
-https://mudblazor.com/components/timepicker#read-only
 
-//TODO
 InterBase
-"обнуление" Notice для какой-н БД //Кнопка - очистить примечание, где... комментарии пусто
 mini PostWorks
 Home Carousel https://mudblazor.com/components/carousel#example
 Drop Zone https://mudblazor.com/components/dropzone#api

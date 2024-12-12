@@ -71,7 +71,7 @@ public class WhisperService
             var responseText = await response.Content.ReadAsStringAsync();
 
             DateTime endTime = DateTime.Now;
-            ConsoleCol.WriteLine("\nWhisper (RecognizeSpeechAsync) => request time: " + ((int)Math.Round((endTime - startTime).TotalSeconds)).ToString() + " sec.", ConsoleColor.DarkGray);
+            ConsoleCol.WriteLine($"\n{DateTime.Now} Whisper (RecognizeSpeechAsync) => request time: " + ((int)Math.Round((endTime - startTime).TotalSeconds)).ToString() + " sec.", ConsoleColor.DarkGray);
 
             return responseText;
         }
