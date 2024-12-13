@@ -144,7 +144,14 @@
         {
             string conStringDBA = SelectDb.ConStringDBA(SettingsDb);
             using var context = await DbContextFactory.CreateDbContext(SettingsDb.DbType, conStringDBA, SettingsDb.Scheme);
-            
+
+            if(!context.Database.CanConnect())
+            {
+                message = $"\nНе удалось установить подключение к БД, проверьте настройки";
+                Console.WriteLine($"Не удалось установить подключение к БД, проверьте настройки");
+                return;
+            }
+
             speechData = await DbQuery.GetSpeechDataByIdAsync(Id, context);
 
             if (speechData != null)
@@ -174,7 +181,7 @@
         }
         catch (Exception ex)
         {
-            message = $"Общая ошибка: {ex.Message}" + $"Ключ записи №{Id} не существует ";
+            message = $"Общая ошибка: {ex.Message}" + $"Возможно, ключ записи №{Id} не существует ";
             Console.WriteLine($"Общая ошибка: {ex.Message}");
         }
         finally

@@ -6,6 +6,7 @@ InterBase
 mini PostWorks
 Home Carousel https://mudblazor.com/components/carousel#example
 Drop Zone https://mudblazor.com/components/dropzone#api
+postgres была не запущена, неверно отработало - ключ записи не существует вместо соединение отсутствует
 
 
 // изучить

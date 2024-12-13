@@ -1,21 +1,16 @@
 ﻿//AiBackGroundService.cs
 
-using MudBlazorWeb2.Components.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
 using MudBlazorWeb2.Components.Modules._Shared;
-using Microsoft.EntityFrameworkCore;
+
 using MudBlazorWeb2.Components.Modules.AiEstimateDb;
+using MudBlazorWeb2.Components.EntityFrameworkCore;
 using MudBlazorWeb2.Components.EntityFrameworkCore.SqliteModel;
-using Microsoft.EntityFrameworkCore.Internal;
-using Microsoft.AspNetCore.Components;
-using System.Configuration;
 using MudBlazorWeb2.Components.EntityFrameworkCore.Sprutora;
-using static MudBlazor.CategoryTypes;
 using Npgsql;
-using Oracle.EntityFrameworkCore;
 using Oracle.ManagedDataAccess.Client;
-using MudBlazorWeb2.Components.Pages;
 
 public class AiBackgroundService : BackgroundService
 {
@@ -52,32 +47,51 @@ public class AiBackgroundService : BackgroundService
             try
             {
                 await AiProcessDatabaseAsync(stoppingToken);
-                
-                Console.WriteLine("AiBackgroundService...");
+                //Console.WriteLine("AiBackgroundService...");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error processing database");
             }
-            await Task.Delay(8000, stoppingToken); // delay
+            await Task.Delay(3000, stoppingToken); // delay
         }
     }
 
     private async Task UpdateTodoItemStateAsync(TodoItem item, string message, CancellationToken _stoppingToken)
     {
-        item.ProcessingMessage = message;
-        await _sqliteDbContext.CreateDbContext().UpdateTodo(item);
-        await _sqliteDbContext.CreateDbContext().SaveChangesAsync();
-        await _hubContext.Clients.All.SendAsync("UpdateTodos", item, _stoppingToken);
+        using var context = _sqliteDbContext.CreateDbContext();
+        try
+        {
+            var todoItemFromDb = await context.TodoItems.FindAsync(item.Id);
+            if (todoItemFromDb != null)
+            {
+                todoItemFromDb.CompletedKeys = item.CompletedKeys;
+                todoItemFromDb.TotalKeys = item.TotalKeys;
+                todoItemFromDb.ProcessingMessage = message;
+                await context.SaveChangesAsync();
+            }
+            await _hubContext.Clients.All.SendAsync("UpdateTodos", todoItemFromDb, _stoppingToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating TodoItem");
+        }
     }
     private async Task StopProcessingAsync(TodoItem item, string message, CancellationToken _stoppingToken)
     {
-        item.IsRunPressed = false;
-        item.IsRunning = false;
-        item.ProcessingMessage = message;
-        await _sqliteDbContext.CreateDbContext().UpdateTodo(item);
-        await _sqliteDbContext.CreateDbContext().SaveChangesAsync();
-        await _hubContext.Clients.All.SendAsync("UpdateTodos", item, _stoppingToken);
+        using var context = _sqliteDbContext.CreateDbContext();
+        var todoItemFromDb = await context.TodoItems.FindAsync(item.Id);
+        if (todoItemFromDb != null)
+        {
+            todoItemFromDb.CompletedKeys = item.CompletedKeys;
+            todoItemFromDb.TotalKeys = item.TotalKeys;
+            todoItemFromDb.IsRunPressed = false;
+            todoItemFromDb.IsStopPressed = true;
+            todoItemFromDb.ProcessingMessage = message;
+            await context.SaveChangesAsync();
+        }
+        await _hubContext.Clients.All.SendAsync("UpdateTodos", todoItemFromDb, _stoppingToken);
+        Console.WriteLine($"Процесс остановлен, нажата кнопкаIsStopPressed => {item.IsStopPressed}");
     }
     private async Task HandleExceptionAsync(TodoItem item, Exception ex, CancellationToken _stoppingToken)
     {
@@ -87,6 +101,18 @@ public class AiBackgroundService : BackgroundService
         await _sqliteDbContext.CreateDbContext().UpdateTodo(item);
         await _sqliteDbContext.CreateDbContext().SaveChangesAsync();
         await _hubContext.Clients.All.SendAsync("UpdateTodos", item, _stoppingToken);
+        Console.WriteLine("HandleExceptionAsync:" + ex.Message);
+    }
+
+    private async Task<bool> ReloadIsStopPressedByItemId(int Id)
+    {
+        var ReloadedTodoItemById = await _sqliteDbContext.CreateDbContext().LoadTodoItem(Id);
+        return ReloadedTodoItemById.IsStopPressed;
+    }
+    private async Task<bool> ReloadIsRunPressedByItemId(int Id)
+    {
+        var ReloadedTodoItemById = await _sqliteDbContext.CreateDbContext().LoadTodoItem(Id);
+        return ReloadedTodoItemById.IsRunPressed;
     }
     private async Task AiProcessDatabaseAsync(CancellationToken stoppingToken)
     {
@@ -96,26 +122,22 @@ public class AiBackgroundService : BackgroundService
 
         foreach (var item in todoItems)
         {
-            Console.WriteLine($"IsStopPressed => {item.IsStopPressed}");
-
-            if (!item.IsRunPressed && !item.IsRunning)
+            if (!await ReloadIsRunPressedByItemId(item.Id))
             {
-                await UpdateTodoItemStateAsync(item, "Готово к запуску. 💤", stoppingToken);
+                await StopProcessingAsync(item, "Готово к запуску. 💤", stoppingToken);
             }
-            if(item.IsRunPressed)
+            else
             {
-                item.IsRunning = true;
                 item.CompletedKeys = 0;
                 item.TotalKeys = 0;
                 await UpdateTodoItemStateAsync(item, "Идёт выполнение... ⌛", stoppingToken);
-                Console.WriteLine($"IsStopPressed => {item.IsStopPressed}");
+                await Task.Delay(1200);
+                Console.WriteLine("item.IsRunPressed =>" + item.IsRunPressed);
 
                 try
                 {
                     string conStringDBA = SelectDb.ConStringDBA(item);
                     using var Context = await _dbContextFactory.CreateDbContext(item.DbType, conStringDBA, item.Scheme);
-
-                    Console.WriteLine($"IsStopPressed => {item.IsStopPressed}");
 
                     //получение записей
                     List<SprSpeechTable> AudioList = await EFCoreQuery.GetSpeechRecords(item.StartDateTime, item.EndDateTime, item.MoreThenDuration, Context, IgnoreRecordTypes);
@@ -124,45 +146,29 @@ public class AiBackgroundService : BackgroundService
                     //если записи отсутствуют => к следующему TODO json
                     if (item.TotalKeys <= 0)
                     {
-                        await Task.Delay(1500);
                         if (item.IsCyclic)
                         {
                             await UpdateTodoItemStateAsync(item, $"Обработано {item.CompletedKeys}/{item.TotalKeys}. Ожидание повторного запуска.", stoppingToken);
                         }
                         else
                         {
-                            item.IsRunPressed = false;
-                            await UpdateTodoItemStateAsync(item, $"Обработано {item.CompletedKeys}/{item.TotalKeys}.", stoppingToken);
+                            await StopProcessingAsync(item, $"Обработано {item.CompletedKeys}/{item.TotalKeys}.", stoppingToken);
                         }
+
                         continue; //к следующей итерации todoItems
                     }
-                    Console.WriteLine($"IsStopPressed => {item.IsStopPressed}");
 
                     //если записи есть => действие с записями
+                    await UpdateTodoItemStateAsync(item, $"Идёт выполнение: {item.CompletedKeys}/{item.TotalKeys}", stoppingToken);
                     int ProcessedWhisper = 0; //выполнено Whisper = 0
                     foreach (var entity in AudioList)
                     {
                         // Остановить процесс, если нажата кнопка
-                        TodoItem tempItem = await _sqliteDbContext.CreateDbContext().LoadTodoItem(item.Id);
-                        item.IsStopPressed = tempItem.IsStopPressed;
-                        if (item.IsStopPressed)
+                        if (await ReloadIsStopPressedByItemId(item.Id))
                         {
                             await StopProcessingAsync(item, $"{DateTime.Now} Остановлено: {item.CompletedKeys} / {item.TotalKeys}", stoppingToken);
                             break;
                         }
-                        Console.WriteLine($"IsStopPressed => {item.IsStopPressed}");
-
-                        // Обработка записей
-                        //await ProcessEntityAsync(entity, item, Context, stoppingToken);
-
-                        item.ProcessingMessage = $"Выполнено: {item.CompletedKeys} / {item.TotalKeys}";
-                        sqlite.TodoItems.Update(item);
-                        await sqlite.SaveChangesAsync();
-                        await _hubContext.Clients.All.SendAsync("UpdateTodos", item, stoppingToken);
-
-                        tempItem = await _sqliteDbContext.CreateDbContext().LoadTodoItem(item.Id);
-                        item.IsStopPressed = tempItem.IsStopPressed;
-                        Console.WriteLine($"IsStopPressed => {item.IsStopPressed}");
 
                         // PreText => get PreText for operator or PreTextDefault
                         string preText = await Params.GetPreTextAsync(entity.SSourcename);
@@ -171,58 +177,55 @@ public class AiBackgroundService : BackgroundService
                         var (audioDataLeft, audioDataRight, recordType) = await EFCoreQuery.GetAudioDataAsync(entity.SInckey, Context);
                         Console.WriteLine($"Audio data for key {entity.SInckey} loaded successfully. recordType = " + recordType);
 
-                        tempItem = await _sqliteDbContext.CreateDbContext().LoadTodoItem(item.Id);
-                        item.IsStopPressed = tempItem.IsStopPressed;
-                        Console.WriteLine($"IsStopPressed => {item.IsStopPressed}");
-
                         // FFMpeg or Decoder => audio to folder
                         string audioFilePath = Path.Combine(_configuration["AudioPathForProcessing"], $"{entity.SInckey}.wav");
                         bool result = await DbToAudioConverter.FFMpegDecoder(audioDataLeft, audioDataRight, recordType, audioFilePath, _configuration);
                         if (!result) continue;
 
-                        tempItem = await _sqliteDbContext.CreateDbContext().LoadTodoItem(item.Id);
-                        item.IsStopPressed = tempItem.IsStopPressed;
-                        Console.WriteLine($"IsStopPressed => {item.IsStopPressed}");
-
                         // WHISPER
-                        Task<string> _recognizedText = _whisper.RecognizeSpeechAsync(audioFilePath, _configuration); //асинхронно, не ждём
-                        (string languageCode, string detectedLanguage) = await _whisper.DetectLanguageAsync(audioFilePath, _configuration);
-                        string recognizedText = await _recognizedText; //дожидаемся _recognizedText...
+                        //Task<string> _recognizedText = _whisper.RecognizeSpeechAsync(audioFilePath, _configuration); //асинхронно, не ждём
+                        //(string languageCode, string detectedLanguage) = await _whisper.DetectLanguageAsync(audioFilePath, _configuration);
+                        //string recognizedText = await _recognizedText; //дожидаемся _recognizedText...
+                        string languageCode = "";
+                        string detectedLanguage = "";
+                        string recognizedText = "";
+                        ProcessedWhisper++;
+                        await Task.Delay(3000);
 
-                        tempItem = await _sqliteDbContext.CreateDbContext().LoadTodoItem(item.Id);
-                        item.IsStopPressed = tempItem.IsStopPressed;
-                        Console.WriteLine($"IsStopPressed => {item.IsStopPressed}");
 
                         // Остановить процесс, если нажата кнопка
-                        if (item.IsStopPressed)
+                        if (await ReloadIsStopPressedByItemId(item.Id))
                         {
                             await StopProcessingAsync(item, $"{DateTime.Now} Остановлено: {item.CompletedKeys} / {item.TotalKeys}", stoppingToken);
-                            break; //выход из foreach (var entity in AudioList)
+                            break;
                         }
 
-                        Console.WriteLine($"IsStopPressed => {item.IsStopPressed}");
+
 
                         // Temprorary push string to Notice to aviod repeated process with entity
                         entity.SNotice = "TempRecord";
                         Context.SprSpeechTables.Update(entity);
                         await Context.SaveChangesAsync();
 
-                        Console.WriteLine($"IsStopPressed => {item.IsStopPressed}");
+
 
                         _logger.LogInformation("entity.SNotice = \"TempRecord\"");
 
                         // Delete earlier created file
                         Files.DeleteFilesByPath(audioFilePath);
 
-                        Console.WriteLine($"IsStopPressed => {item.IsStopPressed}");
-
                         // OLLAMA + ORACLE => Run task !!!_WITHOUT await
                         using var NewContext = await _dbContextFactory.CreateDbContext(item.DbType, conStringDBA, item.Scheme);
                         _logger.LogInformation("NewContext");
-                        await ProcessOllamaAndUpdateEntityAsync(entity.SInckey, recognizedText, languageCode, detectedLanguage, preText, _configuration["OllamaModelName"], _configuration, entity, NewContext, sqlite, item);
+                        //await ProcessOllamaAndUpdateEntityAsync(entity.SInckey, recognizedText, languageCode, detectedLanguage, preText, _configuration["OllamaModelName"], _configuration, entity, NewContext, sqlite, item);
+                        languageCode = "1";
+                        detectedLanguage = "1";
+                        recognizedText = "1";
+                        item.CompletedKeys++;
+                        await Task.Delay(3000);
+
                         _logger.LogInformation("ProcessOllamaAndUpdateEntityAsync");
 
-                        Console.WriteLine($"IsStopPressed => {item.IsStopPressed}");
 
                         // TODO
                         // разрешить "вырываться вперёд не более чем на N раз" и ProcessedAi
@@ -231,18 +234,18 @@ public class AiBackgroundService : BackgroundService
                             await Task.Delay(5000);
                             ConsoleCol.WriteLine("Delay", ConsoleColor.Yellow);
                             ConsoleCol.WriteLine("ProcessedOllama / ProcessedWhisper => " + item.CompletedKeys + "/" + ProcessedWhisper, ConsoleColor.Yellow);
+                            
+                            if (await ReloadIsStopPressedByItemId(item.Id))
+                            {
+                                await StopProcessingAsync(item, $"{DateTime.Now} Остановлено: {item.CompletedKeys} / {item.TotalKeys}", stoppingToken);
+                                break;
+                            }
                         }
-                        ProcessedWhisper++;
                         _logger.LogInformation("ProcessedOllama / ProcessedWhisper => " + item.CompletedKeys + "/" + ProcessedWhisper);
 
                         Console.WriteLine($"IsStopPressed => {item.IsStopPressed}");
 
-                        item.ProcessingMessage = $"Идёт выполнение: {item.CompletedKeys} / {item.TotalKeys}";
-                        sqlite.TodoItems.Update(item);
-                        await sqlite.SaveChangesAsync();
-                        await _hubContext.Clients.All.SendAsync("UpdateTodos", item, stoppingToken);
-
-                        Console.WriteLine($"IsStopPressed => {item.IsStopPressed}");
+                        await UpdateTodoItemStateAsync(item, $"Идёт выполнение: {item.CompletedKeys}/{item.TotalKeys}", stoppingToken);
                     }
                 }
                 catch (OracleException ex)
@@ -259,12 +262,19 @@ public class AiBackgroundService : BackgroundService
                 }
                 finally
                 {
-                    await _hubContext.Clients.All.SendAsync("UpdateTodos", item, stoppingToken);
+                    if (item.IsCyclic)
+                    {
+                        await UpdateTodoItemStateAsync(item, $"Выполнено: {item.CompletedKeys}/{item.TotalKeys}. Ожидание повторного запуска.", stoppingToken);
+                        
+                    }
+                    else
+                    {
+                        await StopProcessingAsync(item, $"Процесс остановлен. Выполнено: {item.CompletedKeys}/{item.TotalKeys}.", stoppingToken);
+                    }
+                    Console.WriteLine("finally");
                 }
 
             }
-
-
         }
     }
 
@@ -287,7 +297,7 @@ public class AiBackgroundService : BackgroundService
         {
             // EFCoreQuery - "обнуление" Notice при ошибке
             await EFCoreQuery.UpdateNoticeValueAsync(entityId, db, null);
-            Console.WriteLine("Ошибка при обработке Ollama и обновлении сущности EFCore: " + ex.Message);
+            ConsoleCol.WriteLine("Ошибка при обработке Ollama и обновлении сущности EFCore: " + ex.Message, ConsoleColor.Red);
 
             // TODO if (MistakesCount > 10)
             //StateService.IsStopPressed = true;

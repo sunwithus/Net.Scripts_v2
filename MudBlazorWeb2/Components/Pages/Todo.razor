@@ -33,18 +33,17 @@
             <MudExpansionPanel @key="todo.Id" Expanded="@IsPanelExpanded">
                 <TitleContent>
                     <MudText Style="display:flex;">
-                        <MudText Typo="Typo.caption" Color="@colorTag" Style="width: 250px;">@todo.Title.PadRight(25) &emsp;<b>→ @todo.Scheme</b></MudText>
-                        <MudText Class="d-flex mr-auto" Style="width: 150px;">
-                            <MudButton Disabled="todo.IsRunPressed" Variant="Variant.Filled" Style="height:32px; width: 32px;" Color="@colorTag" OnClick="@(async () => await StartButtonPressed(todo))">▶︎</MudButton>
-                            <MudText>&nbsp;</MudText>
-                            <MudButton Disabled="false" Variant="Variant.Filled" Style="height:32px; width: 32px;" Color="@colorTag" OnClick="@(async () => await StopButtonPressed(todo))">◼</MudButton>
+                        <MudText Style="display:flex; justify-content:start;">
+                            <MudText Class="d-flex mr-auto" Style="width: 140px;">
+                                <MudButton Disabled="todo.IsRunPressed" Variant="Variant.Filled" Style="height:32px; width: 32px;" Color="@colorTag" OnClick="@(async () => await StartButtonPressed(todo))">▶︎</MudButton>
+                                <MudText>&nbsp;</MudText>
+                                <MudButton Disabled="false" Variant="Variant.Filled" Style="height:32px; width: 32px;" Color="@colorTag" OnClick="@(async () => await StopButtonPressed(todo))">◼</MudButton>
+                            </MudText>
+                            <MudText Typo="Typo.caption" Color="@colorTag" Style="width: 190px;">@todo.Title.PadRight(25) &emsp;<b>→ @todo.Scheme</b></MudText>
                         </MudText>
                         <MudText Class="d-flex ml-auto" Color="@colorTag" Style="display: flex; justify-content: flex-end;">
-                            @if (todo.IsRunning)
-                            {
                                 <MudText Typo="Typo.body2">@todo.ProcessingMessage &emsp;</MudText>
                                 @*<MudProgressLinear Vertical="true" Color="@colorTag" Size="Size.Medium" Indeterminate="true" Striped="true" Rounded="true" />*@
-                            }
                         </MudText>
                     </MudText>
                 </TitleContent>
@@ -66,9 +65,9 @@
                             <MudNumericField Label="Подсветка (0 - не подсвечивать) от:" Variant="Variant.Text" Min="0" Max="10" @bind-Value="todo.BackLight" />
                         </MudText>
                         <MudText Style="display: flex; justify-content: space-between;">
-                            
+
                             <MudCheckBox @bind-Value="todo.IsCyclic" Size="Size.Small" Label="С интервалом повторного запуска." Color="@colorTag" />
-                            <MudText>
+                            <MudText Style="display:flex;">
                                 <MudTooltip Text="Сохранить">
                                     <MudIconButton OnClick="@(async () => await SqliteDbContext.UpdateTodo(todo))" Icon="@Icons.Material.Outlined.Save" />
                                 </MudTooltip>
@@ -77,13 +76,27 @@
                                 </MudTooltip>
                             </MudText>
                         </MudText>
-                        
 
                         @if (todo.IsRunPressed)
                         {
                             <MudOverlay LockScroll="false"  LightBackground="true" Visible="true" Absolute="true" />
                         }
                     </MudPaper>
+                    @if(IsDebug)
+                    {
+                    <MudText>Отладочная информация:</MudText>
+                        <p>todo.Id => @todo.Id</p>
+                        <p>todo.Title => @todo.Title</p>
+                        @*<p>todo.IsRunning => @todo.IsRunning</p>*@
+                        <p>todo.IsRunPressed => @todo.IsRunPressed</p>
+                        <p>todo.IsStopPressed => @todo.IsStopPressed</p>
+                        <p>todo.CompletedKeys => @todo.CompletedKeys</p>
+                        <p>todo.TotalKeys => @todo.TotalKeys</p>
+                        <p>todo.ProcessingMessage => @todo.ProcessingMessage</p>
+                        <p>todo.BackLight => @todo.BackLight</p>
+                        <p>todo.StartDateTime => @todo.StartDateTime</p>
+                        <p>todo.EndDateTime => @todo.EndDateTime</p>
+                    }
                 </ChildContent>
             </MudExpansionPanel>
         }
@@ -99,7 +112,9 @@
 </MudContainer>
 
 <br />
-<br />
+<MudText Typo="Typo.Caption" Style="opacity: 0.4; position: fixed; bottom: 0; left: 270px;"><MudCheckBox @bind-Value="IsDebug" Size="Size.Small" Label="Debug" Color="@colorTag" /></MudText>
+
+<MudText Style="opacity: 0.8; position: fixed; bottom: 0; right: 40px;" Typo="Typo.caption" Color="@colorTag">@($"Hub State: {_hubConnection?.State}")</MudText>
 
 <style>
     .bg-custom-class {
@@ -114,19 +129,23 @@
     public List<TodoItem> todos = new();
     public string? newTodo;
     public bool IsPanelExpanded = false;
+    public bool IsDebug = true;
 
     private HubConnection _hubConnection;
+    private PeriodicTimer? _timer;
 
     protected override async Task OnInitializedAsync()
     {
-        //todos = await LoadTodos();
+        //_timer = new PeriodicTimer(TimeSpan.FromSeconds(5));
+        //_ = UpdateTodosPeriodically();
+
         todos = await SqliteDbContext.LoadTodos();
 
-        //
+
         _hubConnection = new HubConnectionBuilder().WithUrl(NavigationManager.BaseUri + "todohub").Build();
         _hubConnection.On<TodoItem>("UpdateTodos", (todo) =>
         {
-
+            Console.WriteLine("Received update for TodoItem {Id} => " + todo.Id);
             var existingTodo = todos.FirstOrDefault(t => t.Id == todo.Id);
             if (existingTodo != null)
             {
@@ -156,7 +175,11 @@
                 //Todo подумать как по другому присваивать existingTodo=todo
                 //existingTodo = todo; //ссылочный тип
             }
-
+            else
+            {
+                ConsoleCol.WriteLine("existingTodo != null", ConsoleColor.Red);
+            }
+            ConsoleCol.WriteLine("Updated TodoItem {Id} with message: {Message} => " + todo.Id + " => " + todo.ProcessingMessage, ConsoleColor.Blue);
             InvokeAsync(StateHasChanged);
         });
         await _hubConnection.StartAsync();
@@ -166,30 +189,39 @@
     public void Dispose()
     {
         _ = _hubConnection.DisposeAsync();
+        _timer?.Dispose();
     }
 
     protected async Task StartButtonPressed(TodoItem todo)
     {
-        todo.IsRunPressed = true;
-        todo.IsStopPressed = false;
-        //todo.IsRunning = true;
-        todo.ProcessingMessage = "Обработка запускается...";
-        await SqliteDbContext.UpdateTodo(todo);
-        StateHasChanged();
-
+        //using var context = SqliteDbContext;
+        var todoItemFromDb = await SqliteDbContext.TodoItems.FindAsync(todo.Id);
+        if (todoItemFromDb != null)
+        {
+            todoItemFromDb.IsRunPressed = true;
+            todoItemFromDb.IsStopPressed = false;
+            todoItemFromDb.ProcessingMessage = "Добавлено в очередь...";
+            SqliteDbContext.Update(todoItemFromDb);
+            await SqliteDbContext.SaveChangesAsync();
+        }
+ 
+        await InvokeAsync(() => StateHasChanged());
         ConsoleCol.WriteLine("StartButtonPressed", ConsoleColor.Blue);
     }
 
     protected async Task StopButtonPressed(TodoItem todo)
     {
-        todo.IsStopPressed = true;
-        todo.IsRunPressed = false;
-        //todo.IsRunning = false;
-        todo.ProcessingMessage = "Обработка останавливается...";
-        if (todo.IsRunning == false) todo.ProcessingMessage = "Обработка остановлена.";
-        await SqliteDbContext.UpdateTodo(todo);
-        StateHasChanged();
+        var todoItemFromDb = await SqliteDbContext.TodoItems.FindAsync(todo.Id);
+        if (todoItemFromDb != null)
+        {
+            todoItemFromDb.IsStopPressed = true;
+            todoItemFromDb.IsRunPressed = false;
+            todoItemFromDb.ProcessingMessage = "Обработка останавливается...";
+            SqliteDbContext.Update(todoItemFromDb);
+            await SqliteDbContext.SaveChangesAsync();
+        }
 
+        await InvokeAsync(() => StateHasChanged());
         ConsoleCol.WriteLine("StopButtonPressed", ConsoleColor.Blue);
     }
 
@@ -252,6 +284,15 @@
         else
         {
             ConsoleCol.WriteLine("TestConnection => conStringDBA: " + conStringDBA, ConsoleColor.Red);
+        }
+    }
+    
+    private async Task UpdateTodosPeriodically()
+    {
+        while (await _timer.WaitForNextTickAsync())
+        {
+            todos = await SqliteDbContext.LoadTodos();
+            await InvokeAsync(StateHasChanged);
         }
     }
 

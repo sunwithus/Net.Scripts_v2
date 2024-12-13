@@ -31,7 +31,7 @@ namespace MudBlazorWeb2.Components.Modules.AiEstimateDb
             }
         }
     }
-
+/*
     public class TodoListBase : ComponentBase
     {
         [Inject]
@@ -59,4 +59,5 @@ namespace MudBlazorWeb2.Components.Modules.AiEstimateDb
             await Sqlite.SaveChangesAsync();
         }
     }
+*/
 }

@@ -8,6 +8,7 @@ using Oracle.ManagedDataAccess.Client;
 using Spire.Doc;
 using System.Configuration;
 using System.Text;
+using System.Linq;
 
 
 namespace MudBlazorWeb2.Components.Modules.AiEstimateDb
@@ -45,15 +46,6 @@ namespace MudBlazorWeb2.Components.Modules.AiEstimateDb
                //.AsEnumerable() // Evaluate the query so far on the database
                //.Where(x => EFCoreQuery.ConvertDurationStringToSeconds(x.SDuration) > EFCoreQuery.ConvertDurationStringToSeconds(TimeInterval))
                .ToListAsync();
-        }
-
-        public static async Task<List<SprSpeechTable>> GetSpeechRecordsForNoticeNull(DateTime StartDateTime, DateTime EndDateTime, BaseDbContext db)
-        {
-            //Todo TimeInterval TimeSpan.FromSeconds(TimeInterval) //string, int ???
-            return await db.SprSpeechTables
-                .Where(x => x.SDatetime >= StartDateTime && x.SDatetime <= EndDateTime
-                && (x.SNotice != null || x.SNotice != ""))
-                .ToListAsync();
         }
 
         public static async Task<(byte[]? audioDataLeft, byte[]? audioDataRight, string? recordType)> GetAudioDataAsync(long? key, BaseDbContext db)
@@ -152,21 +144,42 @@ namespace MudBlazorWeb2.Components.Modules.AiEstimateDb
             
         }
 
+        public static async Task UpdateManyNoticeValuesAsync(List<long?> keys, BaseDbContext db, string? value = null)
+        {
+            await db.SprSpeechTables
+                .Where(s => keys.Contains(s.SInckey))
+                .ExecuteUpdateAsync(s => s.SetProperty(x => x.SNotice, value));
+        }
         public static async Task UpdateNoticeValueAsync(long? key, BaseDbContext db, string? value = null)
         {
             try
             {
-                var speech = db.SprSpeechTables.Where(c => c.SInckey == key).FirstOrDefault();
+                SprSpeechTable speech = db.SprSpeechTables.Where(c => c.SInckey == key).ToList().FirstOrDefault();
                 if (speech != null)
                 {
+                    /*
                     speech.SNotice = value;
+                    db.SprSpeechTables.Update(speech);
+                    await db.SaveChangesAsync();
+                    */
+                    speech.SNotice = value;
+                    db.Entry(speech).State = EntityState.Modified; // Use Entry to set the state explicitly
+                    await db.SaveChangesAsync().ConfigureAwait(false); // Use ConfigureAwait(false) to avoid deadlocks
                 }
-                await db.SaveChangesAsync();
+                
             }
             catch (Exception ex)
             {
                 ConsoleCol.WriteLine("Ошибка в InsertNullToNoticeAsync => " + ex.Message, ConsoleColor.Red);
             }
+        }
+        public static async Task<List<long?>> GetSInckeyRecordsForNoticeNull(DateTime StartDateTime, DateTime EndDateTime, BaseDbContext db)
+        {
+            return await db.SprSpeechTables
+                .Where(x => x.SDatetime >= StartDateTime && x.SDatetime <= EndDateTime
+                && (x.SNotice != null || x.SNotice != ""))
+                .Select(x => x.SInckey)
+                .ToListAsync();
         }
 
     }
