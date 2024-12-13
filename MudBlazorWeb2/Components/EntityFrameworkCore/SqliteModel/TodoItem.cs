@@ -23,6 +23,7 @@ namespace MudBlazorWeb2.Components.EntityFrameworkCore.SqliteModel
         public string? Password { get; set; } = "masterkey";
         public string? ServerAddress { get; set; } = "127.0.0.1";
         public string? Scheme { get; set; } = "";
+        public string? LastError { get; set; } = "";
 
     }
 

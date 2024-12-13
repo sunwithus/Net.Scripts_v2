@@ -6,7 +6,7 @@
     запрос по-умолчанию
     <MudIconButton style="width: 48px; height: 48px" Icon="@Icons.Material.Filled.SettingsEthernet" Color="@colorButton" OnClick="@(()=>ToggleOverlay(true))" />
 </MudText>
-<MudOverlay Visible="isVisible" DarkBackground="true" Absolute="false">
+<MudOverlay Visible="isVisible" DarkBackground="true" Absolute="false" ZIndex="11">
     <MudCard Style="width:500px">
         <MudCardHeader>Редактирование.</MudCardHeader>
         <MudTextField Style="margin:10px;" @bind-Value="preTextValue" Lines="14" Label="Запрос (если не задан в пользовательских настройках):" Variant="Variant.Outlined"></MudTextField>

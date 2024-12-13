@@ -42,7 +42,7 @@ public class OllamaService
         string preTextToTranslate = "Переведи на русский язык: ";
         (string translatedText, int durationOllama) = await SendTextForAnalysisAsync(preTextToTranslate, recognizedText, Configuration);
         Console.WriteLine();
-        ConsoleCol.WriteLine("{DateTime.Now} OllamaTranslate => Длительность выполнения: " + durationOllama + " sec.", ConsoleColor.Blue);
+        ConsoleCol.WriteLine($"{DateTime.Now} OllamaTranslate => Длительность выполнения: " + durationOllama + " sec.", ConsoleColor.Blue);
         translatedText = await SideEffect.DeleteUnnecessary(translatedText);
         translatedText = $"Перевод с {detectedLanguage.ToUpper()} языка: \n" + translatedText;
 
