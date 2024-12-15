@@ -21,7 +21,7 @@
 
   <ItemGroup>
     <PackageReference Include="FreeSpire.Doc" Version="12.2.0" />
-    <PackageReference Include="InterBaseSql.EntityFrameworkCore.InterBase" Version="10.0.2" />
+    <PackageReference Include="InterBaseSql.EntityFrameworkCore.InterBase" Version="7.10.2" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.0">
@@ -43,6 +43,9 @@
 
   <ItemGroup>
     <Content Update="Components\Modules\Replicator\LogContent.razor">
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+    </Content>
+    <Content Update="Components\Pages\Installation.razor">
       <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
     </Content>
     <Content Update="Components\Pages\ResetNotes.razor">

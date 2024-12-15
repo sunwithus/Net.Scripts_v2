@@ -84,7 +84,7 @@
 
         //_logger = new FileLogger(Path.Combine(AppContext.BaseDirectory, "Logs/replicator.log"));
 
-        await base.OnInitializedAsync();
+        //await base.OnInitializedAsync();
 
         var baseUrl = Navigation.BaseUri;
         _hubConnection = new HubConnectionBuilder().WithUrl(baseUrl + "replicatorhub").Build();

@@ -51,6 +51,7 @@ public class AiBackgroundService : BackgroundService
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error processing database");
+                Console.WriteLine($"Ошибка в AiBackGroundService: {ex.Message}");
             }
             await Task.Delay(10000, stoppingToken); // delay
         }
@@ -86,9 +87,8 @@ public class AiBackgroundService : BackgroundService
             await context.SaveChangesAsync();
         }
         await _hubContext.Clients.All.SendAsync("UpdateTodos", todoItemFromDb, _stoppingToken);
-        //Console.WriteLine($"Процесс остановлен, нажата кнопка IsStopPressed => {item.IsStopPressed}");
     }
-    private async Task HandleExceptionAsync(TodoItem item, Exception ex, CancellationToken _stoppingToken)
+    private async Task HandleExceptionAsync(TodoItem item, string ex, CancellationToken _stoppingToken)
     {
         using var context = _sqliteDbContext.CreateDbContext();
         var todoItemFromDb = await context.TodoItems.FindAsync(item.Id);
@@ -100,12 +100,12 @@ public class AiBackgroundService : BackgroundService
             todoItemFromDb.TotalKeys = item.TotalKeys;
             todoItemFromDb.IsRunPressed = false;
             todoItemFromDb.IsStopPressed = true;
-            item.ProcessingMessage = $"{DateTime.Now} Error: {ex.Message}";
-            item.LastError = $"{DateTime.Now} Error => {ex.Message}";
+            todoItemFromDb.ProcessingMessage = $"{DateTime.Now} Error: {ex}";
+            todoItemFromDb.LastError = $"{DateTime.Now} Error => {ex}";
             await context.SaveChangesAsync();
         }
         await _hubContext.Clients.All.SendAsync("UpdateTodos", todoItemFromDb, _stoppingToken);
-        Console.WriteLine("Процесс остановлен. HandleExceptionAsync:" + ex.Message);
+        Console.WriteLine("Процесс остановлен. Ошибка:" + ex);
     }
 
     private async Task<bool> ReloadIsStopPressedByItemId(int Id)
@@ -132,6 +132,29 @@ public class AiBackgroundService : BackgroundService
             }
             else
             {
+                if (item.IsExecutionTime)
+                {
+                    TimeSpan now = TimeSpan.FromTicks(DateTime.Now.TimeOfDay.Ticks);
+
+                    if (item.StartExecutionTime <= item.EndExecutionTime)
+                    {
+                        if (!(now > item.StartExecutionTime && now < item.EndExecutionTime))
+                        {
+                            await UpdateTodoItemStateAsync(item, $"Запуск в {item.StartExecutionTime}... ⌛", stoppingToken);
+                            continue;
+                        }
+                    }
+                    else
+                    {
+                        // Интервал перекидывается на следующий день
+                        if (!(now > item.StartExecutionTime || now < item.EndExecutionTime))
+                        {
+                            await UpdateTodoItemStateAsync(item, $"Запуск в {item.StartExecutionTime}... ⌛", stoppingToken);
+                            continue;
+                        }
+                    }
+                }
+
                 item.CompletedKeys = 0;
                 item.TotalKeys = 0;
                 await UpdateTodoItemStateAsync(item, "Идёт выполнение... ⌛", stoppingToken);
@@ -185,6 +208,7 @@ public class AiBackgroundService : BackgroundService
                         bool result = await DbToAudioConverter.FFMpegDecoder(audioDataLeft, audioDataRight, recordType, audioFilePath, _configuration);
                         if (!result) continue;
 
+                        await UpdateTodoItemStateAsync(item, $"Идёт выполнение: {item.CompletedKeys}/{item.TotalKeys}. Стадия: Whisper.", stoppingToken);
                         // WHISPER
                         Task<string> _recognizedText = _whisper.RecognizeSpeechAsync(audioFilePath, _configuration); //асинхронно, не ждём
                         (string languageCode, string detectedLanguage) = await _whisper.DetectLanguageAsync(audioFilePath, _configuration);
@@ -228,22 +252,6 @@ public class AiBackgroundService : BackgroundService
                         }
                         _logger.LogInformation("ProcessedOllama / ProcessedWhisper => " + item.CompletedKeys + "/" + ProcessedWhisper);
                     }
-                }
-                catch (OracleException ex)
-                {
-                    await HandleExceptionAsync(item, ex, stoppingToken);
-                }
-                catch (NpgsqlException ex)
-                {
-                    await HandleExceptionAsync(item, ex, stoppingToken);
-                }
-                catch (Exception ex)
-                {
-                    await HandleExceptionAsync(item, ex, stoppingToken);
-                }
-                finally
-                {
-                    item.IsRunning = false;
                     if (item.IsCyclic && !await ReloadIsStopPressedByItemId(item.Id))
                     {
                         await UpdateTodoItemStateAsync(item, $"Выполнено: {item.CompletedKeys}/{item.TotalKeys}. Ожидание повторного запуска.", stoppingToken);
@@ -252,6 +260,22 @@ public class AiBackgroundService : BackgroundService
                     {
                         await StopProcessingAsync(item, $"Процесс остановлен. Выполнено: {item.CompletedKeys}/{item.TotalKeys}.", stoppingToken);
                     }
+                }
+                catch (OracleException ex)
+                {
+                    await HandleExceptionAsync(item, "OracleException: " + ex.Message, stoppingToken);
+                }
+                catch (NpgsqlException ex)
+                {
+                    await HandleExceptionAsync(item, "PostgresException: " + ex.Message, stoppingToken);
+                }
+                catch (Exception ex)
+                {
+                    await HandleExceptionAsync(item, "General: " + ex.Message, stoppingToken);
+                }
+                finally
+                {
+                    item.IsRunning = false;
                 }
 
             }
@@ -272,17 +296,12 @@ public class AiBackgroundService : BackgroundService
             await EFCoreQuery.InsertCommentAsync(entityId, recognizedText, detectedLanguage, responseOllamaText, Configuration["OllamaModelName"], NewContext, item.BackLight);
 
             item.CompletedKeys++;
-            await UpdateTodoItemStateAsync(item, $"Идёт выполнение: {item.CompletedKeys}/{item.TotalKeys}. Стадия: Whisper.", stoppingToken);
         }
         catch (Exception ex)
         {
             // EFCoreQuery - "обнуление" Notice при ошибке
             await EFCoreQuery.UpdateNoticeValueAsync(entityId, NewContext, null);
             ConsoleCol.WriteLine("Ошибка при обработке Ollama и обновлении сущности EFCore: " + ex.Message, ConsoleColor.Red);
-
-            //await HandleExceptionAsync(item, ex, stoppingToken);
-            // TODO if (MistakesCount > 10)
-            //StateService.IsStopPressed = true;
         }
 
     }

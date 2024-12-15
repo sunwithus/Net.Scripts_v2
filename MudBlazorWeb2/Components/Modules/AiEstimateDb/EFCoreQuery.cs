@@ -80,7 +80,7 @@ namespace MudBlazorWeb2.Components.Modules.AiEstimateDb
 
                 string dangerLevelString = int.TryParse(responseOllamaText.Substring(0, 1), out int dangerLevel) ? dangerLevel.ToString() : "unknown";
                 //Selstatus //1 - собеседник, 2 - слово в тексте, 3 - геофильтр, 4 - номер в тексте
-                short selStatus = -1;
+                short selStatus = -1; //без признака
                 if (dangerLevel > 0 && backLight - dangerLevel >= 0)
                 {
                     selStatus = 4; // 4 - номер в тексте

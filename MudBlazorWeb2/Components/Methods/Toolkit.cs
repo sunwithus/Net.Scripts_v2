@@ -215,6 +215,10 @@ namespace MudBlazorWeb2.Components.Methods
             {
                 conStringDBA = $"Host={SettingsDb.ServerAddress};Database={SettingsDb.Scheme};Username={SettingsDb.User};Password={SettingsDb.Password};";
             }
+            else if (SettingsDb.DbType == "Interbase")
+            {
+                conStringDBA = $"data source={SettingsDb.ServerAddress};initial catalog={SettingsDb.Scheme};user id={SettingsDb.User};password={SettingsDb.Password};";
+            }
             return conStringDBA;
         }
         public static string ConStringDBA(TodoItem SettingsDb)
@@ -227,6 +231,10 @@ namespace MudBlazorWeb2.Components.Methods
             else if (SettingsDb.DbType == "Postgres")
             {
                 conStringDBA = $"Host={SettingsDb.ServerAddress};Database={SettingsDb.Scheme};Username={SettingsDb.User};Password={SettingsDb.Password};";
+            }
+            else if (SettingsDb.DbType == "Interbase")
+            {
+                conStringDBA = $"data source={SettingsDb.ServerAddress};initial catalog={SettingsDb.Scheme};user id={SettingsDb.User};password={SettingsDb.Password};";
             }
             return conStringDBA;
         }

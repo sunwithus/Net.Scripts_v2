@@ -42,7 +42,7 @@ public class ReplBackgroundService : BackgroundService
             }
 
             // Задержка между циклами
-            await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
+            await Task.Delay(TimeSpan.FromSeconds(15), stoppingToken);
         }
     }
 

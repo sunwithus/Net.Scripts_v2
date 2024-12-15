@@ -25,6 +25,14 @@
     {
         <ConnectionSettings colorButton="@colorTag" OnSettingsChanged="OnSettingsChanged" SettingsDbList="@SettingsDbList" FileSettingsDb="@FileSettingsDb" />
     }
+
+    <MudText Typo="Typo.body1">Сторонние Базы данных могут иметь заполненное поле "Примечание"</MudText>
+    <MudText Typo="Typo.body2"> - если в "Примечании" записи не пусто, обработчик БД пропустит запись</MudText>
+    <MudText Typo="Typo.body2"> - для записи значения null в "Примечание" выберите период и нажмите "Выполнить"</MudText>
+
+    <MudDivider />
+    <br />
+
     <MudText Style="display: flex; justify-content:space-between; align-items:start; padding-bottom: 7px;">
         <MudText>
             @* // Период, Длительность *@

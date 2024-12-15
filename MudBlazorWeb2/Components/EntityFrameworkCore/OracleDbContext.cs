@@ -15,21 +15,6 @@ namespace MudBlazorWeb2.Components.EntityFrameworkCore
         public override DbSet<SprSpeechTable> SprSpeechTables { get; set; }
         public override DbSet<SprSpData1Table> SprSpData1Tables { get; set; }
         public override DbSet<SprSpCommentTable> SprSpCommentTables { get; set; }
-        
-        public static DbContextOptionsBuilder<OracleDbContext> ConfigureOptionsBuilder(string connectionString)
-        {
-            var optionsBuilder = new DbContextOptionsBuilder<OracleDbContext>();
-            optionsBuilder.UseOracle(connectionString, providerOptions =>
-            {
-                providerOptions.CommandTimeout(60);
-                providerOptions.UseRelationalNulls(true);
-                providerOptions.MinBatchSize(2);
-            })
-            .EnableDetailedErrors(false)
-            .EnableSensitiveDataLogging(false)
-            .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
-            return optionsBuilder;
-        }
 
         // Переопределение метода для настройки моделей (сопоставления сущностей с таблицами)
         protected override void OnModelCreating(ModelBuilder modelBuilder)

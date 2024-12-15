@@ -12,17 +12,16 @@
 <MudContainer>
     <MudText Typo="Typo.h5">Пользовательские настройки => ⚙️</MudText>
     <MudDivider />
-    <br />
 
-    <MudText Style="top:-17px; position:relative;">
-        <MudText Style="display:flex;">
-            <MudTextField @bind-Value="newKey" T="string" Label="Имя источника (оператор)" />
-            <MudButton OnClick="AddOrUpdateSetting">Сохранить 💾</MudButton>
+    <MudText Typo="Typo.body1" Style="position:relative; top:-2px; display: flex; justify-content:space-between; align-items: center;">
+        <MudTextField @bind-Value="newKey" Margin="Margin.Dense"  T="string" Label="Имя источника (оператор)" />&emsp;
+        <MudText Style="position:relative; top:4px;">
+            <MudButton Variant="Variant.Outlined" OnClick="AddOrUpdateSetting">Сохранить 💾</MudButton>
         </MudText>
-        <MudTextField @bind-Value="newValue" Lines="5" FullWidth Label="Шаблон запроса" Variant="Variant.Outlined" />
-
-  
-        
+    </MudText>
+    <MudDivider Style="position:relative; top:4px;" />
+    <br />
+    
     <MudSimpleTable RowClass="cursor-pointer" Hover="true" Dense="true" FixedHeader="true">
         <thead>
             <tr>
@@ -46,7 +45,7 @@
                 }
             </tbody>
     </MudSimpleTable>
-    </MudText>
+
 </MudContainer>
 
 @code {

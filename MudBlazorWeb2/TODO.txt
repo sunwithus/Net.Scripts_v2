@@ -1,13 +1,9 @@
 ﻿//TODO
-Подсветка, встречаются слова
-Запуск по расписанию
 
-InterBase
+инструкция на главной странице
+игра React (javascript, nextjs)
 mini PostWorks
-Home Carousel https://mudblazor.com/components/carousel#example
-Drop Zone https://mudblazor.com/components/dropzone#api
-postgres была не запущена, неверно отработало - ключ записи не существует вместо соединение отсутствует
-
+авторизация для записной книжки, чата
 
 // изучить
 
@@ -18,6 +14,7 @@ https://github.com/dotnet/eShop
 https://learn.microsoft.com/ru-ru/aspnet/core/tutorials/min-web-api?cid=kerryherger&view=aspnetcore-7.0&tabs=visual-studio
 
 изучить: asp net core магазин, чат, игра, efcore
+https://learn.microsoft.com/ru-ru/archive/msdn-magazine/2015/march/game-development-a-web-game-in-an-hour
 game find pair 
 https://learn.microsoft.com/ru-ru/visualstudio/get-started/csharp/tutorial-windows-forms-create-match-game?view=vs-2022
 

@@ -25,6 +25,10 @@ namespace MudBlazorWeb2.Components.EntityFrameworkCore.SqliteModel
         public string? Scheme { get; set; } = "";
         public string? LastError { get; set; } = "";
 
+        public bool IsExecutionTime { get; set; } = false;
+        public TimeSpan? StartExecutionTime { get; set; } = new TimeSpan(20, 00, 00);
+        public TimeSpan? EndExecutionTime { get; set; } = new TimeSpan(08, 00, 00);
+
     }
 
 }

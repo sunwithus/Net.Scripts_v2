@@ -50,6 +50,21 @@ namespace MudBlazorWeb2.Components.EntityFrameworkCore
                     .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
                 context = new PostgresDbContext(optionsBuilder.Options);
             }
+            else if (dbType == "Interbase")
+            {
+                var optionsBuilder = new DbContextOptionsBuilder<InterbaseDbContext>();
+                optionsBuilder.UseInterBase(connectionString, providerOptions =>
+                    {
+                        providerOptions.CommandTimeout(60);
+                        providerOptions.UseRelationalNulls(true);
+                        providerOptions.MinBatchSize(2);
+                    })
+                    .EnableDetailedErrors(false)
+                    .EnableSensitiveDataLogging(false)
+                    .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
+
+                context = new InterbaseDbContext(optionsBuilder.Options);
+            }
             else
             {
                 throw new NotSupportedException("Unsupported database type");

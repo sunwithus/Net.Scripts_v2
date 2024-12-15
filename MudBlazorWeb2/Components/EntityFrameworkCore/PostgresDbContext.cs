@@ -20,27 +20,8 @@ public partial class PostgresDbContext : BaseDbContext
     public override DbSet<SprSpData1Table> SprSpData1Tables { get; set; }
     public override DbSet<SprSpCommentTable> SprSpCommentTables { get; set; }
 
-    public static DbContextOptionsBuilder<PostgresDbContext> ConfigureOptionsBuilder(string connectionString)
-    {
-        var optionsBuilder = new DbContextOptionsBuilder<PostgresDbContext>();
-        optionsBuilder.UseNpgsql(connectionString, providerOptions =>
-        {
-            providerOptions.CommandTimeout(60);
-            providerOptions.UseRelationalNulls(true);
-            providerOptions.MinBatchSize(2);
-        })
-        .EnableDetailedErrors(false)
-        .EnableSensitiveDataLogging(false)
-        .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
-        return optionsBuilder;
-    }
-    //protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-    //    => optionsBuilder.UseNpgsql("Host=localhost;Database=test;Username=postgres;Password=postgres;");
-
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-
-
         modelBuilder.Entity<SprSpCommentTable>(entity =>
         {
             entity.HasKey(e => e.SInckey); // Define SInckey as the primary key

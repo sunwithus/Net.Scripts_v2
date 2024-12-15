@@ -14,5 +14,13 @@
     "Password": "postgres",
     "ServerAddress": "localhost",
     "Scheme": "test"
+  },
+  {
+    "Selected": false,
+    "DbType": "Interbase",
+    "User": "sysdba",
+    "Password": "masterkey",
+    "ServerAddress": "localhost",
+    "Scheme": "D:\\db38_origin.ibs"
   }
 ]

@@ -32,6 +32,7 @@
                         <MudToggleGroup Value="@SelectedDb" ValueChanged="@OnDbTypeChanged" T="string" Outlined="true" Delimiters="true" Size="Size.Medium" Color="@colorButton" CheckMark="true" FixedContent="true" Style="width: 29rem">
                             <MudToggleItem Value="@("Oracle")" />
                             <MudToggleItem Value="@("Postgres")" />
+                            @*<MudToggleItem Value="@("Interbase")" />*@
                         </MudToggleGroup>
 
                         <MudTextField Label="Пользователь" @bind-Value="SettingsDb.User" For="@(() => SettingsDb.User)" />
@@ -43,7 +44,7 @@
                         @bind-Value="SettingsDb.Scheme" For="@(() => SettingsDb.Scheme)" />
 
                     </MudCardContent>
-                    <MudCardContent Style="height:105px">
+                    <MudCardContent Style="height:130px">
                         @if(IsProgressVisible) {<MudProgressCircular Color="@colorButton" Indeterminate="true" />}
                         <MudText Style="white-space: pre-wrap; max-width: 450px; position: relative; top: -25px" Color="@colorButton">@((MarkupString)message)</MudText>
                     </MudCardContent>
@@ -177,6 +178,7 @@
                 await _context.Database.CloseConnectionAsync();
             }
         }
+
         catch (OracleException ex)
         {
             message += "Oracle Error: " + ex.Message + "\n\n";

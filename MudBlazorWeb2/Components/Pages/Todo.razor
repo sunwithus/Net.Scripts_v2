@@ -1,6 +1,6 @@
 ﻿@* Todo.razor *@
 
-@page "/todo"
+@page "/db-todo"
 @rendermode InteractiveServer
 
 @using MudBlazorWeb2.Components.Modules.AiEstimateDb
@@ -57,7 +57,10 @@
                     <MudPaper Style="position: relative;">
                         <MudTextField T="string" @bind-Value="todo.Title" Variant="Variant.Text" Margin="Margin.Dense" />
                         <MudText Style="display: flex;">
-                            <MudTextField @bind-Value="todo.DbType" Label="DbType" Variant="Variant.Outlined" Margin="Margin.Dense" /><MudText>&nbsp;</MudText>
+                            <MudSelect Style="width:140px;" @bind-Value="todo.DbType" Dense="true" Variant="Variant.Outlined" Margin="Margin.Dense" Label="DbType">
+                                <MudSelectItem Value="@("Oracle")">Oracle</MudSelectItem>
+                                <MudSelectItem Value="@("Postgres")">Postgres</MudSelectItem>
+                            </MudSelect><MudText>&nbsp;</MudText>
                             <MudTextField @bind-Value="todo.ServerAddress" Label="ServerAddress" Variant="Variant.Outlined" Margin="Margin.Dense" /><MudText>&nbsp;</MudText>
                             <MudTextField @bind-Value="todo.Scheme" Label="Scheme" Variant="Variant.Outlined" Margin="Margin.Dense" /><MudText>&nbsp;</MudText>
                             <MudTextField @bind-Value="todo.User" Label="User" Variant="Variant.Outlined" Margin="Margin.Dense" /><MudText>&nbsp;</MudText>
@@ -70,8 +73,14 @@
                             <MudNumericField T="int" Label="Длительность (сек.) от:" @bind-Value="todo.MoreThenDuration" Min="0" />&emsp;&nbsp;
                             <MudNumericField Label="Подсветка (0 - не подсвечивать) от:" Variant="Variant.Text" Min="0" Max="10" @bind-Value="todo.BackLight" />
                         </MudText>
-                        <MudText Style="display: flex; justify-content: space-between;">
+                        <MudText Style="display: flex;">
+                            <MudCheckBox @bind-Value="todo.IsExecutionTime" Size="Size.Small" Label="Ежедневно по времени" Color="@colorTag" />&emsp;&nbsp;
+                            <MudTimePicker Label="Время начала:" Color="@colorTag" @bind-Time="todo.StartExecutionTime" />&emsp;&nbsp;
+                            <MudTimePicker Label="Время завершения:" Color="@colorTag" @bind-Time="todo.EndExecutionTime" />
 
+                        </MudText>
+
+                        <MudText Style="display: flex; justify-content: space-between;">
                             <MudCheckBox @bind-Value="todo.IsCyclic" Size="Size.Small" Label="С интервалом повторного запуска." Color="@colorTag" />
                             <MudText Style="display:flex;">
                                 <MudTooltip Text="Сохранить">
@@ -102,6 +111,8 @@
                         <p>todo.StartDateTime => @todo.StartDateTime</p>
                         <p>todo.EndDateTime => @todo.EndDateTime</p>
                         <p>todo.LastError => @todo.LastError</p>
+                        <p>todo.StartExecutionTime => @todo.StartExecutionTime</p>
+                        <p>todo.EndExecutionTime => @todo.EndExecutionTime</p>
                     }
                 </ChildContent>
             </MudExpansionPanel>
@@ -130,7 +141,7 @@
 
 @code {
 
-    public MudBlazor.Color colorTag = Color.Info;
+    public MudBlazor.Color colorTag = Color.Primary;
     public List<TodoItem> todos = new();
     public string? newTodo;
     public bool IsPanelExpanded = false;
@@ -176,6 +187,11 @@
                 existingTodo.Password = todo.Password;
                 existingTodo.ServerAddress = todo.ServerAddress;
                 existingTodo.Scheme = todo.Scheme;
+
+                existingTodo.IsExecutionTime = todo.IsExecutionTime;
+                existingTodo.StartExecutionTime = todo.StartExecutionTime;
+                existingTodo.EndExecutionTime = todo.EndExecutionTime;
+                existingTodo.LastError = todo.LastError;
                 //Todo подумать как по другому присваивать existingTodo=todo
                 //existingTodo = todo; //ссылочный тип
             }
