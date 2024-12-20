@@ -148,7 +148,7 @@
     public bool IsDebug = false;
 
     private HubConnection _hubConnection;
-    private PeriodicTimer? _timer;
+    //private PeriodicTimer? _timer;
 
     protected override async Task OnInitializedAsync()
     {
@@ -197,7 +197,7 @@
             }
             else
             {
-                ConsoleCol.WriteLine("existingTodo == null", ConsoleColor.Red);
+                //ConsoleCol.WriteLine("existingTodo == null", ConsoleColor.Red);
             }
             InvokeAsync(StateHasChanged);
         });
@@ -208,7 +208,7 @@
     public void Dispose()
     {
         _ = _hubConnection.DisposeAsync();
-        _timer?.Dispose();
+        //_timer?.Dispose();
     }
 
     protected async Task StartButtonPressed(TodoItem todo)
@@ -324,14 +324,14 @@
         }
     }
     
-    private async Task UpdateTodosPeriodically()
+    /*private async Task UpdateTodosPeriodically()
     {
         while (await _timer.WaitForNextTickAsync())
         {
             todos = await SqliteDbContext.LoadTodos();
             await InvokeAsync(StateHasChanged);
         }
-    }
+    }*/
 
     private async Task LoadSettings()
     {

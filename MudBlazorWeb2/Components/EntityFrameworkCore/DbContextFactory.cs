@@ -2,6 +2,9 @@
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using MudBlazorWeb2.Components.Modules.AiEstimateDb.Services;
+using Oracle.ManagedDataAccess.Client;
+using System.Data;
 
 namespace MudBlazorWeb2.Components.EntityFrameworkCore
 {
@@ -11,7 +14,7 @@ namespace MudBlazorWeb2.Components.EntityFrameworkCore
     }
     public class DbContextFactory : IDbContextFactory
     {
-        public async Task<BaseDbContext> CreateDbContext(string dbType, string connectionString, string scheme)
+        public async Task<BaseDbContext> CreateDbContext(string dbType, string connectionString, string scheme = null)
         {
             BaseDbContext context = null;
 
@@ -28,12 +31,12 @@ namespace MudBlazorWeb2.Components.EntityFrameworkCore
                     .EnableDetailedErrors(true)
                     .EnableSensitiveDataLogging(false)
                     .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
-                context = new OracleDbContext(optionsBuilder.Options);
 
-                // Set the current schema for Oracle
-                using (var tempContext = new OracleDbContext(optionsBuilder.Options))
+                context = new OracleDbContext(optionsBuilder.Options/*, scheme*/);
+                if (!string.IsNullOrEmpty(scheme))
                 {
-                    await tempContext.Database.ExecuteSqlRawAsync($"ALTER SESSION SET CURRENT_SCHEMA = {scheme}");
+                    await context.Database.OpenConnectionAsync();
+                    await context.Database.ExecuteSqlRawAsync($"ALTER SESSION SET CURRENT_SCHEMA = {scheme}");
                 }
             }
             else if (dbType == "Postgres")
@@ -48,22 +51,8 @@ namespace MudBlazorWeb2.Components.EntityFrameworkCore
                     .EnableDetailedErrors(false)
                     .EnableSensitiveDataLogging(false)
                     .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
-                context = new PostgresDbContext(optionsBuilder.Options);
-            }
-            else if (dbType == "Interbase")
-            {
-                var optionsBuilder = new DbContextOptionsBuilder<InterbaseDbContext>();
-                optionsBuilder.UseInterBase(connectionString, providerOptions =>
-                    {
-                        providerOptions.CommandTimeout(60);
-                        providerOptions.UseRelationalNulls(true);
-                        providerOptions.MinBatchSize(2);
-                    })
-                    .EnableDetailedErrors(false)
-                    .EnableSensitiveDataLogging(false)
-                    .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
 
-                context = new InterbaseDbContext(optionsBuilder.Options);
+                context = new PostgresDbContext(optionsBuilder.Options);
             }
             else
             {

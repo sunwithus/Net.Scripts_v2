@@ -31,7 +31,7 @@
         </MudText>
 
         <MudText Style="display: flex; align-items: center; float: left; margin-left: 30px;">
-            <MudIconButton Icon="@Icons.Material.Filled.PlayCircleFilled" Color="@colorTag" OnClick="QueryRecordById" Size="Size.Large" />
+            <MudIconButton Icon="@Icons.Material.Filled.PlayCircleFilled" Color="@colorTag" OnClick="@(async () => await QueryRecordById(Id))" Size="Size.Large" />
             @if (speechData != null && speechData.Count > 0 && speechData.FirstOrDefault().Id == Id)
             {
                 <MudButton OnClick="@(e => GenerateWord())" Variant="Variant.Filled" Color="@colorTag" Class="ml-3">💾</MudButton>    
@@ -111,7 +111,7 @@
     private string message = ""; // Сообщение об ошибке
     private List<SpeechData> speechData = null;
 
-    long? Id = 0;
+    private long? Id = 0;
     List<string> ColumnHeaders = new() { "Ключ", "Дата/время", "Длительность", "Собеседник", "Пользовательский номер", "Тип вызова", "CID", "LAC", "Базовая станция", "Принадлежность (язык оригинала)", "Имя источника (оператор)", "Устройство" };
 
     private List<SettingsDb> SettingsDbList = null;
@@ -136,7 +136,7 @@
         Console.WriteLine("Настройки подключения к БД для создания Word изменились");
     }
 
-    private async Task QueryRecordById()
+    private async Task QueryRecordById(long? id)
     {
         IsSkeleton = true;
 
@@ -152,7 +152,7 @@
                 return;
             }
 
-            speechData = await DbQuery.GetSpeechDataByIdAsync(Id, context);
+            speechData = await DbQuery.GetSpeechDataByIdAsync(id, context);
 
             if (speechData != null)
             {
@@ -160,13 +160,13 @@
                 string durationString = ItemByKey.Duration.ToString();
 
                 fileNameForSaveAudioViaPlayer = $"" + ItemByKey.Datetime.ToString() + "_" + durationString + "_" + ItemByKey.Sourcename + "_" + ItemByKey.Usernumber + "_" + ItemByKey.Talker + "_" + ItemByKey.Lac + "_" + ItemByKey.Cid + "_" + ItemByKey.Basestation + ".wav";
-                Console.WriteLine("Id = " + Id);
+                Console.WriteLine("Id = " + id);
                 message = "";
             }
             else
             {
-                message = $"\nКлюч записи №{Id} не существует ";
-                Console.WriteLine($"Ключ записи не существует Id: {Id}");
+                message = $"\nКлюч записи №{id} не существует ";
+                Console.WriteLine($"Ключ записи не существует Id: {id}");
             }
         }
         catch (OracleException ex)
@@ -181,7 +181,7 @@
         }
         catch (Exception ex)
         {
-            message = $"Общая ошибка: {ex.Message}" + $"Возможно, ключ записи №{Id} не существует ";
+            message = $"Общая ошибка: {ex.Message}" + $"Возможно, ключ записи №{id} не существует ";
             Console.WriteLine($"Общая ошибка: {ex.Message}");
         }
         finally

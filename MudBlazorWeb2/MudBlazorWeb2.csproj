@@ -38,6 +38,7 @@
 	<PackageReference Include="FFMpegCore" Version="5.1.0" />
 	<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.1" />
 	<PackageReference Include="Oracle.EntityFrameworkCore" Version="9.23.60" />
+	<PackageReference Include="Polly" Version="8.5.0" />
 	  <PackageReference Include="System.Text.Encoding.CodePages" Version="9.0.0" />
   </ItemGroup>
 

@@ -11,7 +11,7 @@ namespace MudBlazorWeb2.Components.Modules.AiEstimateDb
         public static async Task<string> GetPreTextAsync(string operatorName)
         {
             ConsoleCol.WriteLine("operatorName: " + operatorName, ConsoleColor.DarkYellow);
-            string preText = "";
+            string? preText = "";
 
             try
             {

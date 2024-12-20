@@ -105,12 +105,14 @@
         IsProgress = true;
         message = "";
         string conStringDBA = SelectDb.ConStringDBA(SettingsDb);
-        using BaseDbContext context = await DbContextFactory.CreateDbContext(SettingsDb.DbType, conStringDBA, SettingsDb.Scheme);
+        using (var context = await DbContextFactory.CreateDbContext(SettingsDb.DbType, conStringDBA, SettingsDb.Scheme))
+        {
+            List<long?> SInckeyRecords = await EFCoreQuery.GetSInckeyRecordsForNoticeNull(StartDateTime, EndDateTime, context);
+            await EFCoreQuery.UpdateManyNoticeValuesAsync(SInckeyRecords, context, null);
+            await context.Database.CloseConnectionAsync();
+            message = $"Обнулено примечаний в записях: {SInckeyRecords.Count}";
+        }
 
-        List<long?> SInckeyRecords = await EFCoreQuery.GetSInckeyRecordsForNoticeNull(StartDateTime, EndDateTime, context);
-        await EFCoreQuery.UpdateManyNoticeValuesAsync(SInckeyRecords, context, null);
- 
-        message = $"Обнулено примечаний в записях: {SInckeyRecords.Count}";
         IsProgress = false;
     }
 

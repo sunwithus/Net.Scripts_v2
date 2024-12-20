@@ -168,10 +168,34 @@ namespace MudBlazorWeb2.Components.Methods
     {
         public static async Task<(int, byte[], byte[])> FFmpegStream(string inputFileName, string pathToFFmpegExe)
         {
+            int DurationOfWav = 0;
+            int Channels = 1;
+
             // Analyse AudioFile
-            var MediaInfo = await FFProbe.AnalyseAsync(inputFileName);
-            int DurationOfWav = (int)(MediaInfo.PrimaryAudioStream?.Duration.TotalSeconds ?? 0);
-            int Channels = MediaInfo.PrimaryAudioStream?.Channels ?? 0;
+            int retryCount = 0;
+            const int maxRetries = 5;
+
+            while (retryCount < maxRetries)
+            {
+                try
+                {
+                    var MediaInfo = await FFProbe.AnalyseAsync(inputFileName);
+                    DurationOfWav = (int)(MediaInfo.PrimaryAudioStream?.Duration.TotalSeconds ?? 0);
+                    Channels = MediaInfo.PrimaryAudioStream?.Channels ?? 0;
+                    // Process mediaInfo
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"FFProbe.AnalyseAsync {inputFileName} => " + ex);
+                    retryCount++;
+                    if (retryCount >= maxRetries)
+                    {
+                        throw;
+                    }
+                    await Task.Delay(211); // Wait before retrying
+                }
+            }
 
             byte[] fileDataLeft = null;
             byte[] fileDataRight = null;

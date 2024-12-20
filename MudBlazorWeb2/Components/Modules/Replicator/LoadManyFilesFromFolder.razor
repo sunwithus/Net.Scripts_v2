@@ -74,8 +74,8 @@ else if (isVisibleFilesList)
         isVisibleFilesList = false;
         loadedFiles.Clear();
 
-        string pathToSaveTempAudio = Configuration["AudioPathForReplicator"] + Guid.NewGuid();
-        Files.CreateDirectory(pathToSaveTempAudio+"\\");
+        string pathToSaveTempAudio = Configuration["AudioPathForReplicator"];// + Guid.NewGuid();
+        //Files.CreateDirectory(pathToSaveTempAudio+"\\");
 
         progressPercent = 0;
 
@@ -100,10 +100,7 @@ else if (isVisibleFilesList)
 
                     await readStream.CopyToAsync(writeStream);
 
-                    lock (loadedFiles)
-                    {
-                        loadedFiles.Add(file);
-                    }
+                    loadedFiles.Add(file);
 
                     Console.WriteLine($"File saved: {filePath}");
                 }
@@ -121,7 +118,7 @@ else if (isVisibleFilesList)
 
             await Task.WhenAll(tasks);
         }
-        await CreateJsonForBackgroungService (pathToSaveTempAudio);
+        //await CreateJsonForBackgroungService (pathToSaveTempAudio);
         isLoading = false; // проценты выполнения
         isVisibleFilesList = true; // таблица с файлами
         await OnFinishLoading.InvokeAsync(true);

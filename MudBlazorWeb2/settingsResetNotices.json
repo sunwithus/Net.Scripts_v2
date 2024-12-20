@@ -2,7 +2,7 @@
   {
     "Selected ": true,
     "DbType": "Oracle",
-    "User": "sysdba",
+    "User": "SYSDBA",
     "Password": "masterkey",
     "ServerAddress": "localhost",
     "Scheme": ""
@@ -10,7 +10,7 @@
   {
     "Selected ": false,
     "DbType": "Postgres",
-    "User": "sysdba",
+    "User": "postgres",
     "Password": "masterkey",
     "ServerAddress": "localhost",
     "Scheme": ""

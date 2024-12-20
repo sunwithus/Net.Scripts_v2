@@ -12,9 +12,7 @@
 
 @inject IDbContextFactory DbContextFactory
 
-
 @rendermode InteractiveServer
-
 
 <MudText Color="@colorButton" Typo="Typo.body1" Style="position:relative; top:-5px; display: flex; justify-content:space-between; align-items: center;">
     <MudText>
@@ -153,7 +151,7 @@
         await OnSettingsChanged.InvokeAsync(); //оповещение родительского элемента, снова загрузит настройки
         await ToggleOverlay(false);
         SettingsDb = SettingsDbList.FirstOrDefault(x => x.Selected == true);
-        SelectedDb = SettingsDb.DbType;
+        if(SettingsDb != null)SelectedDb = SettingsDb.DbType;
     }
 
     public async Task ToggleOverlay(bool value)
@@ -172,6 +170,7 @@
             if (conStringDBA != "")
             {
                 _context = await DbContextFactory.CreateDbContext(SettingsDb.DbType, conStringDBA, SettingsDb.Scheme);
+                //if (SettingsDb.DbType == "Oracle") await _context.Database.ExecuteSqlRawAsync($"ALTER SESSION SET CURRENT_SCHEMA = {SettingsDb.Scheme};");
                 long? maxKey = await _context.SprSpeechTables.MaxAsync(x => x.SInckey) ?? 0;
                 message += $"Соединение с {SettingsDb.DbType} установлено!\n";
                 message += "Схема: " + SettingsDb.Scheme + " выбрана! \nМаксимальный идентификатор: " + maxKey + ".";

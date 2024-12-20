@@ -3,12 +3,8 @@
 using Microsoft.EntityFrameworkCore;
 using MudBlazorWeb2.Components.EntityFrameworkCore.Sprutora;
 using MudBlazorWeb2.Components.EntityFrameworkCore;
-using Oracle.ManagedDataAccess.Client;
-//using PostgresModel;
-using Spire.Doc;
-using System.Configuration;
 using System.Text;
-using System.Linq;
+using System.Data;
 
 
 namespace MudBlazorWeb2.Components.Modules.AiEstimateDb
@@ -33,10 +29,10 @@ namespace MudBlazorWeb2.Components.Modules.AiEstimateDb
             return 10;
         }
 
-        public static async Task<List<SprSpeechTable>> GetSpeechRecords(DateTime StartDateTime, DateTime EndDateTime, int TimeInterval, BaseDbContext db, List<string> _ignoreRecordType)
+        public static async Task<List<SprSpeechTable>> GetSpeechRecords(DateTime StartDateTime, DateTime EndDateTime, int TimeInterval, BaseDbContext context, List<string> _ignoreRecordType)
         {
             //Todo TimeInterval TimeSpan.FromSeconds(TimeInterval) //string, int ???
-            return await db.SprSpeechTables
+            return await context.SprSpeechTables
                .Where (x => x.SDuration > TimeSpan.FromSeconds(TimeInterval)) 
                .Where(x => x.SDatetime >= StartDateTime && x.SDatetime <= EndDateTime
                && x.SType == 0 // Тип записи (-1 – неизвестно,0 – сеанс связи, 1 – сообщение, 2 – биллинг,3 – служебное сообщение, 4 – регистрация автотранспорта
@@ -50,7 +46,6 @@ namespace MudBlazorWeb2.Components.Modules.AiEstimateDb
 
         public static async Task<(byte[]? audioDataLeft, byte[]? audioDataRight, string? recordType)> GetAudioDataAsync(long? key, BaseDbContext db)
         {
-            await Task.Delay(1);
             var result = db.SprSpData1Tables
                 .Where(x => x.SInckey == key)
                 .Select(x => new
@@ -66,7 +61,7 @@ namespace MudBlazorWeb2.Components.Modules.AiEstimateDb
             return (result.AudioDataLeft, result.AudioDataRight, result.RecordType);
         }
 
-        public static async Task InsertCommentAsync(long? key, string text, string detectedLanguage, string responseOllamaText, string modelName, BaseDbContext db, int backLight = 0)
+        public static async Task InsertCommentAsync(long? key, string text, string detectedLanguage, string responseOllamaText, string modelName, BaseDbContext db, int backLight)
         {
                 // Register the encoding provider
                 Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
@@ -81,7 +76,7 @@ namespace MudBlazorWeb2.Components.Modules.AiEstimateDb
                 string dangerLevelString = int.TryParse(responseOllamaText.Substring(0, 1), out int dangerLevel) ? dangerLevel.ToString() : "unknown";
                 //Selstatus //1 - собеседник, 2 - слово в тексте, 3 - геофильтр, 4 - номер в тексте
                 short selStatus = -1; //без признака
-                if (dangerLevel > 0 && backLight - dangerLevel >= 0)
+                if (dangerLevel > 0 && dangerLevel - backLight >= 0)
                 {
                     selStatus = 4; // 4 - номер в тексте
                 }
@@ -135,13 +130,11 @@ namespace MudBlazorWeb2.Components.Modules.AiEstimateDb
                     // Сохранение всех изменений
                     await db.SaveChangesAsync();
                 }
-                catch
+                catch(Exception ex)
                 {
+                ConsoleCol.WriteLine($"InsertCommentAsync => {ex.Message}", ConsoleColor.Red);
                     throw;
-                }
-
-                await db.Database.CloseConnectionAsync();
-            
+                }            
         }
 
         public static async Task UpdateManyNoticeValuesAsync(List<long?> keys, BaseDbContext db, string? value = null)
@@ -157,11 +150,6 @@ namespace MudBlazorWeb2.Components.Modules.AiEstimateDb
                 SprSpeechTable speech = db.SprSpeechTables.Where(c => c.SInckey == key).ToList().FirstOrDefault();
                 if (speech != null)
                 {
-                    /*
-                    speech.SNotice = value;
-                    db.SprSpeechTables.Update(speech);
-                    await db.SaveChangesAsync();
-                    */
                     speech.SNotice = value;
                     db.Entry(speech).State = EntityState.Modified; // Use Entry to set the state explicitly
                     await db.SaveChangesAsync().ConfigureAwait(false); // Use ConfigureAwait(false) to avoid deadlocks

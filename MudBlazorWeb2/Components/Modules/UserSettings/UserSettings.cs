@@ -18,10 +18,14 @@ namespace MudBlazorWeb2.Components.Modules.UserSettings
             settings[key] = value;
             await WriteAllItemsToFile(settings);
         }
-        public static async Task<string> ReadItemValueByKey(string key)
+        public static async Task<string?> ReadItemValueByKey(string key)
         {
+            if(string.IsNullOrEmpty(key))
+            {
+                return null;
+            }
             var settings = await ReadAllItemsFromFile();
-            return settings.TryGetValue(key, out string value) ? value : null;
+            return settings.TryGetValue(key, out string? value) ? value : null;
         }
         public static async Task DeleteItemByKey(string key)
         {
