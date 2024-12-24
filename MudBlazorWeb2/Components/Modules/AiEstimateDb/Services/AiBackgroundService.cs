@@ -323,10 +323,26 @@ public class AiBackgroundService : BackgroundService
         }
         catch (Exception ex)
         {
+<<<<<<< HEAD
             ConsoleCol.WriteLine("Ошибка при обработке Ollama и обновлении сущности EFCore: " + ex.Message, ConsoleColor.Red);
             item.CompletedKeys++;
         }
 
     }    
+=======
+            // EFCoreQuery - "обнуление" Notice при ошибке
+            //using var NewContext = await _dbContextFactory.CreateDbContext(DbType, conStringDBA, Scheme);
+           // await EFCoreQuery.UpdateNoticeValueAsync(entityId, NewContext, null);
+            ConsoleCol.WriteLine("Ошибка при обработке Ollama и обновлении сущности EFCore: " + ex.Message, ConsoleColor.Red);
+            //_logger.LogError($"DbType => {DbType}");
+            //_logger.LogError($"conStringDBA => {conStringDBA}");
+            //_logger.LogError($"Scheme => {Scheme}");
+            item.CompletedKeys++;
+        }
+
+    }
+    //    public void Dispose()
+    
+>>>>>>> d3ad7df29618a4fe71c244c83e628a7908888ed5
 }
 
