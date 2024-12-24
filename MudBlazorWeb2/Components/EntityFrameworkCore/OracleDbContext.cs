@@ -1,15 +1,15 @@
 ﻿//OracleDbContext.cs
 
 using Microsoft.EntityFrameworkCore;
-using MudBlazorWeb2.Components.EntityFrameworkCore;
 using MudBlazorWeb2.Components.EntityFrameworkCore.Sprutora;
 
 namespace MudBlazorWeb2.Components.EntityFrameworkCore
 {
+
     // Определение контекста базы данных для работы с Entity Framework Core
     public class OracleDbContext : BaseDbContext
     {
-        public OracleDbContext(DbContextOptions<OracleDbContext> options) : base(options)
+        public OracleDbContext(DbContextOptions<OracleDbContext> options/*, string scheme = null*/) : base(options)
         {
         }
         public override DbSet<SprSpeechTable> SprSpeechTables { get; set; }
@@ -19,6 +19,7 @@ namespace MudBlazorWeb2.Components.EntityFrameworkCore
         // Переопределение метода для настройки моделей (сопоставления сущностей с таблицами)
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+
             // Указываем, что сущность SPR_SPEECH_TABLE сопоставляется с таблицей "SPR_SPEECH_TABLE"
             modelBuilder.Entity<SprSpeechTable>().ToTable("SPR_SPEECH_TABLE");
 
@@ -33,17 +34,16 @@ namespace MudBlazorWeb2.Components.EntityFrameworkCore
                 .HasColumnType("BLOB");         // Устанавливаем тип данных для колонки как BLOB
 
             // Сопоставляем сущность SPR_SP_COMMENT_TABLE с таблицей "SPR_SP_COMMENT_TABLE"
-            modelBuilder.Entity<SprSpCommentTable>().ToTable("SPR_SP_COMMENT_TABLE");
-            //.Property(b=>b.SComment).HasColumnType("BLOB");
+            modelBuilder.Entity<SprSpCommentTable>().ToTable("SPR_SP_COMMENT_TABLE")
+            .Property(b=>b.SComment).HasColumnType("BLOB");
 
             modelBuilder.Entity<SprSpeechTable>().Ignore(s => s.SprSpData1Tables);
             modelBuilder.Entity<SprSpData1Table>().Ignore(s => s.SInckeyNavigation);
             modelBuilder.Entity<SprSpCommentTable>().Ignore(s => s.SInckeyNavigation);
-
+            
             // Вызов базовой реализации метода
             base.OnModelCreating(modelBuilder);
         }
     }
-
 }
 

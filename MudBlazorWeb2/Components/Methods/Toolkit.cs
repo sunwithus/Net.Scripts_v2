@@ -1,10 +1,8 @@
-﻿using Microsoft.AspNetCore.Components;
+﻿//Toolkit.cs
+
 using MudBlazorWeb2.Components.EntityFrameworkCore.SqliteModel;
 using MudBlazorWeb2.Components.Modules._Shared;
-using MudBlazorWeb2.Components.Modules.AiEstimateDb;
-using MudBlazorWeb2.Components.Pages;
 using System.Diagnostics;
-using System.Drawing.Imaging;
 using System.Text.Json;
 
 namespace MudBlazorWeb2.Components.Methods
@@ -204,12 +202,20 @@ namespace MudBlazorWeb2.Components.Methods
 
     public class SelectDb
     {
+        private readonly IConfiguration _configuration;
+
+        public SelectDb(IConfiguration configuration)
+        {
+            _configuration = configuration;
+        }
+
         public static string ConStringDBA(SettingsDb SettingsDb)
         {
             string conStringDBA = "";
             if (SettingsDb.DbType == "Oracle")
             {
-                conStringDBA = $"User Id={SettingsDb.User};Password={SettingsDb.Password};Data Source={SettingsDb.ServerAddress}/sprutora;";
+                //Data Source=(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST={SettingsDb.ServerAddress})(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=sprutora)));User Id={SettingsDb.User};Password={SettingsDb.Password};
+                conStringDBA = $"User Id={SettingsDb.User};Password={SettingsDb.Password};Data Source={SettingsDb.ServerAddress}/SPRUTORA;";
             }
             else if (SettingsDb.DbType == "Postgres")
             {
@@ -226,7 +232,7 @@ namespace MudBlazorWeb2.Components.Methods
             string conStringDBA = "";
             if (SettingsDb.DbType == "Oracle")
             {
-                conStringDBA = $"User Id={SettingsDb.User};Password={SettingsDb.Password};Data Source={SettingsDb.ServerAddress}/sprutora;";
+                conStringDBA = $"User Id={SettingsDb.User};Password={SettingsDb.Password};Data Source={SettingsDb.ServerAddress}/SPRUTORA;";
             }
             else if (SettingsDb.DbType == "Postgres")
             {

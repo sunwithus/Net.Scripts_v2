@@ -2,7 +2,7 @@
   {
     "Selected": false,
     "DbType": "Oracle",
-    "User": "sysdba",
+    "User": "SYSDBA",
     "Password": "masterkey",
     "ServerAddress": "localhost",
     "Scheme": "test"
@@ -11,16 +11,8 @@
     "Selected": true,
     "DbType": "Postgres",
     "User": "postgres",
-    "Password": "postgres",
-    "ServerAddress": "localhost",
-    "Scheme": "test"
-  },
-  {
-    "Selected": false,
-    "DbType": "Interbase",
-    "User": "sysdba",
     "Password": "masterkey",
     "ServerAddress": "localhost",
-    "Scheme": "D:\\db38_origin.ibs"
+    "Scheme": "test"
   }
 ]

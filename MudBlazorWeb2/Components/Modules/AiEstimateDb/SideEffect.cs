@@ -4,7 +4,6 @@ namespace MudBlazorWeb2.Components.Modules.AiEstimateDb
 {
     public class SideEffect
     {
-
         // побочка от изменения параметров модели (в ответе спрашивает => Let me know if you have any other...)
         public static async Task<string> DeleteUnnecessary(string text)
         {

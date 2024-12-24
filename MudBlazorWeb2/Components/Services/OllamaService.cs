@@ -22,7 +22,11 @@ public class OllamaService
         if (string.IsNullOrEmpty(recognizedText)) return ("Аудио не транскрибировано", -1);
         try
         {
-            (string text, int durationOllama) = await SendTextForAnalysisAsync(preText, recognizedText, Configuration);
+            (string text, int durationOllama) =
+                (recognizedText.Length < 550) ?
+                await SendTextForAnalysisDefaulOptionsAsync(preText, recognizedText, Configuration) :
+                await SendTextForAnalysisAsync(preText, recognizedText, Configuration);
+
             ConsoleCol.WriteLine($"\n{DateTime.Now} OllamaResponse => Длительность выполнения: " + durationOllama + " sec.", ConsoleColor.DarkBlue);
 
             text = await SideEffect.DeleteUnnecessary(text);
@@ -31,7 +35,6 @@ public class OllamaService
         catch (Exception ex)
         {
             Console.WriteLine("ошибка в методе OllamaResponse: " + ex.Message);
-            //return ("ошибка в методе OllamaResponse: " + ex.Message, -1);
             throw;
         }
     }
@@ -39,16 +42,53 @@ public class OllamaService
     public async Task<(string, int)> OllamaTranslate(string recognizedText, string languageCode, string detectedLanguage, IConfiguration Configuration)
     {
         //Todo
-        string preTextToTranslate = "Переведи на русский язык: ";
-        (string translatedText, int durationOllama) = await SendTextForAnalysisAsync(preTextToTranslate, recognizedText, Configuration);
+        string preText = Configuration["PretextTranslate"];
+        (string translatedText, int durationOllama) =
+            (recognizedText.Length < 550 ) ? 
+            await SendTextForAnalysisDefaulOptionsAsync(preText, recognizedText, Configuration) :
+            await SendTextForAnalysisAsync(preText, recognizedText, Configuration);
+
         Console.WriteLine();
         ConsoleCol.WriteLine($"{DateTime.Now} OllamaTranslate => Длительность выполнения: " + durationOllama + " sec.", ConsoleColor.Blue);
         translatedText = await SideEffect.DeleteUnnecessary(translatedText);
-        translatedText = $"Перевод с {detectedLanguage.ToUpper()} языка: \n" + translatedText;
+        translatedText = $"Перевод с {detectedLanguage.ToUpper()}: \n" + translatedText;
 
         return (translatedText, durationOllama);
     }
 
+    public async Task<(string, int)> OllamaTranslateFromFile(string recognizedText, IConfiguration Configuration)
+    {
+        //Todo
+        string preText = Configuration["PretextTranslate"];
+        (string translatedText, int durationOllama) =
+            (recognizedText.Length < 550) ?
+            await SendTextForAnalysisDefaulOptionsAsync(preText, recognizedText, Configuration) :
+            await SendTextForAnalysisAsync(preText, recognizedText, Configuration);
+
+        Console.WriteLine();
+        ConsoleCol.WriteLine($"{DateTime.Now} OllamaTranslate => Длительность выполнения: " + durationOllama + " sec.", ConsoleColor.Blue);
+        translatedText = await SideEffect.DeleteUnnecessary(translatedText);
+
+        return (translatedText, durationOllama);
+    }
+
+    public async Task<(string, int)> SendTextForAnalysisDefaulOptionsAsync(string preText, string recognizedText, IConfiguration configuration)
+    {
+        var content = new StringContent(JsonSerializer.Serialize(new
+        {
+            model = configuration["OllamaModelName"],
+            prompt = preText + recognizedText,
+            stream = false,
+
+        }), Encoding.UTF8, "application/json");
+        var response = await _httpClient.PostAsync($"{configuration["OllamaIP"]}/api/generate", content);
+        response.EnsureSuccessStatusCode();
+
+        var responseBody = await response.Content.ReadAsStringAsync();
+        var responseWithBody = JsonSerializer.Deserialize<ResponseData>(responseBody);
+
+        return (responseWithBody?.response ?? "response is empty or null", (int)(responseWithBody?.total_duration / 1000 / 1000 / 1000));
+    }
     public async Task<(string, int)> SendTextForAnalysisAsync(string preText, string recognizedText, IConfiguration configuration)
     {
         var ollamaOptions = new
@@ -78,11 +118,11 @@ public class OllamaService
                 temperature = ollamaOptions.temperature,
                 num_predict = ollamaOptions.num_predict,
                 num_ctx = ollamaOptions.num_ctx,
-                top_k = ollamaOptions.top_k,
-                top_p = ollamaOptions.top_p,
-                repeat_penalty = ollamaOptions.repeat_penalty,
-                presence_penalty = ollamaOptions.presence_penalty,
-                frequency_penalty = ollamaOptions.frequency_penalty,
+                //top_k = ollamaOptions.top_k,
+                //top_p = ollamaOptions.top_p,
+                //repeat_penalty = ollamaOptions.repeat_penalty,
+                //presence_penalty = ollamaOptions.presence_penalty,
+                //frequency_penalty = ollamaOptions.frequency_penalty,
             }
 
     }), Encoding.UTF8, "application/json");

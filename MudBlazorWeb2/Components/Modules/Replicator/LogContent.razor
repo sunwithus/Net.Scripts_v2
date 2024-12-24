@@ -3,16 +3,19 @@
 <MudText Style="position: relative; width: 0px;">
     <MudButton Style="float:right;" OnClick="OnExpandCollapseClick">@(_expanded ? "▲" : "▼")</MudButton>
     <br />
+
+
     <MudText Style="float:right; height:0px;" Class="pa-4">
         <MudStack Spacing="2">
-            <MudCollapse Style="z-index: 2; border: 1px solid lightgrey; border-radius: 5px; width: 100%; max-width: 70vh; max-height: 70vh; overflow: auto; white-space: pre; display: block;" Expanded="_expanded">
+            <MudCollapse Style="z-index: 5; border: 1px solid lightgrey; border-radius: 5px; width: 100%; max-width: 70vh; max-height: 70vh; overflow: auto; white-space: pre; display: block;" Expanded="_expanded">
                 @if (!string.IsNullOrEmpty(logContent))
                 {
-                    <MudText Typo="Typo.body2">
-                        <MudPaper Class="pa-4">
-                            @logContent
-                        </MudPaper>
-                    </MudText>
+                    <MudPaper Class="pa-4 mud-height-full">
+                        <MudText Typo="Typo.body2">
+                                @logContent
+                        </MudText>
+                    </MudPaper>
+    
                 }
                 else if (_expanded)
                 {

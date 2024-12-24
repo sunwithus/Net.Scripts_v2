@@ -1,14 +1,10 @@
 ﻿//PostgresDbContext.cs
-using System;
-using System.Collections.Generic;
-using Microsoft.EntityFrameworkCore;
-using MudBlazorWeb2.Components.EntityFrameworkCore;
-using MudBlazorWeb2.Components.EntityFrameworkCore.Sprutora;
 
+using Microsoft.EntityFrameworkCore;
+using MudBlazorWeb2.Components.EntityFrameworkCore.Sprutora;
 
 namespace MudBlazorWeb2.Components.EntityFrameworkCore
 {
-
 
 public partial class PostgresDbContext : BaseDbContext
 {

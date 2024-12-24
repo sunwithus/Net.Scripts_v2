@@ -12,6 +12,10 @@ using MudBlazorWeb2.Components.EntityFrameworkCore.Sprutora;
 using Npgsql;
 using Oracle.ManagedDataAccess.Client;
 
+using Polly;
+using Polly.Retry;
+using System.Threading;
+
 public class AiBackgroundService : BackgroundService
 {
     private readonly ILogger<AiBackgroundService> _logger;
@@ -22,6 +26,8 @@ public class AiBackgroundService : BackgroundService
 
     private readonly IDbContextFactory<SqliteDbContext> _sqliteDbContext;
     private readonly IDbContextFactory _dbContextFactory;
+
+    private readonly AsyncRetryPolicy _retryPolicy;
 
     private List<string> IgnoreRecordTypes;
 
@@ -35,6 +41,8 @@ public class AiBackgroundService : BackgroundService
 
         _sqliteDbContext = sqliteDbContext;
         _dbContextFactory = dbContextFactory;
+        //Эта политика повторяет операцию до 4 раз с экспоненциальной выдержкой, начиная с 2 секунд. 1,2,4,8,16 секунд
+        _retryPolicy = Policy.Handle<Exception>().WaitAndRetryAsync(5, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)));
 
         // Инициализация переменных в конструкторе
         IgnoreRecordTypes = _configuration.GetSection("AudioConverter:IgnoreRecordTypes").Get<List<string>>();
@@ -44,6 +52,7 @@ public class AiBackgroundService : BackgroundService
     {
         while (!stoppingToken.IsCancellationRequested)
         {
+            await Task.Delay(15011, stoppingToken); // delay
             try
             {
                 await AiProcessDatabaseAsync(stoppingToken);
@@ -53,7 +62,6 @@ public class AiBackgroundService : BackgroundService
                 _logger.LogError(ex, "Error processing database");
                 Console.WriteLine($"Ошибка в AiBackGroundService: {ex.Message}");
             }
-            await Task.Delay(10000, stoppingToken); // delay
         }
     }
 
@@ -63,6 +71,7 @@ public class AiBackgroundService : BackgroundService
         var todoItemFromDb = await context.TodoItems.FindAsync(item.Id);
         if (todoItemFromDb != null)
         {
+            todoItemFromDb.Id = item.Id;
             todoItemFromDb.IsRunning = item.IsRunning;
             todoItemFromDb.CompletedKeys = item.CompletedKeys;
             todoItemFromDb.TotalKeys = item.TotalKeys;
@@ -78,6 +87,7 @@ public class AiBackgroundService : BackgroundService
         var todoItemFromDb = await context.TodoItems.FindAsync(item.Id);
         if (todoItemFromDb != null)
         {
+            todoItemFromDb.Id = item.Id;
             todoItemFromDb.IsRunning = item.IsRunning;
             todoItemFromDb.CompletedKeys = item.CompletedKeys;
             todoItemFromDb.TotalKeys = item.TotalKeys;
@@ -95,6 +105,7 @@ public class AiBackgroundService : BackgroundService
 
         if (todoItemFromDb != null)
         {
+            todoItemFromDb.Id = item.Id;
             todoItemFromDb.IsRunning = item.IsRunning;
             todoItemFromDb.CompletedKeys = item.CompletedKeys;
             todoItemFromDb.TotalKeys = item.TotalKeys;
@@ -126,165 +137,170 @@ public class AiBackgroundService : BackgroundService
 
         foreach (var item in todoItems)
         {
+            string conStringDBA = SelectDb.ConStringDBA(item);
+            string DbType = item.DbType;
+            string Scheme = item.Scheme;
+
             if (!await ReloadIsRunPressedByItemId(item.Id))
             {
                 await StopProcessingAsync(item, "Готово к запуску. 💤", stoppingToken);
+                continue;
             }
-            else
-            {
-                if (item.IsExecutionTime)
-                {
-                    TimeSpan now = TimeSpan.FromTicks(DateTime.Now.TimeOfDay.Ticks);
 
-                    if (item.StartExecutionTime <= item.EndExecutionTime)
+            if (item.IsExecutionTime)
+            {
+                TimeSpan now = TimeSpan.FromTicks(DateTime.Now.TimeOfDay.Ticks);
+
+                if (item.StartExecutionTime <= item.EndExecutionTime)
+                {
+                    if (!(now > item.StartExecutionTime && now < item.EndExecutionTime))
                     {
-                        if (!(now > item.StartExecutionTime && now < item.EndExecutionTime))
-                        {
-                            await UpdateTodoItemStateAsync(item, $"Запуск в {item.StartExecutionTime}... ⌛", stoppingToken);
-                            continue;
-                        }
-                    }
-                    else
-                    {
-                        // Интервал перекидывается на следующий день
-                        if (!(now > item.StartExecutionTime || now < item.EndExecutionTime))
-                        {
-                            await UpdateTodoItemStateAsync(item, $"Запуск в {item.StartExecutionTime}... ⌛", stoppingToken);
-                            continue;
-                        }
+                        await UpdateTodoItemStateAsync(item, $"Запуск в {item.StartExecutionTime}... ⌛", stoppingToken);
+                        continue;
                     }
                 }
-
-                item.CompletedKeys = 0;
-                item.TotalKeys = 0;
-                await UpdateTodoItemStateAsync(item, "Идёт выполнение... ⌛", stoppingToken);
-                await Task.Delay(1200);
-                Console.WriteLine("item.IsRunPressed =>" + item.IsRunPressed);
-
-                try
+                else
                 {
-                    string conStringDBA = SelectDb.ConStringDBA(item);
-                    using var Context = await _dbContextFactory.CreateDbContext(item.DbType, conStringDBA, item.Scheme);
+                    // Интервал перекидывается на следующий день
+                    if (!(now > item.StartExecutionTime || now < item.EndExecutionTime))
+                    {
+                        await UpdateTodoItemStateAsync(item, $"Запуск в {item.StartExecutionTime}... ⌛", stoppingToken);
+                        continue;
+                    }
+                }
+            }
 
-                    //получение записей
-                    List<SprSpeechTable> AudioList = await EFCoreQuery.GetSpeechRecords(item.StartDateTime, item.EndDateTime, item.MoreThenDuration, Context, IgnoreRecordTypes);
+            item.CompletedKeys = 0;
+            item.TotalKeys = 0;
+            await UpdateTodoItemStateAsync(item, "Идёт выполнение... ⌛", stoppingToken);
+            await Task.Delay(1500, stoppingToken);
+
+            try
+            {
+                List<SprSpeechTable> AudioList = null;
+                using (var context = await _dbContextFactory.CreateDbContext(DbType, conStringDBA, Scheme))
+                {
+                    //await context.Database.OpenConnectionAsync();
+                    //if (DbType == "Oracle") await context.Database.ExecuteSqlRawAsync($"ALTER SESSION SET CURRENT_SCHEMA = {Scheme}");
+
+                    _logger.LogInformation(context.ToString());
+                    _logger.LogInformation($"DbContext created with DbType: {DbType}, ConnectionString: {conStringDBA}, Scheme: {Scheme}");
+                    
+
+
+                    AudioList = await EFCoreQuery.GetSpeechRecords(item.StartDateTime, item.EndDateTime, item.MoreThenDuration, context, IgnoreRecordTypes);
                     item.TotalKeys = AudioList.Count;
 
-                    //если записи отсутствуют => к следующему TODO json
-                    if (item.TotalKeys <= 0)
+                    
+                    
+
+
+                //если записи отсутствуют => к следующему TODO json
+                if (item.TotalKeys <= 0)
+                {
+                    if (item.IsCyclic)
                     {
-                        if (item.IsCyclic)
-                        {
-                            await UpdateTodoItemStateAsync(item, $"Обработано {item.CompletedKeys}/{item.TotalKeys}. Ожидание повторного запуска.", stoppingToken);
-                        }
-                        else
-                        {
-                            await StopProcessingAsync(item, $"Обработано {item.CompletedKeys}/{item.TotalKeys}.", stoppingToken);
-                        }
-                        continue; //к следующей итерации todoItems
-                    }
-
-                    //если записи есть => действие с записями
-                    int ProcessedWhisper = 0; //выполнено Whisper = 0
-                    foreach (var entity in AudioList)
-                    {
-                        item.IsRunning = true;
-                        // Остановить процесс, если нажата кнопка
-                        if (await ReloadIsStopPressedByItemId(item.Id))
-                        {
-                            await StopProcessingAsync(item, $"{DateTime.Now} Остановлено: {item.CompletedKeys} / {item.TotalKeys}", stoppingToken);
-                            break;
-                        }
-
-                        // PreText => get PreText for operator or PreTextDefault
-                        string preText = await Params.GetPreTextAsync(entity.SSourcename);
-
-                        // Db => get audio (left, right, recordType)
-                        var (audioDataLeft, audioDataRight, recordType) = await EFCoreQuery.GetAudioDataAsync(entity.SInckey, Context);
-                        Console.WriteLine($"Audio data for key {entity.SInckey} loaded successfully. recordType = " + recordType);
-
-                        // FFMpeg or Decoder => audio to folder
-                        string audioFilePath = Path.Combine(_configuration["AudioPathForProcessing"], $"{entity.SInckey}.wav");
-                        bool result = await DbToAudioConverter.FFMpegDecoder(audioDataLeft, audioDataRight, recordType, audioFilePath, _configuration);
-                        if (!result) continue;
-
-                        await UpdateTodoItemStateAsync(item, $"Идёт выполнение: {item.CompletedKeys}/{item.TotalKeys}. Стадия: Whisper.", stoppingToken);
-                        // WHISPER
-                        Task<string> _recognizedText = _whisper.RecognizeSpeechAsync(audioFilePath, _configuration); //асинхронно, не ждём
-                        (string languageCode, string detectedLanguage) = await _whisper.DetectLanguageAsync(audioFilePath, _configuration);
-                        string recognizedText = await _recognizedText; //дожидаемся _recognizedText...
-                        ProcessedWhisper++;
-                        await UpdateTodoItemStateAsync(item, $"Идёт выполнение: {item.CompletedKeys}/{item.TotalKeys}. Стадия: Analisis.", stoppingToken);
-
-                        // Остановить процесс, если нажата кнопка
-                        if (await ReloadIsStopPressedByItemId(item.Id))
-                        {
-                            await StopProcessingAsync(item, $"{DateTime.Now} Остановлено: {item.CompletedKeys} / {item.TotalKeys}", stoppingToken);
-                            break;
-                        }
-
-                        // Temprorary push string to Notice to aviod repeated process with entity
-                        entity.SNotice = "TempRecord";
-                        Context.SprSpeechTables.Update(entity);
-                        await Context.SaveChangesAsync();
-                        _logger.LogInformation("entity.SNotice = \"TempRecord\"");
-
-                        // Delete earlier created file
-                        Files.DeleteFilesByPath(audioFilePath);
-
-                        // OLLAMA + ORACLE => Run task !!!_WITHOUT await
-                        _logger.LogInformation("NewContext and start ProcessOllamaAndUpdateEntityAsync!");
-                        //item.CompletedKeys++; выполняется внутри ProcessOllamaAndUpdateEntityAsync
-                        _ = ProcessOllamaAndUpdateEntityAsync(entity.SInckey, recognizedText, languageCode, detectedLanguage, preText, _configuration["OllamaModelName"], _configuration, /*entity, */conStringDBA, sqlite, item, stoppingToken);
-
-                        // разрешить "вырываться вперёд не более чем на N раз" и ProcessedAi
-                        while (ProcessedWhisper - 1 > item.CompletedKeys)
-                        {
-                            await Task.Delay(5000);
-                            ConsoleCol.WriteLine("Delay is done. OLLAMA / WHISPER => " + item.CompletedKeys + "/" + ProcessedWhisper, ConsoleColor.Yellow);
-                            _logger.LogWarning("Ollama / Whisper => " + item.CompletedKeys + " / " + ProcessedWhisper);
-
-                            if (await ReloadIsStopPressedByItemId(item.Id))
-                            {
-                                await StopProcessingAsync(item, $"Процесс остановлен. Выполнено: {item.CompletedKeys}/{item.TotalKeys}.", stoppingToken);
-                                break;
-                            }
-                        }
-                        _logger.LogInformation("ProcessedOllama / ProcessedWhisper => " + item.CompletedKeys + "/" + ProcessedWhisper);
-                    }
-                    if (item.IsCyclic && !await ReloadIsStopPressedByItemId(item.Id))
-                    {
-                        await UpdateTodoItemStateAsync(item, $"Выполнено: {item.CompletedKeys}/{item.TotalKeys}. Ожидание повторного запуска.", stoppingToken);
+                        await UpdateTodoItemStateAsync(item, $"Обработано {item.CompletedKeys}/{item.TotalKeys}. Ожидание повторного запуска.", stoppingToken);
                     }
                     else
                     {
-                        await StopProcessingAsync(item, $"Процесс остановлен. Выполнено: {item.CompletedKeys}/{item.TotalKeys}.", stoppingToken);
+                        await StopProcessingAsync(item, $"Обработано {item.CompletedKeys}/{item.TotalKeys}. Завершено.", stoppingToken);
                     }
-                }
-                catch (OracleException ex)
-                {
-                    await HandleExceptionAsync(item, "OracleException: " + ex.Message, stoppingToken);
-                }
-                catch (NpgsqlException ex)
-                {
-                    await HandleExceptionAsync(item, "PostgresException: " + ex.Message, stoppingToken);
-                }
-                catch (Exception ex)
-                {
-                    await HandleExceptionAsync(item, "General: " + ex.Message, stoppingToken);
-                }
-                finally
-                {
-                    item.IsRunning = false;
+                        await context.Database.CloseConnectionAsync();
+                        continue; //к следующей итерации todoItems
                 }
 
+                //если записи есть => действие с записями
+                int ProcessedWhisper = 0; //выполнено Whisper = 0
+                item.IsRunning = true;
+                foreach (var entity in AudioList)
+                {
+                    // Остановить процесс, если нажата кнопка
+                    if (await ReloadIsStopPressedByItemId(item.Id))
+                    {
+                        await StopProcessingAsync(item, $"{DateTime.Now} Остановлено: {item.CompletedKeys} / {item.TotalKeys}", stoppingToken);
+                            await context.Database.CloseConnectionAsync();
+                            break;
+                    }
+
+                    // PreText => get PreText for operator or PreTextDefault
+                    string preText = await Params.GetPreTextAsync(entity.SSourcename);
+
+                    // Db => get audio (left, right, recordType)
+                    byte[]? audioDataLeft, audioDataRight;
+                    string recordType = string.Empty;
+
+                    (audioDataLeft, audioDataRight, recordType) = await EFCoreQuery.GetAudioDataAsync(entity.SInckey, context);
+ 
+                    
+                    Console.WriteLine($"Audio data for key {entity.SInckey} loaded successfully. recordType = " + recordType);
+
+                    // FFMpeg or Decoder => audio to folder
+                    string audioFilePath = Path.Combine(_configuration["AudioPathForProcessing"], $"{entity.SInckey}.wav");
+                    bool result = await DbToAudioConverter.FFMpegDecoder(audioDataLeft, audioDataRight, recordType, audioFilePath, _configuration);
+                    if (!result) continue;
+
+                    await UpdateTodoItemStateAsync(item, $"Идёт выполнение: {item.CompletedKeys}/{item.TotalKeys}. Стадия: Whisper.", stoppingToken);
+                    // WHISPER
+                    Task<string> _recognizedText = _whisper.RecognizeSpeechAsync(audioFilePath, _configuration); //асинхронно, не ждём
+                    (string languageCode, string detectedLanguage) = await _whisper.DetectLanguageAsync(audioFilePath, _configuration);
+                    string recognizedText = await _recognizedText; //дожидаемся _recognizedText...
+                    ProcessedWhisper++;
+                    await UpdateTodoItemStateAsync(item, $"Идёт выполнение: {item.CompletedKeys}/{item.TotalKeys}. Стадия: Analisis.", stoppingToken);
+
+                    // Delete earlier created file
+                    Files.DeleteFilesByPath(audioFilePath);
+
+                    // OLLAMA + ORACLE => Run task !!!_WITHOUT await
+                    //item.CompletedKeys++; выполняется внутри ProcessOllamaAndUpdateEntityAsync
+                    _ = ProcessOllamaAndUpdateEntityAsync(conStringDBA, DbType, Scheme, entity.SInckey, recognizedText, languageCode, detectedLanguage, preText, _configuration["OllamaModelName"], _configuration, item, stoppingToken);
+
+                    // разрешить "вырываться вперёд не более чем на N раз" и ProcessedAi
+                    while (ProcessedWhisper - 1 > item.CompletedKeys)
+                    {
+                        await Task.Delay(5000, stoppingToken);
+                        ConsoleCol.WriteLine("Delay is done. OLLAMA / WHISPER => " + item.CompletedKeys + "/" + ProcessedWhisper, ConsoleColor.Yellow);
+                        _logger.LogWarning("Ollama / Whisper => " + item.CompletedKeys + " / " + ProcessedWhisper);
+                    }
+                    _logger.LogInformation("ProcessedOllama / ProcessedWhisper => " + item.CompletedKeys + "/" + ProcessedWhisper);
+                }
+                if (item.IsCyclic && !await ReloadIsStopPressedByItemId(item.Id))
+                {
+                    await UpdateTodoItemStateAsync(item, $"Выполнено: {item.CompletedKeys}/{item.TotalKeys}. Ожидание повторного запуска.", stoppingToken);
+                }
+                else
+                {
+                    await StopProcessingAsync(item, $"Процесс остановлен. Выполнено: {item.CompletedKeys}/{item.TotalKeys}.", stoppingToken);
+                }
+
+
+
+                    await context.Database.CloseConnectionAsync();
+                }
             }
+            catch (OracleException ex)
+            {
+                await HandleExceptionAsync(item, "OracleException: " + ex.Message, stoppingToken);
+            }
+            catch (NpgsqlException ex)
+            {
+                await HandleExceptionAsync(item, "PostgresException: " + ex.Message, stoppingToken);
+            }
+            catch (Exception ex)
+            {
+                await HandleExceptionAsync(item, "General: " + ex.Message, stoppingToken);
+            }
+            finally
+            {
+                item.IsRunning = false;
+            }
+
+
         }
     }
 
-    private async Task ProcessOllamaAndUpdateEntityAsync(long? entityId, string recognizedText, string languageCode, string detectedLanguage, string preText, string modelName, IConfiguration Configuration, /*SprSpeechTable entity, *//*BaseDbContext db*/ string conStringDBA, SqliteDbContext sqlite, TodoItem item, CancellationToken stoppingToken)
+    private async Task ProcessOllamaAndUpdateEntityAsync(string conStringDBA, string DbType, string Scheme, long? entityId, string recognizedText, string languageCode, string detectedLanguage, string preText, string modelName, IConfiguration Configuration, TodoItem item, CancellationToken stoppingToken)
     {
-        using var NewContext = await _dbContextFactory.CreateDbContext(item.DbType, conStringDBA, item.Scheme);
         // OLLAMA
         try
         {
@@ -293,18 +309,24 @@ public class AiBackgroundService : BackgroundService
             {
                 (recognizedText, lagTime) = await _ollama.OllamaTranslate(recognizedText, languageCode, detectedLanguage, Configuration);
             }
-            await EFCoreQuery.InsertCommentAsync(entityId, recognizedText, detectedLanguage, responseOllamaText, Configuration["OllamaModelName"], NewContext, item.BackLight);
+            await _retryPolicy.ExecuteAsync(async () =>
+            {
+                using (var NewContext = await _dbContextFactory.CreateDbContext(DbType, conStringDBA, Scheme))
+                {
+                    await EFCoreQuery.InsertCommentAsync(entityId, recognizedText, detectedLanguage, responseOllamaText, Configuration["OllamaModelName"], NewContext, item.BackLight);
+                    await NewContext.Database.CloseConnectionAsync();
+                    Console.WriteLine("InsertCommentAsync => NewContext: " + NewContext.ToString());
+                }
+            });
 
             item.CompletedKeys++;
         }
         catch (Exception ex)
         {
-            // EFCoreQuery - "обнуление" Notice при ошибке
-            await EFCoreQuery.UpdateNoticeValueAsync(entityId, NewContext, null);
             ConsoleCol.WriteLine("Ошибка при обработке Ollama и обновлении сущности EFCore: " + ex.Message, ConsoleColor.Red);
+            item.CompletedKeys++;
         }
 
-    }
-
+    }    
 }
 

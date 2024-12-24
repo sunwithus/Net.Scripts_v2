@@ -1,4 +1,6 @@
-﻿@page "/counter-1"
+﻿@*
+
+@page "/counter-1"
 
 @using MudBlazorWeb2.Components.Methods
 @inject ILogger<Logger> n_logger
@@ -32,9 +34,10 @@
 @code {
     private int currentCount = 0;
     private FileLogger _logger;
-    
+
     protected override async Task OnInitializedAsync()
     {
+        await Task.Delay(0);
         _logger = new FileLogger(Path.Combine(AppContext.BaseDirectory, "Logs/replicator.log"));
     }
 
@@ -58,3 +61,5 @@
         currentCount++;
     }
 }
+
+*@

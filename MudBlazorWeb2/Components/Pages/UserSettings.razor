@@ -19,13 +19,14 @@
             <MudButton Variant="Variant.Outlined" OnClick="AddOrUpdateSetting">Сохранить 💾</MudButton>
         </MudText>
     </MudText>
-    <MudDivider Style="position:relative; top:4px;" />
-    <br />
+    <MudDivider Style="position:relative; top:4px; padding-bottom:8px;" />
+
+    <MudTextField @bind-Value="newValue" Lines="5" FullWidth Label="Шаблон запроса" Variant="Variant.Outlined" />
     
     <MudSimpleTable RowClass="cursor-pointer" Hover="true" Dense="true" FixedHeader="true">
         <thead>
             <tr>
-                    <th>№ &emsp; Имя источника</th>
+                <th>№ &emsp; Имя источника</th>
                 <th style="width:80px;">Действия</th>
             </tr>
         </thead>

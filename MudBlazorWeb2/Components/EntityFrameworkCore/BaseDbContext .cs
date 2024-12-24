@@ -1,4 +1,4 @@
-﻿//InterbaseDbContext.cs
+﻿//BaseDbContext.cs
 
 using Microsoft.EntityFrameworkCore;
 using MudBlazorWeb2.Components.EntityFrameworkCore.Sprutora;
@@ -16,4 +16,3 @@ namespace MudBlazorWeb2.Components.EntityFrameworkCore
         public abstract DbSet<SprSpCommentTable> SprSpCommentTables { get; set; }
     }
 }
-
