@@ -51,6 +51,9 @@
     <Content Update="Components\Pages\Installation.razor">
       <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
     </Content>
+    <Content Update="Components\Pages\PostWorks.razor">
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+    </Content>
     <Content Update="Components\Pages\ResetNotes.razor">
       <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
     </Content>

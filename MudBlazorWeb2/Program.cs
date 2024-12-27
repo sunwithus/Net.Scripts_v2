@@ -66,4 +66,5 @@ app.UseStaticFiles();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-app.Run("http://0.0.0.0:555");
+app.Run();
+//app.Run("http://0.0.0.0:555");

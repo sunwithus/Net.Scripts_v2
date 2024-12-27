@@ -1,0 +1,66 @@
+﻿@page "/postworks"
+@rendermode InteractiveServer
+
+@using MudBlazorWeb2.Components.Modules._Shared
+@using MudBlazorWeb2.Components.Modules.MakingWord
+@using MudBlazorWeb2.Components.EntityFrameworkCore
+
+@using System.Text
+@using Oracle.ManagedDataAccess.Client
+@using Npgsql
+
+@inject IJSRuntime JsRuntime
+@inject IDbContextFactory DbContextFactory
+
+<PageTitle>𝖕𝖔𝖘𝖙 Mini</PageTitle>
+
+<MudContainer>
+    <MudText Typo="Typo.h5">Postworks Mini 🦕</MudText>
+    <MudDivider />
+    <br />
+
+    @if (SettingsDbList != null)
+    {
+        <ConnectionSettings colorButton="@colorTag" OnSettingsChanged="OnSettingsChanged" SettingsDbList="@SettingsDbList" FileSettingsDb="@FileSettingsDb" />
+    }
+
+    <MudText Style="display: flex; justify-content=start;">
+        <MudText Style="display: flex; align-items: center;">
+            <MudText>Введите номер поля <b>Ключ</b></MudText>
+            <MudNumericField @bind-Value="Id" Label="Ключ записи" Variant="Variant.Outlined" Min="0" Step="1" Style="height: 35px; width: 120px;" Class="ml-3" />
+        </MudText>
+
+        <MudText Style="display: flex; align-items: center; float: left; margin-left: 30px;">
+
+        </MudText>
+    </MudText>
+
+</MudContainer>
+
+
+@code {
+
+    string fileNameForSaveAudioViaPlayer = "";
+    bool IsSkeleton = false;
+
+    MudBlazor.Color colorTag = Color.Success;
+
+    private string message = ""; // Сообщение об ошибке
+    private List<SpeechData> speechData = null;
+
+    private long? Id = 0;
+    List<string> ColumnHeaders = new() { "Ключ", "Дата/время", "Длительность", "Собеседник", "Пользовательский номер", "Тип вызова", "CID", "LAC", "Базовая станция", "Принадлежность (язык оригинала)", "Имя источника (оператор)", "Устройство" };
+
+    private List<SettingsDb> SettingsDbList = null;
+    private SettingsDb SettingsDb = null;
+    private string FileSettingsDb = Path.Combine(AppContext.BaseDirectory, "settingsMakingWord.json");
+
+
+
+    private async Task OnSettingsChanged()
+    {
+        SettingsDbList = await SimpleJson<SettingsDb>.LoadItemsAsync(FileSettingsDb);
+        SettingsDb = SettingsDbList.FirstOrDefault(x => x.Selected == true);
+        Console.WriteLine("Настройки подключения к БД для создания Word изменились");
+    }
+}
