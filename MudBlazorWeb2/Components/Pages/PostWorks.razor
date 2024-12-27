@@ -2,17 +2,23 @@
 @rendermode InteractiveServer
 
 @using MudBlazorWeb2.Components.Modules._Shared
-@using MudBlazorWeb2.Components.Modules.MakingWord
+@using MudBlazorWeb2.Components.Modules.AiEstimateDb
 @using MudBlazorWeb2.Components.EntityFrameworkCore
+@using MudBlazorWeb2.Components.EntityFrameworkCore.Sprutora
 
-@using System.Text
-@using Oracle.ManagedDataAccess.Client
-@using Npgsql
+@using Microsoft.EntityFrameworkCore
+@using System.Text.Json
 
 @inject IJSRuntime JsRuntime
 @inject IDbContextFactory DbContextFactory
 
 <PageTitle>𝖕𝖔𝖘𝖙 Mini</PageTitle>
+
+<style>
+    .mud-table-row td {
+        font-size: 11px;
+    }
+</style>
 
 <MudContainer>
     <MudText Typo="Typo.h5">Postworks Mini 🦕</MudText>
@@ -24,43 +30,219 @@
         <ConnectionSettings colorButton="@colorTag" OnSettingsChanged="OnSettingsChanged" SettingsDbList="@SettingsDbList" FileSettingsDb="@FileSettingsDb" />
     }
 
-    <MudText Style="display: flex; justify-content=start;">
-        <MudText Style="display: flex; align-items: center;">
-            <MudText>Введите номер поля <b>Ключ</b></MudText>
-            <MudNumericField @bind-Value="Id" Label="Ключ записи" Variant="Variant.Outlined" Min="0" Step="1" Style="height: 35px; width: 120px;" Class="ml-3" />
+    <MudText Style="display:flex; justify-content:space-between;">
+        
+        <MudText>
+            @if (!string.IsNullOrEmpty(message) && SInckeyRecords != null && SInckeyRecords.Count > 0)
+            {
+                <MudButton Variant="Variant.Outlined" OnClick="GetDataRecords" Disabled="@(IsProgress)">Выполнить</MudButton>
+            }
+            else if (SInckeyRecords != null)
+            {
+                <MudText>Записей: @(SInckeyRecords.Count)</MudText>
+            }
+            else
+            {
+                <MudText>Настройте фильтр записей</MudText>
+            }
         </MudText>
 
-        <MudText Style="display: flex; align-items: center; float: left; margin-left: 30px;">
-
-        </MudText>
+        <MudButton OnClick="OnExpandCollapseClick">@(_expanded ? "🔺" : "🔻")</MudButton>
     </MudText>
+    <br />
 
+    <MudDivider />
+    <MudCollapse Expanded="_expanded">
+        <MudText Style="display: flex; justify-content:space-between; align-items:start; padding-bottom: 7px;">
+            <MudText>
+                @* // Период, Длительность *@
+                <MudGrid Spacing="4" Justify="Justify.FlexStart">
+                    <MudItem>
+                        <MudTextField T="DateTime" Format="s" Label="От даты:" InputType="InputType.DateTimeLocal" @bind-Value="@StartDateTime" />
+                    </MudItem>
+                    <MudItem>
+                        <MudTextField T="DateTime" Format="yyyy-MM-ddTHH:mm:ss" Label="По дату:" InputType="InputType.DateTimeLocal" @bind-Value="@EndDateTime" />
+                    </MudItem>
+                    <MudItem>
+                        <MudNumericField T="int" Label="Длительность (сек.) от:" @bind-Value="@Duration" Min="0" />
+                    </MudItem>
+                    <MudItem>
+                        <MudButton Style="top:7px;" Variant="Variant.Outlined" Disabled="@IsProgress" OnClick="GetCountRecords">
+                            @if (IsProgress)
+                            {
+                                <MudProgressCircular Color="@colorTag" Size="Size.Small" Indeterminate="true" />
+                            }
+                            else
+                            {
+                                <MudText>▶</MudText>
+                            }
+                        </MudButton>
+                        <i style="top:7px;">&emsp; @message &emsp;</i>
+                    </MudItem>
+                </MudGrid>
+            </MudText>
+        </MudText>
+    </MudCollapse>
+
+    
+    @if (ListDataRecords != null)
+    {
+        <MudTable T="SprSpeechTable" Items="@ListDataRecords" Dense="true" Hover="true" FixedHeader="true" FixedFooter="true" Height="50vh" OnRowClick="@OnRowClick">
+
+            <HeaderContent>
+                <MudTh><MudTableSortLabel SortBy="new Func<SprSpeechTable, object>(x=>x.SInckey)">Ключ</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy="new Func<SprSpeechTable, object>(x=>x.SDatetime)">Дата/время</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy="new Func<SprSpeechTable, object>(x=>x.SDuration)">Длительность</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy="new Func<SprSpeechTable, object>(x=>x.SNotice)">Примечание</MudTableSortLabel></MudTh>
+                <MudTh>Собеседник</MudTh>
+                <MudTh>Польз. номер</MudTh>
+                <MudTh>CID</MudTh>
+                <MudTh>LAC</MudTh>
+                <MudTh>БС</MudTh>
+                <MudTh>Язык</MudTh>
+                <MudTh>Источник</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+
+                <MudTd>@context.SInckey</MudTd>
+                <MudTd>@context.SDatetime</MudTd>
+                <MudTd>@context.SDuration</MudTd>
+                <MudTd>@context.SNotice</MudTd>
+                <MudTd>@context.STalker</MudTd>
+                <MudTd>@context.SUsernumber</MudTd>
+                <MudTd>@context.SCid</MudTd>
+                <MudTd>@context.SLac</MudTd>
+                <MudTd>@context.SBasestation</MudTd>
+                <MudTd>@context.SBelong</MudTd>
+                <MudTd>@context.SSourcename</MudTd>
+
+            </RowTemplate>
+
+            <PagerContent>
+                @if (audioDataLeft != null && recordType != null)
+                {
+                    <WaveFormPlayer FileName="@fileNameForSaveAudioViaPlayer" ColorTag="@colorTag" RecordType="@recordType" AudioDataLeft="@audioDataLeft" AudioDataRight="@audioDataRight" />
+                }
+                <MudTablePager PageSizeOptions="new int[]{50, 100, ListDataRecords.Count}" RowsPerPageString="Записей на страницу:" />
+            </PagerContent>
+        </MudTable>
+    }
 </MudContainer>
 
-
 @code {
+    [Inject]
+    public IConfiguration conf { get; set; }
 
-    string fileNameForSaveAudioViaPlayer = "";
-    bool IsSkeleton = false;
+    bool _expanded = true;
+    byte[]? audioDataLeft;
+    byte[]? audioDataRight;
+    string? recordType;
 
-    MudBlazor.Color colorTag = Color.Success;
+    private void OnExpandCollapseClick()
+    {
+        _expanded = !_expanded;
+    }
+    async Task OnRowClick(TableRowClickEventArgs<SprSpeechTable> args)
+    {
+        audioDataLeft = null;
+        audioDataRight = null;
+        recordType = null;
+        long? SInckey = args.Item.SInckey;
+        string conStringDBA = SelectDb.ConStringDBA(SettingsDb);
+        using (var context = await DbContextFactory.CreateDbContext(SettingsDb.DbType, conStringDBA, SettingsDb.Scheme))
+        {
+            (audioDataLeft, audioDataRight, recordType) = await EFCoreQuery.GetAudioDataAsync(SInckey, context);
+            fileNameForSaveAudioViaPlayer = $"" + args.Item.SDatetime.ToString() + "_" + args.Item.SDuration + "_" + args.Item.SSourcename + "_" + args.Item.SUsernumber + "_" + args.Item.STalker + "_" + args.Item.SLac + "_" + args.Item.SCid + "_" + args.Item.SBasestation + ".wav";
+            await context.Database.CloseConnectionAsync();
+        }
+        Console.WriteLine ($"{args.Item.SInckey} ");
+        StateHasChanged();
+    }
+    string fileNameForSaveAudioViaPlayer = "";//$"" + ItemByKey.Datetime.ToString() + "_" + durationString + "_" + ItemByKey.Sourcename + "_" + ItemByKey.Usernumber + "_" + ItemByKey.Talker + "_" + ItemByKey.Lac + "_" + ItemByKey.Cid + "_" + ItemByKey.Basestation + ".wav";
 
-    private string message = ""; // Сообщение об ошибке
-    private List<SpeechData> speechData = null;
-
-    private long? Id = 0;
-    List<string> ColumnHeaders = new() { "Ключ", "Дата/время", "Длительность", "Собеседник", "Пользовательский номер", "Тип вызова", "CID", "LAC", "Базовая станция", "Принадлежность (язык оригинала)", "Имя источника (оператор)", "Устройство" };
-
+    public MudBlazor.Color colorTag = Color.Default;
     private List<SettingsDb> SettingsDbList = null;
     private SettingsDb SettingsDb = null;
-    private string FileSettingsDb = Path.Combine(AppContext.BaseDirectory, "settingsMakingWord.json");
+    private string FileSettingsDb = Path.Combine(AppContext.BaseDirectory, "settingsPostworks.json");
+    private string message = "";
+    private bool IsProgress = false;
 
+    DateTime StartDateTime = DateTime.Now.AddMonths(-1);
+    DateTime EndDateTime = DateTime.Now;
+    int Duration = 10;
 
+    List<long?> SInckeyRecords = null;
+    List<string> IgnoreRecordTypes = null;
+    List<SprSpeechTable> ListDataRecords = null;
+    SprSpData1Table SprSpData1Table = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        SettingsDbList = await SimpleJson<SettingsDb>.LoadItemsAsync(FileSettingsDb);
+        SettingsDb = SettingsDbList.FirstOrDefault(x => x.Selected == true);
+        StateHasChanged();
+        IgnoreRecordTypes = conf.GetSection("AudioConverter:IgnoreRecordTypes").Get<List<string>>();
+    }
 
     private async Task OnSettingsChanged()
     {
         SettingsDbList = await SimpleJson<SettingsDb>.LoadItemsAsync(FileSettingsDb);
         SettingsDb = SettingsDbList.FirstOrDefault(x => x.Selected == true);
-        Console.WriteLine("Настройки подключения к БД для создания Word изменились");
+        Console.WriteLine("Настройки подключения к БД для репликатора изменились");
+    }
+
+    private async Task GetCountRecords()
+    {
+        SInckeyRecords = null;
+        ListDataRecords = null;
+        message = "";
+
+        try
+        {
+            IsProgress = true;
+            string conStringDBA = SelectDb.ConStringDBA(SettingsDb);
+            using (var context = await DbContextFactory.CreateDbContext(SettingsDb.DbType, conStringDBA, SettingsDb.Scheme))
+            {
+                SInckeyRecords = await EFCoreQuery.GetSInckeyRecordsPostworks(StartDateTime, EndDateTime, Duration, IgnoreRecordTypes, context);
+
+                await context.Database.CloseConnectionAsync();
+                message = $"записей: {SInckeyRecords.Count}";
+            }
+            IsProgress = false;
+        }
+        catch (Exception ex)
+        {
+            message = $"Ошибка: {ex.Message}";
+            IsProgress = false;
+        }
+    }
+
+    private async Task GetDataRecords()
+    {
+        _expanded = false;
+        IsProgress = true;
+        try
+        {
+            string conStringDBA = SelectDb.ConStringDBA(SettingsDb);
+            using (var context = await DbContextFactory.CreateDbContext(SettingsDb.DbType, conStringDBA, SettingsDb.Scheme))
+            {
+                ListDataRecords = await EFCoreQuery.GetSpeechRecordsById(SInckeyRecords, context);
+                await context.Database.CloseConnectionAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            message = $"Ошибка: {ex.Message}";
+        }
+        finally
+        {
+            IsProgress = false;
+        }
+    }
+
+
+    private async Task LoadSettings()
+    {
+        await Task.Delay(1);
     }
 }

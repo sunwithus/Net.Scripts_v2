@@ -5,6 +5,7 @@ using MudBlazorWeb2.Components.EntityFrameworkCore.Sprutora;
 using MudBlazorWeb2.Components.EntityFrameworkCore;
 using System.Text;
 using System.Data;
+using Org.BouncyCastle.Crypto.Digests;
 
 
 namespace MudBlazorWeb2.Components.Modules.AiEstimateDb
@@ -168,6 +169,25 @@ namespace MudBlazorWeb2.Components.Modules.AiEstimateDb
                 && (x.SNotice != null || x.SNotice != ""))
                 .Select(x => x.SInckey)
                 .ToListAsync();
+        }
+
+        public static async Task<List<long?>> GetSInckeyRecordsPostworks(DateTime StartDateTime, DateTime EndDateTime, int Duration, List<string> _ignoreRecordType, BaseDbContext db)
+        {
+            return await db.SprSpeechTables
+                .Where(x => x.SDatetime >= StartDateTime && x.SDatetime <= EndDateTime
+                && x.SType == 0
+                && x.SDuration >= TimeSpan.FromSeconds(Duration)
+                && !_ignoreRecordType.Contains(x.SEventcode))
+                .Select(x => x.SInckey)
+                .ToListAsync();
+        }
+
+        public static async Task<List<SprSpeechTable>> GetSpeechRecordsById(List<long?> Ids, BaseDbContext context)
+        {
+            return await context.SprSpeechTables
+               .Where(x => Ids.Contains(x.SInckey)) // Тип записи 0 – сеанс связи
+               .OrderByDescending(x => x.SDatetime)
+               .ToListAsync();
         }
 
     }
