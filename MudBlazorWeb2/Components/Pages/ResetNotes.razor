@@ -47,19 +47,15 @@
         </MudText>
 
     </MudText>
-    <MudButton Variant="Variant.Outlined" OnClick="ResetNotices">Выполнить</MudButton>
-    @if (!IsProgress)
+    @if (IsProgress)
     {
-        <pre>@message</pre>
+        <MudButton Variant="Variant.Outlined" Disabled="true" OnClick="ResetNotices">Выполнение &emsp;<MudProgressCircular Color="@colorTag" Size="Size.Small" Indeterminate="true" /></MudButton>
     }
     else
     {
-        <MudProgressCircular Color="@colorTag" Size="Size.Small" Indeterminate="true"/>
+        <MudButton Variant="Variant.Outlined" OnClick="ResetNotices">Выполнить</MudButton>
+        <pre>@message</pre>
     }
-        
-
-
-
 
 </MudContainer>
 
@@ -102,18 +98,25 @@
 
     private async Task ResetNotices()
     {
-        IsProgress = true;
-        message = "";
-        string conStringDBA = SelectDb.ConStringDBA(SettingsDb);
-        using (var context = await DbContextFactory.CreateDbContext(SettingsDb.DbType, conStringDBA, SettingsDb.Scheme))
+        try
         {
-            List<long?> SInckeyRecords = await EFCoreQuery.GetSInckeyRecordsForNoticeNull(StartDateTime, EndDateTime, context);
-            await EFCoreQuery.UpdateManyNoticeValuesAsync(SInckeyRecords, context, null);
-            await context.Database.CloseConnectionAsync();
-            message = $"Обнулено примечаний в записях: {SInckeyRecords.Count}";
+            IsProgress = true;
+            message = "";
+            string conStringDBA = SelectDb.ConStringDBA(SettingsDb);
+            using (var context = await DbContextFactory.CreateDbContext(SettingsDb.DbType, conStringDBA, SettingsDb.Scheme))
+            {
+                List<long?> SInckeyRecords = await EFCoreQuery.GetSInckeyRecordsForNoticeNull(StartDateTime, EndDateTime, context);
+                await EFCoreQuery.UpdateManyNoticeValuesAsync(SInckeyRecords, context, null);
+                await context.Database.CloseConnectionAsync();
+                message = $"Обнулено примечаний в записях: {SInckeyRecords.Count}";
+            }
+            IsProgress = false;
         }
-
-        IsProgress = false;
+        catch(Exception ex)
+        {
+            message = $"Ошибка: {ex.Message}";
+            IsProgress = false;
+        }
     }
 
     

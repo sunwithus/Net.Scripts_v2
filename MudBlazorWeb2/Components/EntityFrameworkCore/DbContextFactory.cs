@@ -26,7 +26,8 @@ namespace MudBlazorWeb2.Components.EntityFrameworkCore
                     {
                         providerOptions.CommandTimeout(60);
                         providerOptions.UseRelationalNulls(true);
-                        providerOptions.MinBatchSize(2);
+                        //providerOptions.MinBatchSize(2); //размер 42 был найден как оптимальный для многих сценариев
+                        //providerOptions.UseOracleSQLCompatibility(OracleSQLCompatibility.DatabaseVersion21); // 
                     })
                     .EnableDetailedErrors(true)
                     .EnableSensitiveDataLogging(false)
@@ -46,7 +47,7 @@ namespace MudBlazorWeb2.Components.EntityFrameworkCore
                     {
                         providerOptions.CommandTimeout(60);
                         providerOptions.UseRelationalNulls(true);
-                        providerOptions.MinBatchSize(2);
+                        //providerOptions.MinBatchSize(2);
                     })
                     .EnableDetailedErrors(false)
                     .EnableSensitiveDataLogging(false)

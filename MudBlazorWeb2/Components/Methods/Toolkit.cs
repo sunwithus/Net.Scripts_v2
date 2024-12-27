@@ -1,16 +1,18 @@
 ﻿//Toolkit.cs
 
+using Microsoft.AspNetCore.Components;
 using MudBlazorWeb2.Components.EntityFrameworkCore.SqliteModel;
 using MudBlazorWeb2.Components.Modules._Shared;
 using System.Diagnostics;
 using System.Text.Json;
 
+
 namespace MudBlazorWeb2.Components.Methods
 {
+
     public class ConsoleCol
     {
         private static readonly object consoleLock = new object();
-
         public static void WriteLine(string text, ConsoleColor color)
         {
             lock (consoleLock)
@@ -20,7 +22,6 @@ namespace MudBlazorWeb2.Components.Methods
                 Console.ResetColor();
             }
         }
-
         public static void Write(string text, ConsoleColor color)
         {
             lock (consoleLock)
@@ -200,11 +201,11 @@ namespace MudBlazorWeb2.Components.Methods
         }
     }
 
-    public class SelectDb
+    public static class SelectDb
     {
-        private readonly IConfiguration _configuration;
+        private static IConfiguration _configuration;
 
-        public SelectDb(IConfiguration configuration)
+        public static void Configure(IConfiguration configuration)
         {
             _configuration = configuration;
         }
@@ -214,8 +215,8 @@ namespace MudBlazorWeb2.Components.Methods
             string conStringDBA = "";
             if (SettingsDb.DbType == "Oracle")
             {
-                //Data Source=(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST={SettingsDb.ServerAddress})(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=sprutora)));User Id={SettingsDb.User};Password={SettingsDb.Password};
-                conStringDBA = $"User Id={SettingsDb.User};Password={SettingsDb.Password};Data Source={SettingsDb.ServerAddress}/SPRUTORA;";
+                //Data Source=(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST={SettingsDb.ServerAddress})(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=sprutora)));User Id={SettingsDb.User};Password={SettingsDb.Password};Connection Timeout=120;
+                conStringDBA = $"User Id={SettingsDb.User};Password={SettingsDb.Password};Data Source={SettingsDb.ServerAddress}/{_configuration["OracleDbGlobalName"]};Connection Timeout=60;";
             }
             else if (SettingsDb.DbType == "Postgres")
             {

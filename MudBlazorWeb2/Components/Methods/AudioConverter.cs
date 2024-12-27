@@ -112,16 +112,21 @@ namespace MudBlazorWeb2.Components.Methods
 
         public static async Task UsingDecoderAsync(byte[] audioDataLeft, byte[] audioDataRight, string outputFilePath, string recordType, IConfiguration conf)
         {
+            string rightArgument = "-filter_complex amix=inputs=2:duration=first:dropout_transition=2"; // для ffmpeg
+            if (audioDataRight != null)
+            {
+                rightArgument = "-filter_complex amerge=inputs=2 -ac 2";
+            }
+
             var ramdomFileName = Path.GetRandomFileName();
             string? directoryName = Path.GetDirectoryName(outputFilePath);
-            directoryName += "_for_decoder";
+            //directoryName += "_for_decoder";
             if (!Directory.Exists(directoryName)) Directory.CreateDirectory(directoryName);
             var ramdomFileNameWithPath = Path.Combine(directoryName, ramdomFileName);
             string fileNameLeft = ramdomFileNameWithPath + "_left"; // имя входного файла
             string fileNameRight = ramdomFileNameWithPath + "_right";
             string fileNameLeftWav = fileNameLeft + ".wav"; // имя выходного файла
             string fileNameRightWav = fileNameRight + ".wav";
-            string rightArgument = "-filter_complex amix=inputs=2:duration=first:dropout_transition=2"; // для ffmpeg
 
             try
             {
@@ -146,7 +151,7 @@ namespace MudBlazorWeb2.Components.Methods
                     .AddFileInput(fileNameRightWav)
                     .OutputToFile(outputFilePath, true, options => options
                         .ForceFormat("wav")
-                        .WithCustomArgument("-codec:a pcm_s16le -b:a 128k -ar 16000 -ac 1")
+                        .WithCustomArgument("-codec:a pcm_s16le -b:a 128k -ar 16000 ")
                         .WithCustomArgument(rightArgument)
                     ).ProcessAsynchronously(true, new FFOptions { BinaryFolder = conf["PathToFFmpegExe"] });
 

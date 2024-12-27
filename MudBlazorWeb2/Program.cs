@@ -40,6 +40,8 @@ builder.Services.AddHttpClient<OllamaService>(client =>
     client.Timeout = TimeSpan.FromMinutes(15);
 });
 
+SelectDb.Configure(builder.Configuration); //for static Toolkit.cs
+
 var app = builder.Build();
 
 app.UseRouting();

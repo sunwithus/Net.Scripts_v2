@@ -14,13 +14,6 @@
 @inject IWebHostEnvironment HostEnvironment
 @inject NavigationManager NavigationManager
 
-<!--
-<style>
-    #playercontainer {
-        background-color: white !important;
-    }
-</style>
--->
 <style>
     #buttonsgroup {
         font-size: 12px;
@@ -29,7 +22,7 @@
 
 
 <MudText Typo="Typo.body1" style="align-items:center; display: flex; flex-direction: row; min-width: 300px; max-width:100%; position: relative;">
-    <MudButtonGroup id="buttonsgroup" Color="@colorTag" Variant="Variant.Text" Vertical="true" Style="width: 110px;">
+    <MudButtonGroup id="buttonsgroup" Color="@ColorTag" Variant="Variant.Text" Vertical="true" Style="width: 110px; min-height:150px;">
         <label>
             <input type="checkbox" id="loopregions" checked="${loop}" /> Зацикливание
         </label>
@@ -46,10 +39,16 @@
             <button id="backwardbutton">⏮</button>|<button id="forwardbutton">⏭</button>
         </div>
         <div id="saveaudio">
-            <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Save" Color="Color.Info" Size="Size.Small">.wav</MudButton>
+            <MudButton Disabled="@IsAudioLoadErr" Variant="Variant.Outlined" FullWidth StartIcon="@Icons.Material.Filled.Save" Color="Color.Info" Size="Size.Small">.wav</MudButton>
         </div>
     </MudButtonGroup>
-    <div id="playercontainer" style="width: calc(100% - 110px); padding-left: 8px;"></div>
+    <div id="playercontainer" style="width: calc(100% - 110px); padding-left: 8px;">
+        @if (IsAudioLoadErr)
+        {
+            <MudText Color="Color.Error" Style="width:100%; text-align:center;">НЕПОДДЕРЖИВАЕМЫЙ ТИП АУДИОЗАПИСИ (RecordType = "@RecordType")</MudText>
+        }
+    </div>
+
 </MudText>
 
 
@@ -57,11 +56,15 @@
     [Parameter]
     public string FileName { get; set; }
     [Parameter]
-    public MudBlazor.Color colorTag { get; set; }
+    public MudBlazor.Color ColorTag { get; set; }
     [Parameter]
     public byte[] AudioDataLeft { get; set; }
     [Parameter]
     public byte[] AudioDataRight { get; set; }
+    [Parameter]
+    public string RecordType { get; set; }
+
+    private bool IsAudioLoadErr = false;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -77,23 +80,36 @@
         Files.CreateDirectory(Path.GetDirectoryName(path));
         try
         {
-            await DbToAudioConverter.UsingStreamsMakeStereoAsync(AudioDataLeft, AudioDataRight, path, conf);
+            ConsoleCol.WriteLine("RecordType: " + RecordType, ConsoleColor.DarkYellow);
+            IsAudioLoadErr = false;
+            if (RecordType != null && conf.GetSection("AudioConverter:Codecs").Get<List<string>>().Contains(RecordType))
+            {
+                await DbToAudioConverter.UsingDecoderAsync(AudioDataLeft, AudioDataRight, path, RecordType, conf);
+            }
+            else
+            {
+                await DbToAudioConverter.UsingStreamsMakeStereoAsync(AudioDataLeft, AudioDataRight, path, conf);
+            }
+
+            string url = NavigationManager.BaseUri + "files/1.wav";
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("createAudioSingletrack", url, FileName);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Ошибка при выполнении JSRuntime в WaveFormPlayer.razor, проверьте кеш браузера");
+                Console.WriteLine(ex.Message);
+            }
         }
         catch (Exception ex)
         {
-            Console.WriteLine("Ошибка при выполнении UsingStreamsMakeStereoAsync в WaveFormPlayer.razor, проверьте кеш браузера");
+            IsAudioLoadErr = true;
+            Console.WriteLine("Ошибка при выполнении LoadAudioData в WaveFormPlayer.razor, возможно не поддерживается формат аудио");
             Console.WriteLine(ex.Message);
+            StateHasChanged();
         }
-        string url = NavigationManager.BaseUri +"files/1.wav";
-        try 
-        {
-            await JSRuntime.InvokeVoidAsync("createAudioSingletrack", url, FileName);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine("Ошибка при выполнении JSRuntime в WaveFormPlayer.razor, проверьте кеш браузера");
-            Console.WriteLine(ex.Message);
-        }
+
 
     }
 

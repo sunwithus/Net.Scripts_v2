@@ -18,5 +18,6 @@ namespace MudBlazorWeb2.Components.Modules.MakingWord
         public byte[]? Comment { get; set; }
         public byte[]? AudioF { get; set; }
         public byte[]? AudioR { get; set; }
+        public string? RecordType { get; set; }
     }
 }

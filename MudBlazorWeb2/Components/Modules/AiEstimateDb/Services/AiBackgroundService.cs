@@ -143,7 +143,10 @@ public class AiBackgroundService : BackgroundService
 
             if (!await ReloadIsRunPressedByItemId(item.Id))
             {
-                await StopProcessingAsync(item, "Готово к запуску. 💤", stoppingToken);
+                if(item.ProcessingMessage != "Готово к запуску. 💤")
+                {
+                    await StopProcessingAsync(item, "Готово к запуску. 💤", stoppingToken);
+                }
                 continue;
             }
 
@@ -180,20 +183,10 @@ public class AiBackgroundService : BackgroundService
                 List<SprSpeechTable> AudioList = null;
                 using (var context = await _dbContextFactory.CreateDbContext(DbType, conStringDBA, Scheme))
                 {
-                    //await context.Database.OpenConnectionAsync();
-                    //if (DbType == "Oracle") await context.Database.ExecuteSqlRawAsync($"ALTER SESSION SET CURRENT_SCHEMA = {Scheme}");
-
-                    _logger.LogInformation(context.ToString());
-                    _logger.LogInformation($"DbContext created with DbType: {DbType}, ConnectionString: {conStringDBA}, Scheme: {Scheme}");
-                    
-
-
+                    //_logger.LogInformation(context.ToString());
+                    //_logger.LogInformation($"DbContext created with DbType: {DbType}, ConnectionString: {conStringDBA}, Scheme: {Scheme}");
                     AudioList = await EFCoreQuery.GetSpeechRecords(item.StartDateTime, item.EndDateTime, item.MoreThenDuration, context, IgnoreRecordTypes);
                     item.TotalKeys = AudioList.Count;
-
-                    
-                    
-
 
                 //если записи отсутствуют => к следующему TODO json
                 if (item.TotalKeys <= 0)

@@ -46,14 +46,14 @@ namespace MudBlazorWeb2.Components.Modules.AiEstimateDb
 
         public static async Task<(byte[]? audioDataLeft, byte[]? audioDataRight, string? recordType)> GetAudioDataAsync(long? key, BaseDbContext db)
         {
-            var result = db.SprSpData1Tables
-                .Where(x => x.SInckey == key)
-                .Select(x => new
+            var results = await db.SprSpData1Tables.Where(x => x.SInckey == key).Select(x => new
             {
                 AudioDataLeft = x.SFspeech,
                 AudioDataRight = x.SRspeech,
                 RecordType = x.SRecordtype
-            }).ToList().FirstOrDefault();
+            }).ToListAsync();
+
+            var result = results.FirstOrDefault();
 
             if (result == null)
                 return (null, null, null);
@@ -109,7 +109,7 @@ namespace MudBlazorWeb2.Components.Modules.AiEstimateDb
                         speech.SBelong = detectedLanguage;
                         speech.SNotice = dangerLevelString;
                         speech.SPostid = modelName;
-                        speech.SDeviceid = "MEDIUM_R";
+                        //speech.SDeviceid = "MEDIUM_R";
                         speech.SSelstatus = selStatus;
                         db.SprSpeechTables.Update(speech);
                     }
@@ -121,7 +121,7 @@ namespace MudBlazorWeb2.Components.Modules.AiEstimateDb
                             SBelong = detectedLanguage,
                             SNotice = dangerLevelString,
                             SPostid = modelName,
-                            SDeviceid = "MEDIUM_R",
+                            //SDeviceid = "MEDIUM_R",
                             SSelstatus = selStatus
                         };
                         await db.SprSpeechTables.AddAsync(speech);

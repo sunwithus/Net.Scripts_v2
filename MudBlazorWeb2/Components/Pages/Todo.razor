@@ -65,7 +65,7 @@
                             <MudTextField @bind-Value="todo.Scheme" Label="Scheme" Variant="Variant.Outlined" Margin="Margin.Dense" /><MudText>&nbsp;</MudText>
                             <MudTextField @bind-Value="todo.User" Label="User" Variant="Variant.Outlined" Margin="Margin.Dense" /><MudText>&nbsp;</MudText>
                             <MudTextField @bind-Value="todo.Password" Label="Password" Variant="Variant.Outlined" Margin="Margin.Dense" /><MudText>&nbsp;</MudText>
-                            <MudButton Size="Size.Small" Color="@colorTag" OnClick="@(async () => await TestConnection(todo))">Тест</MudButton>
+                            <MudButton Size="Size.Small" Color="@colorTag" OnClick="@(async () => await TestConnection(todo))">@(IsTestingConnection ? "⏳" : "Тест")</MudButton>
                         </MudText>
                         <MudTextField T="DateTime" Format="s" Label="От даты:" InputType="InputType.DateTimeLocal" @bind-Value="@todo.StartDateTime" />
                         <MudTextField T="DateTime" Format="yyyy-MM-ddTHH:mm:ss" Label="По дату:" InputType="InputType.DateTimeLocal" @bind-Value="@todo.EndDateTime" />
@@ -146,6 +146,7 @@
     public string? newTodo;
     public bool IsPanelExpanded = false;
     public bool IsDebug = false;
+    private bool IsTestingConnection = false;
 
     private HubConnection _hubConnection;
     //private PeriodicTimer? _timer;
@@ -296,6 +297,8 @@
         string status = "";
         if (!string.IsNullOrEmpty(conStringDBA))
         {
+            IsTestingConnection = true;
+            StateHasChanged();
             try
             {
                 using var context = await DbContextFactory.CreateDbContext(todo.DbType, conStringDBA, todo.Scheme);
@@ -311,6 +314,11 @@
             {
                 relultString = "Неизвестная ошибка.";
                 status = ex.Message;
+            }
+            finally
+            {
+                IsTestingConnection = false;
+                StateHasChanged();
             }
 
             SnackbarService.Configuration.PositionClass = Defaults.Classes.Position.BottomRight;
