@@ -40,7 +40,7 @@
 
 4.	Порядок установки СПО
 а) cкопировать папку  «dotnet» на диск С на сервера;
-б) установить Docker (порядок установки https://docs.docker.com/desktop/install/windows-install) и пакет SDK для .NET (порядок установки https://dotnet.microsoft.com/en-us/download/dotnet/8.0);
+б) установить Docker (порядок установки https://docs.docker.com/desktop/install/windows-install) и пакет SDK для .NET (порядок установки https://dotnet.microsoft.com/en-us/download/dotnet/);
 в) установить Whisper-контейнер (порядок установки https://hub.docker.com/r/onerahmet/openai-whisper-asr-webservice);
 запустить контейнер и необходимую модель Whisper для транскрибирования (в нашем варианте используется модель Whisper Turbo):
 docker run -d --gpus all --name whisper-large-v3-turbo-gpu -p 9000:9000 --restart=always -e ASR_MODEL=large-v3-turbo -e ASR_ENGINE=openai_whisper onerahmet/openai-whisper-asr-webservice:latest-gpu 

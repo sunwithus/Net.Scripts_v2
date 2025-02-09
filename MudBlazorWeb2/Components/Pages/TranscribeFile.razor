@@ -1,6 +1,8 @@
 ﻿@* TranscribeFile.razor *@
 
 @page "/transcribe-file"
+@using MudBlazorWeb2.Components.Modules._Shared
+@inject IConfiguration conf
 
 <PageTitle>🔊 Transcribe audio</PageTitle>
 
@@ -18,8 +20,8 @@
         <MudText Typo="Typo.body2" Style="display: flex; align-items: center">
             <MudFileUpload T="IBrowserFile" FilesChanged="UploadFile">
                 <ActivatorContent>
-                    <MudButton Variant="Variant.Filled" Color="@Color" Style="height: 30px;"
-                               StartIcon="@Icons.Material.Filled.CloudUpload">
+                    <MudButton Variant="Variant.Filled" Color="@colorTag" Style="height: 30px;"
+                    StartIcon="@Icons.Material.Filled.CloudUpload">
                         Выбор файла
                     </MudButton>
                 </ActivatorContent>
@@ -27,17 +29,30 @@
 
             @if (!string.IsNullOrEmpty(fileName))
             {
-                <MudText>
+                <MudText Typo="Typo.body2">
                     &emsp;&emsp;
                     <MudIcon Icon="@Icons.Material.Filled.AttachFile" Title="selected file" />
                     @fileName &emsp;&emsp;<code>@fileSize Mb</code>
                 </MudText>
             }
         </MudText>
-        
+        <br />
+        @if (audioDataLeft == null && !string.IsNullOrEmpty(fileName))
+        {
+            <MudPaper Style="width: 100%;">
+                <WaveFormPlayerSkeleton />
+            </MudPaper>
+        }
+        @if (audioDataLeft != null)
+        {
+            <MudPaper Style="width: 100%;">
+                <WaveFormPlayer AutoPlay="false" FileName="@fileName" ColorTag="@colorTag" RecordType="@("PCMA")" AudioDataLeft="@audioDataLeft" AudioDataRight="@audioDataRight" />
+            </MudPaper>
+        }
+
         <!-- Transcription -->
         <br />
-        @if (!string.IsNullOrEmpty(fileName))
+        @if (!string.IsNullOrEmpty(fileName) && !isTranscribed)
         {
             <MudButton Variant="Variant.Filled" OnClick="@TranscribeAudio" Disabled="@(isTranscribing)">
                 @if (isTranscribing)
@@ -70,26 +85,60 @@
     [Inject]
     public WhisperService WhisperService { get; set; }
 
-    private MudBlazor.Color Color = MudBlazor.Color.Surface;
+    private MudBlazor.Color colorTag = MudBlazor.Color.Surface;
     private string audioFilePath = string.Empty;
     private string transcriptionResult = string.Empty;
     private bool isTranscribing = false;
     private string fileName = string.Empty;
     private string fileSize = string.Empty;
 
+    private byte[]? audioDataLeft = null;
+    private byte[]? audioDataRight = null;
+    int durationOfWav;
+    bool isTranscribed = false;
+
     private async Task UploadFile(IBrowserFile file)
     {
+        isTranscribed = false;
+        // Удаление временного файла после обработки
+        try
+        {
+            if (File.Exists(audioFilePath)) 
+            {
+                File.Delete(audioFilePath);
+            }
+
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Ошибка при удалении временного файла: " + ex.Message);
+        }
+
+        audioDataLeft = null;
+        audioDataRight = null;
+        durationOfWav = 0;
         if (file != null)
         {
             // Save file to temporary path
             fileName = file.Name;
             fileSize = Math.Round(file.Size / 1024.0 / 1024.0, 2).ToString();
             using var stream = new MemoryStream();
-            await file.OpenReadStream(maxAllowedSize: 1024 * 1024 * 512).CopyToAsync(stream); // 512 MB
+            await file.OpenReadStream(maxAllowedSize: 1024 * 1024 * 1024).CopyToAsync(stream); // 1024 MB
+
+            // Создание временного файла
             audioFilePath = Path.GetTempFileName();
-            using var fileStream = File.Create(audioFilePath);
-            stream.Seek(0, SeekOrigin.Begin);
-            await stream.CopyToAsync(fileStream);
+            using (var fileStream = File.Create(audioFilePath))
+            {
+                stream.Seek(0, SeekOrigin.Begin);
+                await stream.CopyToAsync(fileStream);
+            }
+
+            Console.WriteLine("fileName = " + fileName);
+            Console.WriteLine("audioFilePath = " + audioFilePath);
+            Console.WriteLine(" conf[PathToFFmpegExeForReplicator] = " + conf["PathToFFmpegExeForReplicator"]);
+
+            await Task.Delay(10);
+            (durationOfWav, audioDataLeft, audioDataRight) = await AudioToDbConverter.FFmpegStream(audioFilePath, conf["PathToFFmpegExeForReplicator"]);
         }
         transcriptionResult = "";
     }
@@ -103,6 +152,7 @@
                 isTranscribing = true;
                 transcriptionResult = "";
                 transcriptionResult = await WhisperService.RecognizeSpeechAsync(audioFilePath, Configuration);
+                isTranscribed = true;
             }
             catch (Exception ex)
             {

@@ -235,6 +235,7 @@ public class AiBackgroundService : BackgroundService
 
                     await UpdateTodoItemStateAsync(item, $"Идёт выполнение: {item.CompletedKeys}/{item.TotalKeys}. Стадия: Whisper.", stoppingToken);
                     // WHISPER
+                    ConsoleCol.WriteLine("RecognizeSpeechAsync Task и далее DetectLanguageAsync", ConsoleColor.Yellow);
                     Task<string> _recognizedText = _whisper.RecognizeSpeechAsync(audioFilePath, _configuration); //асинхронно, не ждём
                     (string languageCode, string detectedLanguage) = await _whisper.DetectLanguageAsync(audioFilePath, _configuration);
                     string recognizedText = await _recognizedText; //дожидаемся _recognizedText...
@@ -306,9 +307,9 @@ public class AiBackgroundService : BackgroundService
             {
                 using (var NewContext = await _dbContextFactory.CreateDbContext(DbType, conStringDBA, Scheme))
                 {
-                    await EFCoreQuery.InsertCommentAsync(entityId, recognizedText, detectedLanguage, responseOllamaText, Configuration["OllamaModelName"], NewContext, item.BackLight);
+                    await EFCoreQuery.InsertOrUpdateCommentAsync(entityId, recognizedText, detectedLanguage, responseOllamaText, Configuration["OllamaModelName"], NewContext, item.BackLight);
                     await NewContext.Database.CloseConnectionAsync();
-                    Console.WriteLine("InsertCommentAsync => NewContext: " + NewContext.ToString());
+                    Console.WriteLine("InsertOrUpdateCommentAsync => NewContext: " + NewContext.ToString());
                 }
             });
 

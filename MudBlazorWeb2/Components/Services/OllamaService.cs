@@ -27,7 +27,9 @@ public class OllamaService
                 await SendTextForAnalysisDefaulOptionsAsync(preText, recognizedText, Configuration) :
                 await SendTextForAnalysisAsync(preText, recognizedText, Configuration);
 
-            ConsoleCol.WriteLine($"\n{DateTime.Now} OllamaResponse => Длительность выполнения: " + durationOllama + " sec.", ConsoleColor.DarkBlue);
+            Console.WriteLine();
+            ConsoleCol.WriteLine($"#######################################", ConsoleColor.DarkBlue);
+            ConsoleCol.WriteLine($"{DateTime.Now} OllamaResponse => Длительность выполнения: " + durationOllama + " sec.", ConsoleColor.DarkBlue);
 
             text = await SideEffect.DeleteUnnecessary(text);
             return (text, durationOllama);
@@ -48,7 +50,7 @@ public class OllamaService
             await SendTextForAnalysisDefaulOptionsAsync(preText, recognizedText, Configuration) :
             await SendTextForAnalysisAsync(preText, recognizedText, Configuration);
 
-        Console.WriteLine();
+        ConsoleCol.WriteLine($"#######################################", ConsoleColor.Blue);
         ConsoleCol.WriteLine($"{DateTime.Now} OllamaTranslate => Длительность выполнения: " + durationOllama + " sec.", ConsoleColor.Blue);
         translatedText = await SideEffect.DeleteUnnecessary(translatedText);
         translatedText = $"Перевод с {detectedLanguage.ToUpper()}: \n" + translatedText;
@@ -65,8 +67,8 @@ public class OllamaService
             await SendTextForAnalysisDefaulOptionsAsync(preText, recognizedText, Configuration) :
             await SendTextForAnalysisAsync(preText, recognizedText, Configuration);
 
-        Console.WriteLine();
-        ConsoleCol.WriteLine($"{DateTime.Now} OllamaTranslate => Длительность выполнения: " + durationOllama + " sec.", ConsoleColor.Blue);
+        ConsoleCol.WriteLine($"#######################################", ConsoleColor.Blue);
+        ConsoleCol.WriteLine($"{DateTime.Now} OllamaTranslateFromFile => Длительность выполнения: " + durationOllama + " sec.", ConsoleColor.Blue);
         translatedText = await SideEffect.DeleteUnnecessary(translatedText);
 
         return (translatedText, durationOllama);
@@ -125,9 +127,9 @@ public class OllamaService
                 //frequency_penalty = ollamaOptions.frequency_penalty,
             }
 
-    }), Encoding.UTF8, "application/json");
-        var response = await _httpClient.PostAsync($"{configuration["OllamaIP"]}/api/generate", content);
-        response.EnsureSuccessStatusCode();
+        }), Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync($"{configuration["OllamaIP"]}/api/generate", content);
+            response.EnsureSuccessStatusCode();
 
         var responseBody = await response.Content.ReadAsStringAsync();
         var responseWithBody = JsonSerializer.Deserialize<ResponseData>(responseBody);

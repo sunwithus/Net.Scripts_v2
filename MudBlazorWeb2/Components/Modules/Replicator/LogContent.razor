@@ -3,19 +3,17 @@
 <MudText Style="position: relative; width: 0px;">
     <MudButton Style="float:right;" OnClick="OnExpandCollapseClick">@(_expanded ? "▲" : "▼")</MudButton>
     <br />
-
-
     <MudText Style="float:right; height:0px;" Class="pa-4">
         <MudStack Spacing="2">
-            <MudCollapse Style="z-index: 5; border: 1px solid lightgrey; border-radius: 5px; width: 100%; max-width: 70vh; max-height: 70vh; overflow: auto; white-space: pre; display: block;" Expanded="_expanded">
+            <MudCollapse Style="z-index: 5; width: 70vh; max-height: 70vh; overflow: auto; white-space: pre-wrap; display: block;" Expanded="_expanded">
                 @if (!string.IsNullOrEmpty(logContent))
                 {
-                    <MudPaper Class="pa-4 mud-height-full">
+                    <MudPaper Class="pa-4 mud-height-full" Style="border: 1px solid lightgrey; border-radius: 5px; ">
                         <MudText Typo="Typo.body2">
-                                @logContent
+                            @logContent
                         </MudText>
                     </MudPaper>
-    
+
                 }
                 else if (_expanded)
                 {
@@ -35,6 +33,10 @@
     {
         _expanded = !_expanded;
         logContent = _expanded ? await ReadLogContent() : "";
+        if (_expanded == true && logContent == "")
+        {
+            logContent = "Пусто";
+        }
 
     }
     private async Task<string> ReadLogContent()

@@ -18,33 +18,15 @@ public class WhisperService
     {
         try
         {
-            string whisperIP = conf["WhisperDetectLanguageIP"];
+            var jsonResponse = await SendAudioRequestAsync(audioFilePath, conf["WhisperDetectLanguageIP"]);
 
-            DateTime startTime = DateTime.Now;
-            using var form = new MultipartFormDataContent();
-            using var fileStream = File.OpenRead(audioFilePath);
-            var fileContent = new StreamContent(fileStream);
-            fileContent.Headers.ContentType = MediaTypeHeaderValue.Parse("audio/wav");
-            form.Add(fileContent, "audio_file", Path.GetFileName(audioFilePath));
-
-            string requestUrl = $"{whisperIP}/detect-language?encode=true";
-
-            var response = await _httpClient.PostAsync(requestUrl, form);
-            response.EnsureSuccessStatusCode();
-
-            var jsonResponse = await response.Content.ReadAsStringAsync();
             var result = JsonDocument.Parse(jsonResponse);
-
-            DateTime endTime = DateTime.Now;
-            ConsoleCol.WriteLine("\nWhisper (DetectLanguageAsync) => request time: " + ((int)Math.Round((endTime - startTime).TotalSeconds)).ToString() + " sec.", ConsoleColor.DarkGreen);
-
             return (result.RootElement.GetProperty("language_code").GetString().ToLower(),
-                result.RootElement.GetProperty("detected_language").GetString());
+                    result.RootElement.GetProperty("detected_language").GetString());
         }
         catch (Exception ex)
         {
-            ConsoleCol.WriteLine("ошибка в методе WhisperDetectLanguage: " + ex.Message, ConsoleColor.Red);
-            //return ("", "");
+            ConsoleCol.WriteLine("Ошибка в методе WhisperDetectLanguage: " + ex.Message, ConsoleColor.Red);
             throw;
         }
     }
@@ -53,33 +35,34 @@ public class WhisperService
     {
         try
         {
-            string whisperIP = conf["WhisperRecogniseIP"];
-
-            DateTime startTime = DateTime.Now;
-        
-            using var form = new MultipartFormDataContent();
-            using var fileStream = File.OpenRead(audioFilePath);
-            var fileContent = new StreamContent(fileStream);
-            fileContent.Headers.ContentType = MediaTypeHeaderValue.Parse("audio/wav");
-            form.Add(fileContent, "audio_file", Path.GetFileName(audioFilePath));
-
-            string requestUrl = $"{whisperIP}/asr?encode=true&task=transcribe&word_timestamps=true&output=txt";
-
-            var response = await _httpClient.PostAsync(requestUrl, form);
-            response.EnsureSuccessStatusCode();
-
-            var responseText = await response.Content.ReadAsStringAsync();
-
-            DateTime endTime = DateTime.Now;
-            ConsoleCol.WriteLine($"\n{DateTime.Now} Whisper (RecognizeSpeechAsync) => request time: " + ((int)Math.Round((endTime - startTime).TotalSeconds)).ToString() + " sec.", ConsoleColor.DarkGray);
-
+            var responseText = await SendAudioRequestAsync(audioFilePath, conf["WhisperRecogniseIP"]);
             return responseText;
         }
-        catch (Exception ex) {
-            
-            ConsoleCol.WriteLine("ошибка в методе RecognizeSpeechAsync: " + ex.Message, ConsoleColor.Red);
-            //return ("Error в методе RecognizeSpeechAsync: " + ex.Message);
+        catch (Exception ex)
+        {
+            ConsoleCol.WriteLine("Ошибка в методе RecognizeSpeechAsync: " + ex.Message, ConsoleColor.Red);
             throw;
         }
+    }
+
+    private async Task<string> SendAudioRequestAsync(string audioFilePath, string requestUrl, string contentType = "audio/wav")
+    {
+        DateTime startTime = DateTime.Now;
+
+        using var form = new MultipartFormDataContent();
+        using var fileStream = File.OpenRead(audioFilePath);
+        var fileContent = new StreamContent(fileStream);
+        fileContent.Headers.ContentType = MediaTypeHeaderValue.Parse(contentType);
+        form.Add(fileContent, "audio_file", Path.GetFileName(audioFilePath));
+
+        var response = await _httpClient.PostAsync(requestUrl, form);
+        response.EnsureSuccessStatusCode();
+
+        var responseText = await response.Content.ReadAsStringAsync();
+
+        DateTime endTime = DateTime.Now;
+        ConsoleCol.WriteLine($"\n########## {requestUrl} \nВремя выполнения Whisper = {((int)Math.Round((endTime - startTime).TotalSeconds))} sec.", ConsoleColor.DarkYellow);
+
+        return responseText;
     }
 }

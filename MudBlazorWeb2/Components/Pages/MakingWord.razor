@@ -45,7 +45,7 @@
     @if (speechData != null && speechData.Count > 0 && speechData.FirstOrDefault().Id == Id)
     {
         <MudDivider />
-        <WaveFormPlayer FileName="@fileNameForSaveAudioViaPlayer" ColorTag="@colorTag" RecordType="@speechData?.FirstOrDefault()?.RecordType" AudioDataLeft="@speechData?.FirstOrDefault()?.AudioF" AudioDataRight="@speechData?.FirstOrDefault()?.AudioR" />
+        <WaveFormPlayer AutoPlay="false" FileName="@fileNameForSaveAudioViaPlayer" ColorTag="@colorTag" RecordType="@speechData?.FirstOrDefault()?.RecordType" AudioDataLeft="@speechData?.FirstOrDefault()?.AudioF" AudioDataRight="@speechData?.FirstOrDefault()?.AudioR" />
         <br />
 
         <MudTable Style="min-width: 525px;" Items="@speechData" Dense="true" Hover="true" Bordered="true" Striped="true">

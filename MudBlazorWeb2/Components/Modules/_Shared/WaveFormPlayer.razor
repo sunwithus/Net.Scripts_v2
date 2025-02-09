@@ -16,45 +16,53 @@
 
 <style>
     #buttonsgroup {
-        font-size: 12px;
+    font-size: 12px;
     }
 </style>
 
+@if (IsAudioLoading)
+{
+    <WaveFormPlayerSkeleton />
+}
+<div style="display: @(IsAudioLoading ? "none" : "block" )">
+    <MudText Typo="Typo.body1" style="align-items:center; display: flex; flex-direction: row; min-width: 300px; min-height: 174px; max-width:100%; position: relative;">
+        <MudButtonGroup id="buttonsgroup" Color="@ColorTag" Variant="Variant.Text" Vertical="true" Style="width: 110px; min-height:150px;">
+            <label>
+                <input type="checkbox" id="loopregions" checked="${loop}" /> Зацикливание
+            </label>
+            <MudDivider />
+            <label>
+                Скорость: <span id="currentspeed">1.00</span>x <input type="range" id="speedlevel" min="0" max="6" value="3" style="width: 100px;" />
+            </label>
+            <MudDivider />
+            <label>
+                Увеличение: <input type="range" id="zoomlevel" min="10" max="500" value="0" style="width: 100px;" />
+            </label>
+            <MudDivider />
+            <div style="display: flex; justify-content:space-between;">
+                <button id="backwardbutton">⏮</button>|<button id="forwardbutton">⏭</button>
+            </div>
+            <div id="saveaudio">
+                <MudButton Disabled="@IsAudioLoadErr" Variant="Variant.Outlined" FullWidth StartIcon="@Icons.Material.Filled.Save" Color="Color.Info" Size="Size.Small">.wav</MudButton>
+            </div>
+        </MudButtonGroup>
 
-<MudText Typo="Typo.body1" style="align-items:center; display: flex; flex-direction: row; min-width: 300px; max-width:100%; position: relative;">
-    <MudButtonGroup id="buttonsgroup" Color="@ColorTag" Variant="Variant.Text" Vertical="true" Style="width: 110px; min-height:150px;">
-        <label>
-            <input type="checkbox" id="loopregions" checked="${loop}" /> Зацикливание
-        </label>
-        <MudDivider />
-        <label>
-            Скорость: <span id="currentspeed">1.00</span>x <input type="range" id="speedlevel" min="0" max="6" value="3" style="width: 100px;" />
-        </label>
-        <MudDivider />
-        <label>
-            Увеличение: <input type="range" id="zoomlevel" min="10" max="500" value="0" style="width: 100px;" />
-        </label>
-        <MudDivider />
-        <div style="display: flex; justify-content:space-between;">
-            <button id="backwardbutton">⏮</button>|<button id="forwardbutton">⏭</button>
+        <div id="playercontainer" style="width: calc(100% - 110px); padding-left: 8px;">
+            @if (IsAudioLoadErr)
+            {
+                <MudText Color="Color.Error" Style="width:100%; text-align:center;">НЕПОДДЕРЖИВАЕМЫЙ ТИП АУДИОЗАПИСИ (RecordType = "@RecordType")</MudText>
+            }
         </div>
-        <div id="saveaudio">
-            <MudButton Disabled="@IsAudioLoadErr" Variant="Variant.Outlined" FullWidth StartIcon="@Icons.Material.Filled.Save" Color="Color.Info" Size="Size.Small">.wav</MudButton>
-        </div>
-    </MudButtonGroup>
-    <div id="playercontainer" style="width: calc(100% - 110px); padding-left: 8px;">
-        @if (IsAudioLoadErr)
-        {
-            <MudText Color="Color.Error" Style="width:100%; text-align:center;">НЕПОДДЕРЖИВАЕМЫЙ ТИП АУДИОЗАПИСИ (RecordType = "@RecordType")</MudText>
-        }
-    </div>
 
-</MudText>
 
+    </MudText>
+</div>
 
 @code {
     [Parameter]
     public string FileName { get; set; }
+    [Parameter]
+    public bool AutoPlay { get; set; } = false;
     [Parameter]
     public MudBlazor.Color ColorTag { get; set; }
     [Parameter]
@@ -65,18 +73,43 @@
     public string RecordType { get; set; }
 
     private bool IsAudioLoadErr = false;
+    private bool IsAudioLoading = true;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            await LoadAudioData();
+            string UnicId = Guid.NewGuid().ToString();
+            await LoadAudioData(UnicId);
+            await DeleteAudioFileAsync(UnicId);
         }
     }
 
-    private async Task LoadAudioData()
+    private async Task DeleteAudioFileAsync(string UnicId)
     {
-        var path = Path.Combine(HostEnvironment.WebRootPath, "files", "1.wav");
+        await Task.Delay(1200); // Ждём, чтобы пользователь мог воспроизвести аудио
+        var path = Path.Combine(HostEnvironment.WebRootPath, "files", UnicId + ".wav");
+        try
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+            if (File.Exists(path))
+            {
+                Console.WriteLine("file is not deleted = " + path);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Ошибка: " + ex.Message);
+        }
+
+    }
+
+    private async Task LoadAudioData(string UnicId)
+    {
+        var path = Path.Combine(HostEnvironment.WebRootPath, "files", UnicId + ".wav");
         Files.CreateDirectory(Path.GetDirectoryName(path));
         try
         {
@@ -91,10 +124,15 @@
                 await DbToAudioConverter.UsingStreamsMakeStereoAsync(AudioDataLeft, AudioDataRight, path, conf);
             }
 
-            string url = NavigationManager.BaseUri + "files/1.wav";
+            string url = NavigationManager.BaseUri + "files/" + UnicId + ".wav";
             try
             {
-                await JSRuntime.InvokeVoidAsync("createAudioSingletrack", url, FileName);
+                IsAudioLoading = true;
+                StateHasChanged();
+                await JSRuntime.InvokeVoidAsync("createAudioSingletrack", url, FileName, AutoPlay);
+                await Task.Delay(200);
+                IsAudioLoading = false;
+                StateHasChanged();
             }
             catch (Exception ex)
             {

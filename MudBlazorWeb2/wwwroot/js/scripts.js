@@ -60,9 +60,11 @@ function downloadFile(filename, byteBase64) {
     link.click();
 }
 
+
 ////////////////////////////////////////////////////
+//let wavesurfer;
 //Single audio WaveForm
-window.createAudioSingletrack = async (url, FileName) => {
+window.createAudioSingletrack = async (url, FileName, AutoPlay) => {
 
     //Initialize the Regions plugin
     const regions = WaveSurfer.Regions.create();
@@ -85,7 +87,7 @@ window.createAudioSingletrack = async (url, FileName) => {
         minPxPerSec: 10,
         fillParent: true,
         mediaControls: true,
-        autoplay: false,
+        autoplay: AutoPlay,
         interact: true,
         dragToSeek: false,
         hideScrollbar: true,
@@ -224,8 +226,24 @@ window.createAudioSingletrack = async (url, FileName) => {
         });
     }
 };
+/*
 
-
+window.stopAudio = () => {
+    if (wavesurfer) {
+        wavesurfer.pause();
+        wavesurfer.setTime(0);
+    } else {
+        console.error('wavesurfer is not initialized');
+    }
+};
+window.playAudio = () => {
+    if (wavesurfer) {
+        wavesurfer.play();
+    } else {
+        console.error('wavesurfer is not initialized');
+    }
+};
+*/
 
 /*
 //Multitrack Audio WaveForm
